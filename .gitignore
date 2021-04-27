@@ -1,0 +1,22 @@
+.idea
+.DS_Store
+tutorials/.ipynb_checkpoints
+tutorials/output
+functionalities.rst
+*.egg-info/
+*/__pycache__/
+*/*/__pycache__/
+temp/
+
+
+# Docs
+/docs/_build/
+*.pdf
+*png
+*.zip
+*.gz
+*.tgz
+
+# Others
+data/
+*.pyc

@@ -7,6 +7,7 @@ functionalities.rst
 */__pycache__/
 */*/__pycache__/
 temp/
+gpu_run/
 
 
 # Docs

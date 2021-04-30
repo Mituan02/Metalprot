@@ -351,6 +351,12 @@ def get_2aa_core(pdb_prody, metal_sel, aas = ['HIS', 'HIS'], extention = 3, exte
     '''
     extract 2 amino acid core + metal.
 
+    extention: useful in M4 clustering method. Decide the gap between two extracted aa. Example, extention = 3, aaa-HIS-aaa will be check overlap with aaa-GLU-aaa
+
+    extention_out: useful in M4 clustering method. Decide the N and C terminal extention. Example, extention_out = 1, a-HIS-aa-HIS-a; extention_out = 2, aa-HIS-aa-HIS-aa;
+
+    aas: useful in M4 clustering method. Decide which two type of aa are extracted.
+
     '''
     aa_name = '_'.join(aas)
     nis = pdb_prody.select(metal_sel)
@@ -405,6 +411,19 @@ def get_2aa_core(pdb_prody, metal_sel, aas = ['HIS', 'HIS'], extention = 3, exte
     return aa_cores
 
 def extract_all_core_aa(pdbs, metal_sel, aa = 'resname HIS', consider_phipsi = False, extention = 0, extention_out = 1, extract2aa = False, aas = None):
+    '''
+    consider_phipsi: trigger M2 clustering method.
+
+    extention: trigger M3 clustering method.
+
+    extract2aa: trigger M4 clustering method.
+
+    extention: useful in M4 clustering method. Decide the gap between two extracted aa. Example, extention = 3, aaa-HIS-aaa will be check overlap with aaa-GLU-aaa
+
+    extention_out: useful in M4 clustering method. Decide the N and C terminal extention. Example, extention_out = 1, a-HIS-aa-HIS-a; extention_out = 2, aa-HIS-aa-HIS-aa;
+
+    aas: useful in M4 clustering method. Decide which two type of aa are extracted.
+    '''
     all_aa_cores = []
     for pdb in pdbs:
         if extract2aa:
@@ -416,7 +435,7 @@ def extract_all_core_aa(pdbs, metal_sel, aa = 'resname HIS', consider_phipsi = F
             all_aa_cores.extend(aa_cores)
     return all_aa_cores
 
-def superimpose_aa_core(pdbs, rmsd = 0.5, len_sel = 5, align_sel = 'name C CA N O NI'):
+def superimpose_aa_core(pdbs, rmsd = 0.5, len_sel = 5, align_sel = 'name C CA N O NI', min_cluster_size = 2):
     '''
     There are so many ways to superimpose aa and metal.
     This method try to algin the C-CA-N_NI
@@ -455,13 +474,13 @@ def get_clu_info_write(outfile, pdbs, clu, rmsd = 0.5, metal_sel = 'NI', align_s
     write_clu_info(outfile, clu_infos)
     return clu_infos
 
-def print_cluster_pdbs(clu, outdir, rmsd = 0.5):
+def print_cluster_pdbs(clu, outdir, rmsd = 0.5, tag = ''):
 
     for i in range(len(clu.mems)):
         cluster_out_dir = outdir + str(i) + '/'
         # if not os.path.exists(cluster_out_dir):
         #     os.mkdir(cluster_out_dir)
-        _print_cluster_rank_pdbs(clu, i, cluster_out_dir, str(rmsd))
+        _print_cluster_rank_pdbs(clu, i, cluster_out_dir, tag)
 
 def _print_cluster_rank_pdbs(clu, rank, outdir='./', tag=''):
     try: os.makedirs(outdir)
@@ -482,7 +501,7 @@ def _print_cluster_rank_pdbs(clu, rank, outdir='./', tag=''):
             coords_transformed = np.dot((pdb_coords - m_com), R) + t_com
             pdb.setCoords(coords_transformed)
             is_cent = '_centroid' if mem == cent else ''
-            pr.writePDB(outdir + 'cluster_' + str(rank) + '_mem_' + str(i)
+            pr.writePDB(outdir + tag + 'cluster_' + str(rank) + '_mem_' + str(i)
                          + is_cent + '_' + pdb.getTitle().split('.')[0] + '.pdb', pdb)
 
     except IndexError:
@@ -561,13 +580,13 @@ def extract_all_atom_core(pdbs, metal_sel, tag  ='_atom'):
 
 # run cluster
 
-def run_cluster(_pdbs, workdir, outdir, rmsd, metal_sel, len_sel, align_sel):
+def run_cluster(_pdbs, workdir, outdir, rmsd, metal_sel, len_sel, align_sel, min_cluster_size = 2, tag = ''):
     
-    clu = superimpose_aa_core(_pdbs, rmsd = rmsd, len_sel = len_sel, align_sel = align_sel)
+    clu = superimpose_aa_core(_pdbs, rmsd = rmsd, len_sel = len_sel, align_sel = align_sel, min_cluster_size = min_cluster_size)
     
     if not clu or len(clu.mems) == 0: return
     
-    print_cluster_pdbs(clu, workdir + outdir)
+    print_cluster_pdbs(clu, workdir + outdir, rmsd, tag)
 
     metal_diffs = check_metal_diff(clu)
 

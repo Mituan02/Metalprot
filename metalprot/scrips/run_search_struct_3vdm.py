@@ -4,7 +4,7 @@ import prody as pr
 
 #You can either add the python package path.
 sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
-from metalprot import search_struct
+from metalprot import search_struct, extract_vdm
 
 # Generate queryss
 queryss = []
@@ -16,36 +16,20 @@ print(query_dir)
 
 #Get query pdbs 
 
-subfolders_with_paths = [f.path for f in os.scandir(query_dir) if f.is_dir() if f.name[0] == '7' and '_' in f.name and 'cluster' in f.name]
-
-querys = []
-
-for subfolder in subfolders_with_paths:
-    qs = search_struct.extract_query(subfolder + '/', file_path = '_summary.txt', score_cut = 0, clu_num_cut = 10)
-    querys.extend(qs)
+querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['cluster', '7_'], score_cut = 0, clu_num_cut = 10)
 
 queryss.append(querys)
 
 #Get query_2nd pdbs 
-# TO DO: currently, cannot superimpose to cluster with phipsi angle.
-subfolders_with_paths2 = [f.path for f in os.scandir(query_dir) if f.is_dir() if f.name[0] == '4' and '_sc' in f.name and 'cluster' in f.name]
 
-query_2nds = []
+query_2nds = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['cluster', '4_', '_sc'], score_cut = 1, clu_num_cut = 50)
 
-for subfolder in subfolders_with_paths2:
-    qs = search_struct.extract_query(subfolder + '/', file_path = '/_summary.txt', score_cut = 1, clu_num_cut = 50)
-    query_2nds.extend(qs)
 queryss.append(query_2nds)
 
 #Get query_3rd pdbs 
-# TO DO: currently, cannot superimpose to cluster with phipsi angle.
-subfolders_with_paths3 = [f.path for f in os.scandir(query_dir) if f.is_dir() if f.name[0] == '4' and '_sc' in f.name and 'cluster' in f.name]
 
-query_3rds = []
+query_3rds = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['cluster', '4_', '_sc'], score_cut = 1, clu_num_cut = 50)
 
-for subfolder in subfolders_with_paths3:
-    qs = search_struct.extract_query(subfolder + '/', file_path = '/_summary.txt', score_cut = 1, clu_num_cut = 50)
-    query_3rds.extend(qs)
 queryss.append(query_3rds)
 
 # run Search_struct
@@ -56,6 +40,16 @@ outdir = workdir + 'output_test_3vdm/'
 
 target_path = workdir + '3into4_helix_assembly_renum.pdb'
 
-ss = search_struct.Search_struct(target_path, outdir, queryss, [0.5, 0.5, 0.5], [1, 1, 1], 3, 2.3, 2.3)
+rmsd_cuts = [0.5, 0.5, 0.5]
+
+dist_cuts = [1, 1, 1]
+
+num_iter = 3
+
+clash_query_query = 2.3
+
+clash_query_target = 2.3
+
+ss = search_struct.Search_struct(target_path, outdir, queryss, rmsd_cuts, dist_cuts, num_iter, clash_query_query, clash_query_target)
 
 ss.run_search_struct()

@@ -1,9 +1,8 @@
 import os
 import sys
 import prody as pr
-sys.path.append(r'/mnt/e/GitHub_Design/DesignScript/MetalDesign')
-from ligand_database import *
-
+sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
+from metalprot import ligand_database
 
 workdir = "/mnt/e/DesignData/ligands/ZN_rcsb/"
 
@@ -40,37 +39,37 @@ writepdb(cores, workdir + '3_aa_cores_reps/')
 
 '''
 
-pdbs = get_all_pbd_prody(workdir + '2_seq_cores_reps/')
+pdbs = ligand_database.get_all_pbd_prody(workdir + '2_seq_cores_reps/')
 
 # Align aa core
 
-aa_cores = extract_all_core_aa(pdbs, metal_sel, aa = aa)
+aa_cores = ligand_database.extract_all_core_aa(pdbs, metal_sel, aa = aa)
 writepdb(aa_cores, workdir + '4_' + aa_name + '_cores_reps/')
 
-_pdbs = get_all_pbd_prody(workdir + '4_' + aa_name + '_cores_reps/')
+_pdbs = ligand_database.get_all_pbd_prody(workdir + '4_' + aa_name + '_cores_reps/')
 run_cluster(_pdbs, workdir, '4_' + aa_name + '_cores_cluster/', rmsd = 0.5, metal_sel = metal_sel, len_sel = len_sel, align_sel = align_sel_backbone)
 
 # Align aa core + sidechain
 
-run_cluster(_pdbs, workdir, '4_' + aa_name + '_sc_cores_cluster/', rmsd = 0.5, metal_sel = metal_sel, len_sel = len_sel_sc, align_sel = 'heavy') 
+ligand_database.run_cluster(_pdbs, workdir, '4_' + aa_name + '_sc_cores_cluster/', rmsd = 0.5, metal_sel = metal_sel, len_sel = len_sel_sc, align_sel = 'heavy') 
 
 # Align aa core + phipsi.
 
-aa_ps_cores = extract_all_core_aa(pdbs, metal_sel, aa = aa, consider_phipsi = True)
-writepdb(aa_ps_cores, workdir + '5_' + aa_name + '_ps_cores_reps/')
+aa_ps_cores = ligand_database.extract_all_core_aa(pdbs, metal_sel, aa = aa, consider_phipsi = True)
+ligand_database.writepdb(aa_ps_cores, workdir + '5_' + aa_name + '_ps_cores_reps/')
 
-_pdbs = get_all_pbd_prody(workdir + '5_' + aa_name + '_ps_cores_reps/')
-run_cluster(_pdbs, workdir, '5_' + aa_name + '_ps_cores_cluster/', rmsd = 0.5, metal_sel = metal_sel, len_sel = len_sel_ps, align_sel = align_sel_backbone)
+_pdbs = ligand_database.get_all_pbd_prody(workdir + '5_' + aa_name + '_ps_cores_reps/')
+ligand_database.run_cluster(_pdbs, workdir, '5_' + aa_name + '_ps_cores_cluster/', rmsd = 0.5, metal_sel = metal_sel, len_sel = len_sel_ps, align_sel = align_sel_backbone)
 
 # Align aa core + sidechain + phipsi
 
-run_cluster(_pdbs, workdir, '5_' + aa_name + '_sc_ps_cores_cluster/', rmsd = 0.5, metal_sel = metal_sel, len_sel = len_sel_ps_sc, align_sel = 'heavy') 
+ligand_database.run_cluster(_pdbs, workdir, '5_' + aa_name + '_sc_ps_cores_cluster/', rmsd = 0.5, metal_sel = metal_sel, len_sel = len_sel_ps_sc, align_sel = 'heavy') 
 
 # Align his core + 2 AA 
 
-aa_2aa_cores = extract_all_core_aa(pdbs, metal_sel, aa = aa, extention= 2)
-writepdb(aa_2aa_cores, workdir + '6_' + aa_name + '_2aa_cores_reps/')
+aa_2aa_cores = ligand_database.extract_all_core_aa(pdbs, metal_sel, aa = aa, extention= 2)
+ligand_database.writepdb(aa_2aa_cores, workdir + '6_' + aa_name + '_2aa_cores_reps/')
 
-_pdbs = get_all_pbd_prody(workdir + '6_' + aa_name + '_2aa_cores_reps/')
-run_cluster(_pdbs, workdir, '6_' + aa_name + '_2aa_cores_cluster/', rmsd = 0.5, metal_sel = metal_sel, len_sel = 21, align_sel = align_sel_backbone)
+_pdbs = ligand_database.get_all_pbd_prody(workdir + '6_' + aa_name + '_2aa_cores_reps/')
+ligand_database.run_cluster(_pdbs, workdir, '6_' + aa_name + '_2aa_cores_cluster/', rmsd = 0.5, metal_sel = metal_sel, len_sel = 21, align_sel = align_sel_backbone)
 

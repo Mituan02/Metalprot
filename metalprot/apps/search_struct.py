@@ -25,55 +25,6 @@ class Vdm:
         vdm_info = str(round(self.total_score, 2)) + '\t' + str(self.total_clu_number) + '\t' + '||'.join([q.query.getTitle() for q in self.querys]) + '\t' + '||'.join([str(round(n, 2)) for n in self.scores]) + '\t' + '||'.join([str(s) for s in self.clu_nums]) 
         return vdm_info
 
-def read_cluster_info(file_path):
-    clu_infos = []
-    if not os.path.exists(file_path):
-        return clu_infos
-    with open(file_path, 'r') as f:
-        lines = f.readlines()
-        
-        for line in lines[1:]:
-            ts = line[:-1].split('\t')
-            if len(ts)!=7: continue
-            clu_infos.append(clu_info(Metal=ts[0], clu_type = ts[1], clu_rmsd= ts[2], total_num=float(ts[3]), clu_rank= int(ts[4]), clu_num= int(ts[5]), score=float(ts[6])))
-    return clu_infos
-
-def filter_cluter_info(clu_infos, score_cut = 0, clu_num_cut = 10):
-    filtered_infos = []
-    for info in clu_infos:
-        if info.score >= score_cut or info.clu_num >= clu_num_cut:
-            filtered_infos.append(info)
-    return filtered_infos
-
-def extract_query(workdir, file_path = '_summary.txt', score_cut = 0, clu_num_cut = 10):
-    clu_infos = read_cluster_info(workdir + file_path)
-    filtered_infos = filter_cluter_info(clu_infos, score_cut, clu_num_cut)
-
-    querys = []
-    if len(filtered_infos) == 0:
-        return querys
-
-    for info in filtered_infos:
-        centroid = [file for file in os.listdir(workdir  + str(info.clu_rank)) if 'centroid' in file][0]
-        pbd = pr.parsePDB(workdir + str(info.clu_rank) + '/' + centroid)
-        query = Query(pbd, info.score, info.clu_num, info.total_num)
-        querys.append(query)
-
-    return querys
-
-def extract_centroid_pdb_in_clu(workdir, file_path = '_summary.txt', score_cut = 0, clu_num_cut = 10):  
-    clu_infos = read_cluster_info(workdir + file_path)
-    filtered_infos = filter_cluter_info(clu_infos, score_cut, clu_num_cut)
-    pdb_paths = []
-    if len(filtered_infos) == 0:
-        return pdb_paths
-
-    for info in filtered_infos:
-        centroid = [file for file in os.listdir(workdir  + str(info.clu_rank)) if 'centroid' in file][0]
-        pdb_paths.append(workdir + str(info.clu_rank) + '/' + centroid)
-    return pdb_paths
-
-
 def _connectivity_filter(arr, inds):
     d = np.diff(arr[inds, :], axis=0)
     tf = (d[:, 0] == 1) & (d[:, 1] == 0) & (d[:, 2] == 0)
@@ -91,7 +42,8 @@ def connectivity_filter(pdb, window_inds):
     chains = pdb.getChids().astype('object')
     arr[:, 1] = np.array(list(map(ord, chains))) 
     segids = pdb.getSegnames().astype('object')
-    segids[segids == ''] = 'a' 
+    #segids[segids == ''] = 'a' 
+    segids[np.array([len(s)!=1 for s in segids])] = 'a'
     arr[:, 2] = np.array(list(map(ord, segids))) 
     return window_inds[[_connectivity_filter(arr, inds) for inds in window_inds]]
 
@@ -102,9 +54,12 @@ def supperimpose_target_bb(query, target, rmsd_cut = 1):
     query: prody pdb
     target: prody pdb
     '''
-    query_len = len(query.query.select('protein and name CA'))
-    target_len = len(target.select('protein and name CA'))
-
+    try:
+        query_len = len(query.query.select('protein and name CA'))
+        target_len = len(target.select('protein and name CA'))
+    except:
+        print(query.query.getTitle())
+        return []
     ind = np.arange(query_len)
     window_inds = np.array([ind + i for i in range(target_len- query_len + 1)])
 
@@ -121,66 +76,79 @@ def supperimpose_target_bb(query, target, rmsd_cut = 1):
         rmsd = pr.calcRMSD(target_sel.select('name N CA C O'), query.query.select('name N CA C O'))
 
         if rmsd < rmsd_cut:
-            new_query = Query(query.query.copy(), query.score, query.clu_num, query.clu_total_num)          
+            new_query = Query(query.query.copy(), query.score, query.clu_num, query.clu_total_num)
+            new_query.win.extend(win)          
             new_querys.append(new_query)
 
     return new_querys
 
-def metal_distance_extract(target, comb, query, dis_cut = 1):
-    
-    #only calculate the distance with the first vdm superimposed to the target.
-    dist = pr.calcDistance(comb[0].query.select('ion'), query.query.select('ion'))
-
-    if dist > dis_cut: 
-        return 
-
-    if query_target_clash(query.query, target):
-            print('query target clash.')
-            return
-    for c in comb: 
-        if simple_clash(c.query, query.query): 
-            print('two query clash.')
-            return
-        
-    comb.append(query)
-    return comb 
-
-def simple_clash(query, query_2nd):
+def simple_clash(query, query_2nd, clash_dist = 2.0):
     '''
     If the two query has CA within 2, then it is a crash.
     '''
     xyzs = []
-    for c in query.select('protein and heavy').getCoords():
+    try:
+        ni_index = query.select('ion or name NI MN ZN CO CU MG FE')[0].getIndex()
+        all_near = query.select('protein and within 2.84 of index ' + str(ni_index))
+        inds = all_near.select('nitrogen or oxygen or sulfur').getResindices()
+        query_contact_sc = query.select('protein and heavy and resindex ' + ' '.join([str(ind) for ind in inds]))
+    except:
+        print('clashing fail: ' + query.getTitle())
+        return True
+
+    for c in query_contact_sc.getCoords():
         xyzs.append(c)
-    for c in query_2nd.select('protein and heavy').getCoords():
+    try:
+        ni_index2 = query_2nd.select('ion or name NI MN ZN CO CU MG FE')[0].getIndex()
+        all_near2 = query_2nd.select('protein and within 2.84 of index ' + str(ni_index2))
+        inds2 = all_near2.select('nitrogen or oxygen or sulfur').getResindices()
+        query_contact_sc2 = query_2nd.select('protein and heavy and resindex ' + ' '.join([str(ind) for ind in inds2]))
+    except:
+        print('clashing fail: ' + query_2nd.getTitle())
+        return True
+
+    for c in query_contact_sc2.getCoords():
         xyzs.append(c)
 
     xyzs = np.vstack(xyzs)  
     dists = cdist(xyzs, xyzs)
 
     np.fill_diagonal(dists, 5)
-    extracts = np.argwhere(dists <= 1.2)
+    extracts = np.argwhere(dists <= clash_dist)
 
-    first_len = len(query.select('protein and heavy'))
+    first_len = len(query_contact_sc)
     extracts = [(ex[0], ex[1] - first_len) for ex in extracts if ex[0] < first_len and ex[1] > first_len]
     if len(extracts) > 0:
         return True
     return False
 
-def query_target_clash(query, target):
+def query_target_clash(query, win, target, clash_dist = 2.0):
     xyzs = []
-    for c in query.select('sc and heavy').getCoords():
+
+    #extract contact side chains. 
+    try:
+        ni_index = query.select('ion or name NI MN ZN CO CU MG FE')[0].getIndex()
+        all_near = query.select('protein and within 2.83 of index ' + str(ni_index))
+        inds = all_near.select('nitrogen or oxygen or sulfur').getResindices()
+        query_contact_sc = query.select('sc and heavy and resindex ' + ' '.join([str(ind) for ind in inds]))
+    except:
+        print('clashing fail: ' + query.getTitle())
+        return True
+
+
+    for c in query_contact_sc.getCoords():
         xyzs.append(c)
-    for c in target.select('bb').getCoords():
+
+    for c in target.select('bb and not resindex ' + ' '.join([str(ind) for ind in win])).getCoords():
         xyzs.append(c)
 
     xyzs = np.vstack(xyzs)  
     dists = cdist(xyzs, xyzs)
 
     np.fill_diagonal(dists, 5)
-    extracts = np.argwhere(dists <= 1.2)
+    extracts = np.argwhere(dists <= clash_dist)
 
-    first_len = len(query.select('sc and heavy'))
+    first_len = len(query_contact_sc.select('sc and heavy'))
     extracts = [(ex[0], ex[1] - first_len) for ex in extracts if ex[0] < first_len and ex[1] > first_len]
     if len(extracts) > 0:
         return True
@@ -196,7 +164,7 @@ class Search_struct:
     '''
     The function to search comb
     '''
-    def __init__(self, target_pdb, workdir, queryss, rmsd_cuts, dist_cuts, num_iter):
+    def __init__(self, target_pdb, workdir, queryss, rmsd_cuts, dist_cuts, num_iter, qt_clash_dist, qq_clash_dist):
         if workdir:
             _workdir = os.path.realpath(workdir)
             if not os.path.exists(_workdir):
@@ -210,6 +178,8 @@ class Search_struct:
         self.rmsd_cuts = rmsd_cuts
         self.dist_cuts = dist_cuts
         self.num_iter = num_iter
+        self.qt_clash_dist = qt_clash_dist
+        self.qq_clash_dist = qq_clash_dist
 
         if len(queryss) < num_iter:
             print('--Please includes the correct number of query list.')
@@ -277,7 +247,7 @@ class Search_struct:
         dists = cdist(xyzs, xyzs)
 
         np.fill_diagonal(dists, 5)
-        extracts = np.argwhere(dists <= 1)
+        extracts = np.argwhere(dists <= dist_cut)
 
         extracts = [(ex[0], ex[1] - len(cquerys_0)) for ex in extracts if ex[0] < len(cquerys_0) and ex[1] > len(cquerys_0)]
         
@@ -286,12 +256,13 @@ class Search_struct:
     
         extracts_filtered = []
         for i, j in extracts:
-            if simple_clash(cquerys_0[i].query, cquerys_ind[j].query): 
-                print('two query clash.')
+            if simple_clash(cquerys_0[i].query, cquerys_ind[j].query, self.qq_clash_dist): 
+                #print('two query clash.')
                 continue
-            if query_target_clash(cquerys_0[i].query, self.target) or query_target_clash(cquerys_ind[j].query, self.target) :
-                print('query target clash.')
+            if query_target_clash(cquerys_0[i].query, cquerys_0[i].win, self.target, self.qt_clash_dist) or query_target_clash(cquerys_ind[j].query, cquerys_ind[j].win, self.target, self.qt_clash_dist) :
+                #print('query target clash.')
                 continue
+             
             extracts_filtered.append([i, j])
         if len(extracts_filtered) <= 0: 
             return 
@@ -325,22 +296,24 @@ class Search_struct:
             self.extractsss[index][inds[index]][inds[0]] = extracts_filtered
 
         if len(inds) == 2:
+            print(extract_binarys[0])
             return extract_binarys[0]
 
-        print(extract_binarys)
+        #print(extract_binarys)
         extract_all_filtered = []
         for exb in list(itertools.product(*extract_binarys)):
-            print(exb)
             ex_1st = [x[0] for x in exb]
             if all(x == ex_1st[0] for x in ex_1st):  
                 the_extract = [ex_1st[0]] + [x[1] for x in exb] 
-                print(the_extract)
                 for i in range(1, len(inds)):
                     for j in range(i + 1, len(inds)):
-                        if simple_clash(self.cquerysss[i][inds[i]][the_extract[i]].query, self.cquerysss[j][inds[j]][the_extract[j]].query): 
+                        if inds[i] == inds[j] and the_extract[i] == the_extract[j]:
+                            return
+                        if simple_clash(self.cquerysss[i][inds[i]][the_extract[i]].query, self.cquerysss[j][inds[j]][the_extract[j]].query, self.qq_clash_dist): 
                             print('two extra query clash.')
                             return
 
+                print(the_extract)
                 extract_all_filtered.append(the_extract)
 
         return extract_all_filtered
@@ -417,7 +390,26 @@ def write_query_pdbs_depre(outdir, win_extract):
         pr.writePDB(outdir + 'ex_' + str(count) + '_' + wx[0].getTitle(), wx[0])
         count += 1
 
-def metal_distance_extract_depre_(target, win_extract, win_extract_2nd, distance_cut = 1):
+def metal_distance_extract_depre(target, comb, query, dis_cut = 1, clash_dist = 2.3):
+    
+    #only calculate the distance with the first vdm superimposed to the target.
+    dist = pr.calcDistance(comb[0].query.select('ion'), query.query.select('ion'))
+
+    if dist > dis_cut: 
+        return 
+
+    if query_target_clash(query.query, query.win, target, clash_dist):
+            print('query target clash.')
+            return
+    for c in comb: 
+        if simple_clash(c.query, query.query, clash_dist): 
+            print('two query clash.')
+            return
+        
+    comb.append(query)
+    return comb 
+
+def metal_distance_extract_depre_depre(target, win_extract, win_extract_2nd, distance_cut = 1, clash_dist = 2.3):
     xyzs = []
     for win in win_extract:
         xyzs.append(win[0].select('ion').getCoords())
@@ -434,10 +426,10 @@ def metal_distance_extract_depre_(target, win_extract, win_extract_2nd, distance
     
     extracts_filtered = []
     for i, j in extracts:
-        if simple_clash(win_extract[i][0], win_extract_2nd[j][0]): 
+        if simple_clash(win_extract[i][0], win_extract_2nd[j][0], clash_dist): 
             print('two query clash.')
             continue
-        if query_target_clash(win_extract[i][0], target) or query_target_clash(win_extract_2nd[j][0], target) :
+        if query_target_clash(win_extract[i][0], [], target) or query_target_clash(win_extract_2nd[j][0], [], target, clash_dist) :
             print('query target clash.')
             continue
         extracts_filtered.append((i, j))

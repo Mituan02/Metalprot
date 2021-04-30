@@ -37,7 +37,8 @@ for subfolder in subfolders_with_paths2:
     query_2nds.extend(qs)
 queryss.append(query_2nds)
 
-
+print(len(queryss[0]))
+print(len(queryss[1]))
 # run Search_struct
 
 workdir = '/mnt/e/DesignData/ligands/Design_Sam/'
@@ -46,6 +47,6 @@ outdir = workdir + 'output_test/'
 
 target_path = workdir + '3into4_helix_assembly_renum.pdb'
 
-ss = search_struct.Search_struct(target_path, outdir, queryss, [0.5, 0.5], [1, 1], 2)
+ss = search_struct.Search_struct(target_path, outdir, queryss, [0.5, 0.5], [0.75, 0.75], 2, 2.3, 2.8)
 
 ss.run_search_struct()

@@ -1,4 +1,4 @@
-__all__ = ['cluster', 'database_investigation', 'ligand_database', 'search_struct', 'transformation', 'extract_vdm']
+__all__ = ['cluster', 'database_investigation', 'ligand_database', 'search_struct', 'transformation', 'extract_vdm', 'generate_sse']
 
 from . import cluster
 from .cluster import *
@@ -17,3 +17,6 @@ from .transformation import *
 
 from . import extract_vdm
 from .extract_vdm import *
+
+from . import generate_sse
+from .generate_sse import *

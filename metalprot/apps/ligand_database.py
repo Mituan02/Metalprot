@@ -347,7 +347,7 @@ def get_aa_core(pdb_prody, metal_sel, aa = 'resname HIS', consider_phipsi = Fals
         aa_cores.append((pdb_prody.getTitle() + '_' + aa_name + '_' + str(count), sel_pdb_prody))                
     return aa_cores
         
-def get_2aa_core(pdb_prody, metal_sel, aas = ['HIS', 'HIS'], extention = 3, extention_out = 1):
+def get_2aa_core(pdb_prody, metal_sel, aas = ['HIS', 'HIS'], extention = 3, extention_out = 0):
     '''
     extract 2 amino acid core + metal.
 
@@ -410,7 +410,60 @@ def get_2aa_core(pdb_prody, metal_sel, aas = ['HIS', 'HIS'], extention = 3, exte
         aa_cores.append((pdb_prody.getTitle() + '_' + aa_name + '_' + str(count), sel_pdb_prody))                
     return aa_cores
 
-def extract_all_core_aa(pdbs, metal_sel, aa = 'resname HIS', consider_phipsi = False, extention = 0, extention_out = 1, extract2aa = False, aas = None):
+def get_2aa_sep_core(pdb_prody, metal_sel, filter_aas = False, aas = ['HIS', 'HIS'], extention = 3, extention_out = 0):
+    '''
+    Extract 2 amino acid core + metal, without considering they are connected.
+
+    extention: useful in M4 clustering method. Decide the gap between two extracted aa. Example, extention = 3, aaa-HIS-aaa will be check overlap with aaa-GLU-aaa
+
+    extention_out: useful in M4 clustering method. Decide the N and C terminal extention. Example, extention_out = 1, a-HIS-aa-HIS-a; extention_out = 2, aa-HIS-aa-HIS-aa;
+
+    aas: useful in M4 clustering method. Decide which two type of aa are extracted.
+
+    '''
+    aa_name = '_'.join(aas)
+    nis = pdb_prody.select(metal_sel)
+
+    # A pdb can contain more than one NI.
+    if not nis:
+        print('No NI?' + pdb_prody.getTitle())
+        return
+    
+    ni = nis[0]
+    aa_cores = []
+    count = 0
+
+    all_aa = pdb_prody.select('protein and within 2.83 of index ' + str(ni.getIndex()))
+    if not all_aa:
+        return          
+    inds = np.unique(all_aa.getResindices())
+    
+    pairs = []
+    pairs_ind = []
+    for i in range(len(inds) - 1):
+        for j in range(i+1, len(inds)):
+
+            if filter_aas:
+                filtered = True
+                if aas and len(aas)==2:
+                    if pdb_prody.select('resindex ' + str(inds[i])).getResnames()[0] == aas[0] and pdb_prody.select('resindex ' + str(inds[j])).getResnames()[0] == aas[1]:
+                        filtered= False
+                    elif pdb_prody.select('resindex ' + str(inds[i])).getResnames()[0] == aas[1] and pdb_prody.select('resindex ' + str(inds[j])).getResnames()[0] == aas[0]:
+                        filtered= False
+                if filtered: continue
+
+            pairs_ind.append((inds[i], inds[j]))
+            pairs_ind.append((inds[j], inds[i]))  # In the database, we don't know the order of the two aa.
+    
+    for p in pairs_ind:
+
+        count += 1
+
+        sel_pdb_prody = pdb_prody.select('resindex ' + str(p[0]) + ' ' +  str(p[1]) + ' '+ str(ni.getResindex()))
+        aa_cores.append((pdb_prody.getTitle() + '_' + aa_name + '_' + str(count), sel_pdb_prody))                
+    return aa_cores
+
+def extract_all_core_aa(pdbs, metal_sel, aa = 'resname HIS', consider_phipsi = False, extention = 0, extention_out = 0, extract2aa = False, extract2aa_sep = False, aas = None):
     '''
     consider_phipsi: trigger M2 clustering method.
 
@@ -428,6 +481,8 @@ def extract_all_core_aa(pdbs, metal_sel, aa = 'resname HIS', consider_phipsi = F
     for pdb in pdbs:
         if extract2aa:
             aa_cores = get_2aa_core(pdb, metal_sel, aas, extention, extention_out)
+        if extract2aa_sep:
+            aa_cores = get_2aa_sep_core(pdb, metal_sel, filter_aas = False, aas = aas)
         else:
             aa_cores = get_aa_core(pdb, metal_sel, aa, consider_phipsi, extention)
 

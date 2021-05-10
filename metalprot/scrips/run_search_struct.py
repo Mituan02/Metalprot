@@ -46,6 +46,10 @@ clash_query_query = 2.3
 
 clash_query_target = 2.8
 
-ss = search_struct.Search_struct(target_path, outdir, queryss, rmsd_cuts, dist_cuts, num_iter, clash_query_query, clash_query_target)
+use_sep_aas = [False, False]
+
+tolerance = 0.5
+
+ss = search_struct.Search_struct(target_path, outdir, queryss, rmsd_cuts, dist_cuts, num_iter, clash_query_query, clash_query_target, use_sep_aas, tolerance)
 
 ss.run_search_struct()

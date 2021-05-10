@@ -48,9 +48,9 @@ def connectivity_filter(pdb, window_inds):
     return window_inds[[_connectivity_filter(arr, inds) for inds in window_inds]]
 
 
-def supperimpose_target_bb(query, target, rmsd_cut = 1):
+def supperimpose_target_bb(query, target, rmsd_cut = 0.5):
     '''
-    Two possible way:1. Master search; 2. prody calrmsd.
+    Two possible way:1. Master search; 2. prody calcrmsd.
     query: prody pdb
     target: prody pdb
     '''
@@ -159,12 +159,59 @@ def geometry_filter():
     There are only certain geometries for metal contact atoms.
     '''
 
+def get_contact_map(target):
+    '''
+    calculate contact map for 2aa_sep database.
+    return the ordered distance array and resindex array.
+    '''
+    xyzs = []
+    for c in target.select('protein and name CA').getCoords():
+        xyzs.append(c)
+    xyzs = np.vstack(xyzs)  
+    dists = cdist(xyzs, xyzs)
+
+    dist_array = []
+    id_array = []
+    for i in len(xyzs[0]):
+        for j in range(i+1, len(xyzs[0])):
+            dist_array.append(dists[i, j])  
+            id_array.append((i, j))
+
+    dist_array, id_array = zip(*sorted(zip(dist_array, id_array)))
+    return dist_array, id_array
     
+
+def supperimpose_target_bb_bydist(query, target, dist_array, id_array, tolerance = 0.5, rmsd_cut = 0.5):
+    '''
+    Filter by contact map first with contact tolerance. 
+    Then perform transformation and calculate RMSD. 
+    return the Query array. 
+    '''
+    cas = query.query.select('protein and name CA')
+    dist = pr.calcDistance(cas[0], cas[1])
+    left = np.searchsorted(dist_array, dist - tolerance)
+    right = np.searchsorted(dist_array, dist + tolerance, side = 'right')
+
+    new_querys = []
+    if right >= left:
+        for i in range(left, right+1):
+            idi, idj = id_array[i]
+            target_sel = target.select('Resindex ' + str(idi) + ' ' + str(idj))
+            pr.calcTransformation(query.query.select('name N CA C O'), target_sel.select('name N CA C O')).apply(query.query)
+            rmsd = pr.calcRMSD(target_sel.select('name N CA C O'), query.query.select('name N CA C O'))
+
+            if rmsd < rmsd_cut:
+                new_query = Query(query.query.copy(), query.score, query.clu_num, query.clu_total_num)
+                new_query.win.extend(win)          
+                new_querys.append(new_query)
+
+    return new_querys
+
 class Search_struct:
     '''
     The function to search comb
     '''
-    def __init__(self, target_pdb, workdir, queryss, rmsd_cuts, dist_cuts, num_iter, qt_clash_dist, qq_clash_dist):
+    def __init__(self, target_pdb, workdir, queryss, rmsd_cuts, dist_cuts, num_iter, qt_clash_dist, qq_clash_dist, use_sep_aas, tolerance):
         if workdir:
             _workdir = os.path.realpath(workdir)
             if not os.path.exists(_workdir):
@@ -180,6 +227,13 @@ class Search_struct:
         self.num_iter = num_iter
         self.qt_clash_dist = qt_clash_dist
         self.qq_clash_dist = qq_clash_dist
+
+        #Distance map for 2aa_sep database.
+        dist_array, id_array = get_contact_map(target)
+        self.dist_array = dist_array
+        self.id_array = id_array
+        self.use_sep_aas = use_sep_aas
+        self.tolerance = tolerance
 
         if len(queryss) < num_iter:
             print('--Please includes the correct number of query list.')
@@ -203,7 +257,7 @@ class Search_struct:
     def run_search_struct(self):
         self.generate_cquerys()
 
-        ind_exts = self.generate_combs()
+        ind_exts = self.generate_combs(use_sep_aas)
 
         self.build_combs(ind_exts)
 
@@ -214,8 +268,11 @@ class Search_struct:
     def generate_cquerys(self):
         for ind in range(len(self.queryss)):
             cqueryss = []
-            for query in self.queryss[ind]:    
-                cquerys = supperimpose_target_bb(query, self.target, self.rmsd_cuts[ind])
+            for query in self.queryss[ind]:   
+                if self.use_sep_aas[ind]:
+                    cquerys = supperimpose_target_bb_bydist(query, self.target, self.dist_array, self.id_array, self.tolerance, self.rmsd_cuts[ind])
+                else:
+                    cquerys = supperimpose_target_bb(query, self.target, self.rmsd_cuts[ind])
                 cqueryss.append(cquerys)
             self.cquerysss.append(cqueryss)
 

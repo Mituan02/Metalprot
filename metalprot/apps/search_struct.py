@@ -172,7 +172,7 @@ def get_contact_map(target):
 
     dist_array = []
     id_array = []
-    for i in len(xyzs[0]):
+    for i in range(len(xyzs[0])):
         for j in range(i+1, len(xyzs[0])):
             dist_array.append(dists[i, j])  
             id_array.append((i, j))
@@ -229,7 +229,7 @@ class Search_struct:
         self.qq_clash_dist = qq_clash_dist
 
         #Distance map for 2aa_sep database.
-        dist_array, id_array = get_contact_map(target)
+        dist_array, id_array = get_contact_map(self.target)
         self.dist_array = dist_array
         self.id_array = id_array
         self.use_sep_aas = use_sep_aas
@@ -257,7 +257,7 @@ class Search_struct:
     def run_search_struct(self):
         self.generate_cquerys()
 
-        ind_exts = self.generate_combs(use_sep_aas)
+        ind_exts = self.generate_combs()
 
         self.build_combs(ind_exts)
 

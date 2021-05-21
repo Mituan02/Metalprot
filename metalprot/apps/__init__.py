@@ -1,10 +1,7 @@
-__all__ = ['cluster', 'database_investigation', 'ligand_database', 'search_struct', 'transformation', 'extract_vdm', 'generate_sse', 'constant']
+__all__ = ['cluster',  'ligand_database', 'search_struct', 'transformation', 'extract_vdm', 'generate_sse', 'constant']
 
 from . import cluster
 from .cluster import *
-
-from . import database_investigation
-from .database_investigation import *
 
 from . import ligand_database
 from .ligand_database import *

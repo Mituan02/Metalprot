@@ -3,7 +3,7 @@ import sys
 import prody as pr
 
 #You can either add the python package path.
-sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
+#sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
 from metalprot import search_struct, extract_vdm
 
 # Generate queryss

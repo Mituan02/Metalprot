@@ -181,14 +181,81 @@ def get_metal_core_seq(pdb_prody, metal_sel, extend = 4):
         metal_cores.append((pdb_prody.getTitle() + '_' + metal + '_'+ str(count), sel_pdb_prody))        
     return metal_cores
 
-def extract_all_core_seq_from_path(workdir, metal_sel, extend = 3):
+def get_2ndshell_indices(inds, pdb_prody, ni_index):
+    _2nd_resindices = []
+    for ind in inds:
+        if pdb_prody.select('resindex ' + str(ind)).getResnames()[0] == 'HIS':
+            dist1 = pr.calcDistance(pdb_prody.select('index ' + str(ni_index))[0], pdb_prody.select('resindex ' + str(ind) + ' name ND1')[0])
+            dist2 = pr.calcDistance(pdb_prody.select('index ' + str(ni_index))[0], pdb_prody.select('resindex ' + str(ind) + ' name NE2')[0])
+            if dist1 < dist2:
+                index = pdb_prody.select('resindex ' + str(ind) + ' name NE2')[0].getIndex()
+                resindex = pdb_prody.select('resindex ' + str(ind) + ' name NE2')[0].getResindex()
+            else:
+                index = pdb_prody.select('resindex ' + str(ind) + ' name ND1')[0].getIndex()
+                resindex = pdb_prody.select('resindex ' + str(ind) + ' name ND1')[0].getResindex()                         
+        elif pdb_prody.select('resindex ' + str(ind)).getResnames()[0] == 'ASP':
+            dist1 = pr.calcDistance(pdb_prody.select('index ' + str(ni_index))[0], pdb_prody.select('resindex ' + str(ind) + ' name OD1')[0])
+            dist2 = pr.calcDistance(pdb_prody.select('index ' + str(ni_index))[0], pdb_prody.select('resindex ' + str(ind) + ' name OD2')[0])
+            if dist1 < dist2:
+                index = pdb_prody.select('resindex ' + str(ind) + ' name OD2')[0].getIndex()
+                resindex = pdb_prody.select('resindex ' + str(ind) + ' name OD2')[0].getResindex()
+            else:
+                index = pdb_prody.select('resindex ' + str(ind) + ' name OD1')[0].getIndex()
+                resindex = pdb_prody.select('resindex ' + str(ind) + ' name OD1')[0].getResindex()               
+        elif pdb_prody.select('resindex ' + str(ind)).getResnames()[0] == 'GLU':
+            dist1 = pr.calcDistance(pdb_prody.select('index ' + str(ni_index))[0], pdb_prody.select('resindex ' + str(ind) + ' name OE1')[0])
+            dist2 = pr.calcDistance(pdb_prody.select('index ' + str(ni_index))[0], pdb_prody.select('resindex ' + str(ind) + ' name OE2')[0])
+            if dist1 < dist2:
+                index = pdb_prody.select('resindex ' + str(ind) + ' name OE2')[0].getIndex()
+                resindex = pdb_prody.select('resindex ' + str(ind) + ' name OE2')[0].getResindex()
+            else:
+                index = pdb_prody.select('resindex ' + str(ind) + ' name OE1')[0].getIndex()
+                resindex = pdb_prody.select('resindex ' + str(ind) + ' name OE1')[0].getResindex()
+        else:
+            return _2nd_resindices          
+        all_near = pdb_prody.select('heavy and within 3.4 of index ' + str(index) + ' and not resindex ' + str(resindex))
+        if not all_near or not all_near.select('nitrogen or oxygen or sulfur'):
+            continue
+        inds_2nshell = all_near.select('nitrogen or oxygen or sulfur').getResindices()
+        _2nd_resindices.extend(inds_2nshell) 
+
+    return _2nd_resindices
+
+def get_metal_core_seq_2ndshell(pdb_prody, metal_sel, extend = 4):
+    metal = metal_sel.split(' ')[-1]
+    nis = pdb_prody.select(metal_sel)
+
+    # A pdb can contain more than one NI.
+    if not nis:
+        return
+    
+    metal_cores = []
+    count = 0
+    for ni in nis:
+        ni_index = ni.getIndex()
+        #all_near = pdb_prody.select('nitrogen or oxygen or sulfur').select('not water and within 2.83 of index ' + str(ni_index))
+        all_near = pdb_prody.select('protein and within 2.83 of index ' + str(ni_index))
+        if not all_near or not all_near.select('nitrogen or oxygen or sulfur') or len(all_near.select('nitrogen or oxygen or sulfur')) < 3:
+            continue          
+        inds = all_near.select('nitrogen or oxygen or sulfur').getResindices()
+        ext_inds = extend_res_indices(inds, pdb_prody, extend)
+        _2ndshell_inds = get_2ndshell_indices(inds, pdb_prody, ni_index)
+        count += 1
+        sel_pdb_prody = pdb_prody.select('resindex ' + ' '.join([str(ind) for ind in ext_inds]) + ' '+ ' '.join([str(ind) for ind in _2ndshell_inds]) + ' ' + str(ni.getResindex()))
+        metal_cores.append((pdb_prody.getTitle() + '_' + metal + '_'+ str(count), sel_pdb_prody))        
+    return metal_cores
+
+def extract_all_core_seq_from_path(workdir, metal_sel, extend = 3, extract_2ndshell = False):
     cores = []
     for pdb_path in os.listdir(workdir):
         if not pdb_path.endswith(".pdb"):
             continue
         try:
             pdb_prody = pr.parsePDB(workdir + pdb_path)
-            core = get_metal_core_seq(pdb_prody, metal_sel, extend)
+            if extract_2ndshell:
+                core = get_metal_core_seq_2ndshell(pdb_prody, metal_sel, extend)
+            else:
+                core = get_metal_core_seq(pdb_prody, metal_sel, extend)
             if core:
                 cores.extend(core)
             pdb_prody = None
@@ -463,7 +530,37 @@ def get_2aa_sep_core(pdb_prody, metal_sel, filter_aas = False, aas = ['HIS', 'HI
         aa_cores.append((pdb_prody.getTitle() + '_' + aa_name + '_' + str(count), sel_pdb_prody))                
     return aa_cores
 
-def extract_all_core_aa(pdbs, metal_sel, aa = 'resname HIS', consider_phipsi = False, extention = 0, extention_out = 0, extract2aa = False, extract2aa_sep = False, aas = None):
+def get_aa_2ndshell_core(pdb_prody, metal_sel, aa = 'resname HIS'):
+    '''
+    extract amino acid core + metal + 2ndshell.
+
+    '''
+    aa_name = aa.split(' ')[-1]
+    nis = pdb_prody.select(metal_sel)
+
+    # A pdb can contain more than one NI.
+    if not nis:
+        print('No NI?' + pdb_prody.getTitle())
+        return
+    
+    ni = nis[0]
+    aa_cores = []
+    count = 0
+
+    all_aa = pdb_prody.select(aa + ' and within 2.83 of index ' + str(ni.getIndex()))
+    if not all_aa:
+        return          
+    inds = np.unique(all_aa.getResindices())
+    for ind in inds:      
+        _2nshell_resinds = get_2ndshell_indices([ind], pdb_prody, ni.getIndex())
+        if len(_2nshell_resinds) > 0:
+            count += 1
+            print(pdb_prody.getTitle() + '+' + '-'.join([str(x) for x in _2nshell_resinds]))
+            sel_pdb_prody = pdb_prody.select('resindex ' + ' '.join([str(ind) for ind in _2nshell_resinds]) + ' '+ str(ni.getResindex()))
+            aa_cores.append((pdb_prody.getTitle() + '_' + aa_name + '_' + str(count), sel_pdb_prody))                
+    return aa_cores
+
+def extract_all_core_aa(pdbs, metal_sel, aa = 'resname HIS', consider_phipsi = False, extention = 0, extract2aa = False, aas = None, extention_out = 0, extract2aa_sep = False, extract2ndshell = False):
     '''
     consider_phipsi: trigger M2 clustering method.
 
@@ -476,6 +573,10 @@ def extract_all_core_aa(pdbs, metal_sel, aa = 'resname HIS', consider_phipsi = F
     extention_out: useful in M4 clustering method. Decide the N and C terminal extention. Example, extention_out = 1, a-HIS-aa-HIS-a; extention_out = 2, aa-HIS-aa-HIS-aa;
 
     aas: useful in M4 clustering method. Decide which two type of aa are extracted.
+
+    extract2aa_sep: trigger M5 clustering method.
+
+    extract2ndshell: trigger 2ndshell method.
     '''
     all_aa_cores = []
     for pdb in pdbs:
@@ -483,6 +584,8 @@ def extract_all_core_aa(pdbs, metal_sel, aa = 'resname HIS', consider_phipsi = F
             aa_cores = get_2aa_core(pdb, metal_sel, aas, extention, extention_out)
         if extract2aa_sep:
             aa_cores = get_2aa_sep_core(pdb, metal_sel, filter_aas = False, aas = aas)
+        if extract2ndshell:
+            aa_cores = get_aa_2ndshell_core(pdb, metal_sel, aa)
         else:
             aa_cores = get_aa_core(pdb, metal_sel, aa, consider_phipsi, extention)
 

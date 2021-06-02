@@ -117,3 +117,4 @@ for pdb in os.listdir(outdir):
         continue
     pdbs.append(pr.parsePDB(outdir + pdb))
 write_XYZs(outdir, pdbs)
+'''

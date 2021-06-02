@@ -5,6 +5,7 @@ import numpy as np
 from scipy.spatial.distance import cdist
 import math as m
 import string
+import itertools
 from . import constant
 
 def Rx(theta):
@@ -118,6 +119,11 @@ def MergeAtomGroup(outdir, atomGroups, chains, name, keep_metal = False):
     '''
     The function assume each atomGroup has only one chain. 
     '''
+    
+    for i, j in itertools.combinations(list(range(len(atomGroups))), 2):
+        if quick_clash(atomGroups[i], atomGroups[j], clash_dist = 3.0):
+            return
+
     all_ags = atomGroups[0].select('protein').toAtomGroup()
     all_ags.setChids(chains[0])
     
@@ -145,7 +151,7 @@ def MergeAtomGroupAuto(outdir, atomGroups, name, keep_metal = False, write_pdb =
             chain = ag.select('protein and chindex ' + str(chindi)).toAtomGroup()
             chain.setChids(string.ascii_uppercase[chain_num])
             all_ags = all_ags + chain
-    all_ags.setTitle('name')
+    all_ags.setTitle(name)
     if keep_metal:
         all_ags.add(atomGroups[0].select('ion or name NI MN ZN CO CU MG FE').toAtomGroup())
     if write_pdb:
@@ -186,7 +192,7 @@ def cal_dssp(phi, psi, seq):
                 
 def quick_clash(query, query_2nd, clash_dist = 2.0):
     '''
-    If the two query has CA within 2, then it is a crash.
+    If the two query has CA within 3, then it is a crash.
     '''
     xyzs = []
 

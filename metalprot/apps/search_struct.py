@@ -13,6 +13,10 @@ class Query:
         self.clu_total_num = clu_total_num
         self.win = []
 
+    def to_tab_string(self):
+        query_info = self.query.getTitle() + '\t' + str(round(self.score, 2)) + '\t' + str(self.clu_num)  + '\t'+ str(self.clu_total_num)
+        return query_info
+
 class Vdm:
     def __init__(self, querys):
         self.querys = querys       
@@ -296,9 +300,9 @@ class Search_struct:
     def _metal_distance_extract(self, cquerys_0, cquerys_ind, dist_cut):
         xyzs = []
         for cq in cquerys_0:
-            xyzs.append(cq.query.select('ion').getCoords())
+            xyzs.append(cq.query.select('ion or name NI MN ZN CO CU MG FE').getCoords())
         for cq in cquerys_ind:
-            xyzs.append(cq.query.select('ion').getCoords())
+            xyzs.append(cq.query.select('ion or name NI MN ZN CO CU MG FE').getCoords())
 
         xyzs = np.vstack(xyzs)  
         dists = cdist(xyzs, xyzs)
@@ -450,7 +454,7 @@ def write_query_pdbs_depre(outdir, win_extract):
 def metal_distance_extract_depre(target, comb, query, dis_cut = 1, clash_dist = 2.3):
     
     #only calculate the distance with the first vdm superimposed to the target.
-    dist = pr.calcDistance(comb[0].query.select('ion'), query.query.select('ion'))
+    dist = pr.calcDistance(comb[0].query.select('ion or name NI MN ZN CO CU MG FE' ), query.query.select('ion or name NI MN ZN CO CU MG FE' ))
 
     if dist > dis_cut: 
         return 
@@ -469,9 +473,9 @@ def metal_distance_extract_depre(target, comb, query, dis_cut = 1, clash_dist = 
 def metal_distance_extract_depre_depre(target, win_extract, win_extract_2nd, distance_cut = 1, clash_dist = 2.3):
     xyzs = []
     for win in win_extract:
-        xyzs.append(win[0].select('ion').getCoords())
+        xyzs.append(win[0].select('ion or name NI MN ZN CO CU MG FE' ).getCoords())
     for win in win_extract_2nd:
-        xyzs.append(win[0].select('ion').getCoords())
+        xyzs.append(win[0].select('ion or name NI MN ZN CO CU MG FE' ).getCoords())
 
     xyzs = np.vstack(xyzs)  
     dists = cdist(xyzs, xyzs)

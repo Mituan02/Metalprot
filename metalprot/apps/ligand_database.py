@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from . import cluster
 from . import transformation
+from . import core
 
 @dataclass
 class clu_info:
@@ -99,6 +100,19 @@ def writepdb(cores, outdir):
     for c in cores:
         outfile = c[0].split('.')[0]
         pr.writePDB(outdir + outfile + '.pdb', c[1])
+
+def load_cores(workdir):
+    cores = []
+    for pdb_path in os.listdir(workdir):
+        if not pdb_path.endswith(".pdb"):
+            continue
+        try:
+            pdb_prody = pr.parsePDB(workdir + pdb_path)
+            _core = core.Core(pdb_prody)
+            cores.append(_core)
+        except:
+            print('not sure')   
+    return cores
 
 # Write Summary
 
@@ -340,7 +354,7 @@ def extract_rep_and_writepdb(pdbs, clusters, metal_sel, outdir):
 
     superimpose_core_and_writepdb(sel_pdbs, sel_pdbs[0], metal_sel, outdir)
 
-# Extract Cores from the prepared database. //For manucheck. 
+### Extract Cores from the prepared database. //For manucheck. 
 
 def get_metal_core(pdb_prody, metal_sel):
     nis = pdb_prody.select(metal_sel)
@@ -368,7 +382,7 @@ def extract_all_core(pdbs, metal_sel):
             cores.extend(core)
     return cores
 
-# Extract and Cluster Cores from the prepared database.
+### Extract and Cluster Cores from the prepared database.
 
 def get_aa_core(pdb_prody, metal_sel, aa = 'resname HIS', consider_phipsi = False, extention = 0):
     '''
@@ -414,7 +428,7 @@ def get_aa_core(pdb_prody, metal_sel, aa = 'resname HIS', consider_phipsi = Fals
         aa_cores.append((pdb_prody.getTitle() + '_' + aa_name + '_' + str(count), sel_pdb_prody))                
     return aa_cores
         
-def get_2aa_core(pdb_prody, metal_sel, aas = ['HIS', 'HIS'], extention = 3, extention_out = 0):
+def get_2aa_core(pdb_prody, metal_sel, filter_aas = False, aas = ['HIS', 'HIS'], extention = 3, extention_out = 0):
     '''
     extract 2 amino acid core + metal.
 
@@ -425,7 +439,10 @@ def get_2aa_core(pdb_prody, metal_sel, aas = ['HIS', 'HIS'], extention = 3, exte
     aas: useful in M4 clustering method. Decide which two type of aa are extracted.
 
     '''
-    aa_name = '_'.join(aas)
+    if aas:
+        aa_name = '_'.join(aas)
+    else:
+        aa_name = 'Any'
     nis = pdb_prody.select(metal_sel)
 
     # A pdb can contain more than one NI.
@@ -453,13 +470,14 @@ def get_2aa_core(pdb_prody, metal_sel, aas = ['HIS', 'HIS'], extention = 3, exte
             overlap = list(set(exts[i]) & set(exts[j]))
             if len(overlap) ==0: continue
 
-            filtered = True
-            if aas and len(aas)==2:
-                if pdb_prody.select('resindex ' + str(inds[i])).getResnames()[0] == aas[0] and pdb_prody.select('resindex ' + str(inds[j])).getResnames()[0] == aas[1]:
-                    filtered= False
-                elif pdb_prody.select('resindex ' + str(inds[i])).getResnames()[0] == aas[1] and pdb_prody.select('resindex ' + str(inds[j])).getResnames()[0] == aas[0]:
-                    filtered= False
-            if filtered: continue
+            if filter_aas:
+                filtered = True
+                if aas and len(aas)==2:
+                    if pdb_prody.select('resindex ' + str(inds[i])).getResnames()[0] == aas[0] and pdb_prody.select('resindex ' + str(inds[j])).getResnames()[0] == aas[1]:
+                        filtered= False
+                    elif pdb_prody.select('resindex ' + str(inds[i])).getResnames()[0] == aas[1] and pdb_prody.select('resindex ' + str(inds[j])).getResnames()[0] == aas[0]:
+                        filtered= False
+                if filtered: continue
 
             pairs.append((i, j))
             if inds[i] < inds[j]:
@@ -488,7 +506,10 @@ def get_2aa_sep_core(pdb_prody, metal_sel, filter_aas = False, aas = ['HIS', 'HI
     aas: useful in M4 clustering method. Decide which two type of aa are extracted.
 
     '''
-    aa_name = '_'.join(aas)
+    if aas:
+        aa_name = '_'.join(aas)
+    else:
+        aa_name = 'Any'
     nis = pdb_prody.select(metal_sel)
 
     # A pdb can contain more than one NI.
@@ -530,6 +551,17 @@ def get_2aa_sep_core(pdb_prody, metal_sel, filter_aas = False, aas = ['HIS', 'HI
         aa_cores.append((pdb_prody.getTitle() + '_' + aa_name + '_' + str(count), sel_pdb_prody))                
     return aa_cores
 
+def get_inds_from_resind(pdb_prody, resind, aa = 'resname HIS'):
+    if aa == 'resname HIS':
+        inds = pdb_prody.select('name ND1 NE2 and resindex ' + str(resind)).getIndices()
+    elif aa == 'resname ASP':
+        inds = pdb_prody.select('name OD1 OD2 and resindex ' + str(resind)).getIndices()
+    elif aa == 'resname GLU':
+        inds = pdb_prody.select('name OE1 OE2 and resindex ' + str(resind)).getIndices()
+    else:
+        inds = []
+    return inds
+
 def get_aa_2ndshell_core(pdb_prody, metal_sel, aa = 'resname HIS'):
     '''
     extract amino acid core + metal + 2ndshell.
@@ -550,17 +582,20 @@ def get_aa_2ndshell_core(pdb_prody, metal_sel, aa = 'resname HIS'):
     all_aa = pdb_prody.select(aa + ' and within 2.83 of index ' + str(ni.getIndex()))
     if not all_aa:
         return          
-    inds = np.unique(all_aa.getResindices())
-    for ind in inds:      
-        _2nshell_resinds = get_2ndshell_indices([ind], pdb_prody, ni.getIndex())
+    resinds = np.unique(all_aa.getResindices())
+    for resind in resinds:      
+        #inds = get_inds_from_resind(pdb_prody, resind, aa)
+        _2nshell_resinds = get_2ndshell_indices([resind], pdb_prody, ni.getIndex())
         if len(_2nshell_resinds) > 0:
-            count += 1
-            print(pdb_prody.getTitle() + '+' + '-'.join([str(x) for x in _2nshell_resinds]))
-            sel_pdb_prody = pdb_prody.select('resindex ' + ' '.join([str(ind) for ind in _2nshell_resinds]) + ' '+ str(ni.getResindex()))
-            aa_cores.append((pdb_prody.getTitle() + '_' + aa_name + '_' + str(count), sel_pdb_prody))                
+            for _2resind in _2nshell_resinds:
+                count += 1
+                print(pdb_prody.getTitle() + '+' + '-'.join([str(x) for x in _2nshell_resinds]))
+                sel_pdb_prody = pdb_prody.select('resindex ' + str(resind) + ' ' + str(_2resind) + ' ' + str(ni.getResindex()))
+                #sel_pdb_prody = pdb_prody.select('resindex ' + str(_2resind) + ' or index ' + ' '.join([str(ind) for ind in inds]) + ' ' + str(ni.getIndex()))
+                aa_cores.append((pdb_prody.getTitle() + '_' + aa_name + '_' + str(count), sel_pdb_prody))                
     return aa_cores
 
-def extract_all_core_aa(pdbs, metal_sel, aa = 'resname HIS', consider_phipsi = False, extention = 0, extract2aa = False, aas = None, extention_out = 0, extract2aa_sep = False, extract2ndshell = False):
+def extract_all_core_aa(pdbs, metal_sel, aa = 'resname HIS', consider_phipsi = False, extention_out = 0, extract2aa = False, extention = 0, filter_aas = False, aas = None,  extract2aa_sep = False, extract2ndshell = False):
     '''
     consider_phipsi: trigger M2 clustering method.
 
@@ -582,16 +617,18 @@ def extract_all_core_aa(pdbs, metal_sel, aa = 'resname HIS', consider_phipsi = F
     for pdb in pdbs:
         if extract2aa:
             aa_cores = get_2aa_core(pdb, metal_sel, aas, extention, extention_out)
-        if extract2aa_sep:
-            aa_cores = get_2aa_sep_core(pdb, metal_sel, filter_aas = False, aas = aas)
-        if extract2ndshell:
+        elif extract2aa_sep:
+            aa_cores = get_2aa_sep_core(pdb, metal_sel, filter_aas = filter_aas, aas = aas)
+        elif extract2ndshell:
             aa_cores = get_aa_2ndshell_core(pdb, metal_sel, aa)
         else:
-            aa_cores = get_aa_core(pdb, metal_sel, aa, consider_phipsi, extention)
+            aa_cores = get_aa_core(pdb, metal_sel, aa, consider_phipsi, extention_out)
 
         if aa_cores:
             all_aa_cores.extend(aa_cores)
     return all_aa_cores
+
+### clustring
 
 def superimpose_aa_core(pdbs, rmsd = 0.5, len_sel = 5, align_sel = 'name C CA N O NI', min_cluster_size = 2):
     '''

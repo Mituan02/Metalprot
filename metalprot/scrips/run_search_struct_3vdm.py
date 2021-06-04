@@ -38,7 +38,7 @@ queryss.append(query_3rds)
 
 workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
 
-outdir = workdir + 'output_test_3vdm1/'
+outdir = workdir + 'output_test_3vdm2/'
 
 target_path = workdir + '5od1_zn.pdb'
 
@@ -58,4 +58,5 @@ tolerance = 0.5
 
 ss = search_struct.Search_struct(target_path, outdir, queryss, rmsd_cuts, dist_cuts, num_iter, clash_query_query, clash_query_target, use_sep_aas, tolerance)
 
-ss.run_search_struct()
+#ss.run_search_struct()
+ss.run_round_search_structure()

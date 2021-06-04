@@ -158,6 +158,22 @@ def MergeAtomGroupAuto(outdir, atomGroups, name, keep_metal = False, write_pdb =
         pr.writePDB(outdir + name + '.pdb', all_ags)
     return all_ags
 
+def MergeAtomGroup(atomGroups, name):
+    chain_num = 0
+    all_ags = atomGroups[0].toAtomGroup()
+    all_ags.setChids(string.ascii_uppercase[chain_num])
+    for i in range(len(atomGroups)):
+        ag = atomGroups[i]
+        for chindi in np.unique(ag.getChindices()):
+            if i == 0 and chindi == 0:
+                continue
+            chain_num += 1
+            chain = ag.toAtomGroup()
+            chain.setChids(string.ascii_uppercase[chain_num])
+            all_ags = all_ags + chain
+    all_ags.setTitle(name)
+    return all_ags
+
 def cal_phipsi(pr_pdb):
     seq = []
     phi_180 = []

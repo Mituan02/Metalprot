@@ -7,7 +7,7 @@ import prody as pr
 from scipy.spatial.distance import cdist, dice
 import datetime
 from .ligand_database import clu_info
-
+from .generate_sse import MergeAtomGroup
 
 class Query:
     def __init__(self, query, score, clu_num, clu_total_num):
@@ -308,7 +308,7 @@ class Search_struct:
         for x, y in xys:
             self.pair_extracts[x][y] = dict()
 
-        #depre 
+        #depre---------------------------- 
         #list of list of list(None), the len of list(None) equal to the len of queryss[0].
         self.extractsss = []
         for i in range(len(self.queryss)):
@@ -317,7 +317,51 @@ class Search_struct:
                 extractss.append([None for i in range(len(self.queryss[0]))])
             self.extractsss.append(extractss)
         self.queues = []
+
+
+    def run_round_search_structure(self):
+        '''
+        The searching speed is similar to run_search_struct. 
+        '''     
+        self.generate_cquerys()
+        comb_inds = self.get_round_pair(dist_cut = 1)
+
+        self.build_combs(comb_inds)
+
+        self.write_combs()
+
+        self.write_comb_info()
+
         
+    def get_round_pair(self, dist_cut): 
+
+        comb_inds = []
+        for i in range(1, self.num_iter):
+            all_inds = generate_ind_combination_listoflist(self.queryss[0:i+1])
+            if len(comb_inds) > 0:
+                all_inds = self.filter_all_inds(all_inds, comb_inds)
+            comb_inds.clear()
+
+            for inds in all_inds:
+                extracts = self.get_pair_extracts(inds, dist_cut)
+                if extracts and len(extracts)>0:
+                    combs = get_combs_from_pair_extract(i+1, extracts)
+                    for comb in combs:
+                        comb_inds.append((inds, comb))
+
+        return comb_inds
+
+
+    def filter_all_inds(self, all_inds, comb_inds):
+        inds_set = set([inds for (inds, comb) in comb_inds])
+
+        filtered_all_inds = []
+        for inds in all_inds:
+            if tuple(inds[0:-1]) in inds_set:
+                filtered_all_inds.append(inds)
+
+        return filtered_all_inds
+
 
     def run_search_struct(self):
         self.generate_cquerys()

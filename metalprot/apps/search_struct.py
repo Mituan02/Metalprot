@@ -1,9 +1,13 @@
 import os
+from typing import Dict
 import numpy as np
 import itertools
+from numpy.lib.function_base import extract
 import prody as pr
-from scipy.spatial.distance import cdist
+from scipy.spatial.distance import cdist, dice
+import datetime
 from .ligand_database import clu_info
+
 
 class Query:
     def __init__(self, query, score, clu_num, clu_total_num):
@@ -17,7 +21,7 @@ class Query:
         query_info = self.query.getTitle() + '\t' + str(round(self.score, 2)) + '\t' + str(self.clu_num)  + '\t'+ str(self.clu_total_num)
         return query_info
 
-class Vdm:
+class Comb:
     def __init__(self, querys):
         self.querys = querys       
         self.total_score = sum([q.score for q in querys])
@@ -50,6 +54,19 @@ def connectivity_filter(pdb, window_inds):
     segids[np.array([len(s)!=1 for s in segids])] = 'a'
     arr[:, 2] = np.array(list(map(ord, segids))) 
     return window_inds[[_connectivity_filter(arr, inds) for inds in window_inds]]
+
+
+def target_position_filter(window_inds, select_inds):
+    filter_window_inds = []
+    for inds in window_inds:
+        exist = True
+        for ind in inds:
+            if not ind in select_inds:
+                exist = False
+                break
+        if exist:
+            filter_window_inds.append(inds)
+    return np.array(filter_window_inds)
 
 
 def supperimpose_target_bb(query, target, rmsd_cut = 0.5):
@@ -211,6 +228,45 @@ def supperimpose_target_bb_bydist(query, target, dist_array, id_array, tolerance
 
     return new_querys
 
+def generate_ind_combination_listoflist(_listoflist):
+    _all_list = []
+    for i in range(len(_listoflist)):
+        _all_list.append(list(range(len(_listoflist[i]))))     
+    all_inds = list(itertools.product(*_all_list))
+
+    return all_inds
+
+def get_combs_from_pair_extract(xys_len, extracts):
+
+    xys = list(itertools.combinations(range(xys_len), 2))
+
+    all_inds = generate_ind_combination_listoflist(extracts)
+
+    comb_inds = []
+    for inds in all_inds:
+        extract = [extracts[j][inds[j]] for j in range(len(inds))]
+        ext_inds = [None]*xys_len
+        conflict = False
+        for i in range(len(xys)):               
+            x, y = xys[i]
+            if ext_inds[x]:
+                if ext_inds[x] != extract[i][0]:
+                    conflict = True
+                    break
+            else:
+                ext_inds[x] = extract[i][0]
+
+            if ext_inds[y]:
+                if ext_inds[y] != extract[i][1]:
+                    conflict = True
+                    break
+            else:
+                ext_inds[y] = extract[i][1]
+        if not conflict:
+            comb_inds.append(ext_inds)
+
+    return comb_inds
+
 class Search_struct:
     '''
     The function to search comb
@@ -244,11 +300,15 @@ class Search_struct:
         self.queryss = queryss
 
         #---------------------------------
-        self.queues = []
-        self.vdms = []
-
+        self.combs = []
         self.cquerysss = []
 
+        xys = itertools.combinations(range(len(self.queryss)), 2)
+        self.pair_extracts = [[None]* len(self.queryss)]* len(self.queryss)
+        for x, y in xys:
+            self.pair_extracts[x][y] = dict()
+
+        #depre 
         #list of list of list(None), the len of list(None) equal to the len of queryss[0].
         self.extractsss = []
         for i in range(len(self.queryss)):
@@ -256,18 +316,29 @@ class Search_struct:
             for j in range(len(self.queryss[i])):
                 extractss.append([None for i in range(len(self.queryss[0]))])
             self.extractsss.append(extractss)
-
+        self.queues = []
+        
 
     def run_search_struct(self):
         self.generate_cquerys()
 
-        ind_exts = self.generate_combs()
+        all_inds = generate_ind_combination_listoflist(self.queryss)
+        print(len(all_inds))
 
-        self.build_combs(ind_exts)
+        comb_inds = []
+        for inds in all_inds:
+            extracts = self.get_pair_extracts(inds, dist_cut = 1)
+            if extracts and len(extracts)>0:
+                combs = get_combs_from_pair_extract(self.num_iter, extracts)
+                for comb in combs:
+                    comb_inds.append((inds, comb))
+
+        self.build_combs(comb_inds)
 
         self.write_combs()
 
         self.write_comb_info()
+
 
     def generate_cquerys(self):
         for ind in range(len(self.queryss)):
@@ -281,28 +352,48 @@ class Search_struct:
             self.cquerysss.append(cqueryss)
 
 
-    def generate_combs(self):   
-        _all_list = []
-        for i in range(len(self.queryss)):
-            _all_list.append(list(range(len(self.queryss[i]))))
-        
-        all_inds = list(itertools.product(*_all_list))
+    def get_pair_extracts(self, inds, dist_cut):
 
-        all_ind_extracts = []
-        for inds in all_inds:
-            extractss = self.metal_distance_extract(self.target, inds)
-            if not extractss or len(extractss)<=0: continue
-            for exts in extractss:
-                all_ind_extracts.append((inds, exts))
-        
-        return all_ind_extracts
+        xys = itertools.combinations(range(len(inds)), 2)
+
+        extractss = []
+
+        for x, y in xys:         
+            #if already calculated, store
+            if (inds[x], inds[y]) in self.pair_extracts[x][y].keys():
+                #print('See it in the dictionary.')
+                extracts_filtered = self.pair_extracts[x][y][(inds[x], inds[y])]
+                if extracts_filtered:
+                    extractss.append(extracts_filtered)
+                    continue          
+                else:
+                    return
+            
+            cquerys_a = self.cquerysss[x][inds[x]]
+            cquerys_b = self.cquerysss[y][inds[y]]
+
+            if len(cquerys_a) <= 0 or len(cquerys_b) <=0: 
+                #store
+                self.pair_extracts[x][y][(inds[x], inds[y])] = None
+                return
+
+            extracts = self._metal_distance_extract(cquerys_a, cquerys_b, dist_cut)
+            extracts_filtered = self.distance_extracts_filter(cquerys_a, cquerys_b,extracts)
+            #store
+            self.pair_extracts[x][y][(inds[x], inds[y])] = extracts_filtered
+            if extracts_filtered:
+                extractss.append(extracts_filtered)
+            else:
+                return
+        return extractss
+
 
     def _metal_distance_extract(self, cquerys_0, cquerys_ind, dist_cut):
         xyzs = []
         for cq in cquerys_0:
-            xyzs.append(cq.query.select('ion or name NI MN ZN CO CU MG FE').getCoords())
+            xyzs.append(cq.query.select('ion or name NI MN ZN CO CU MG FE')[0].getCoords())
         for cq in cquerys_ind:
-            xyzs.append(cq.query.select('ion or name NI MN ZN CO CU MG FE').getCoords())
+            xyzs.append(cq.query.select('ion or name NI MN ZN CO CU MG FE')[0].getCoords())
 
         xyzs = np.vstack(xyzs)  
         dists = cdist(xyzs, xyzs)
@@ -310,12 +401,16 @@ class Search_struct:
         np.fill_diagonal(dists, 5)
         extracts = np.argwhere(dists <= dist_cut)
 
-        extracts = [(ex[0], ex[1] - len(cquerys_0)) for ex in extracts if ex[0] < len(cquerys_0) and ex[1] > len(cquerys_0)]
+        extracts = [(ex[0], ex[1] - len(cquerys_0)) for ex in extracts if ex[0] < len(cquerys_0) and ex[1] >= len(cquerys_0)]
         
-        if len(extracts) <= 0: 
-            return 
+        return extracts
     
+
+    def distance_extracts_filter(self, cquerys_0, cquerys_ind, extracts):
         extracts_filtered = []
+        if len(extracts) <= 0: 
+            return
+    
         for i, j in extracts:
             if simple_clash(cquerys_0[i].query, cquerys_ind[j].query, self.qq_clash_dist): 
                 #print('two query clash.')
@@ -324,13 +419,73 @@ class Search_struct:
                 #print('query target clash.')
                 continue
              
-            extracts_filtered.append([i, j])
+            extracts_filtered.append((i, j))
         if len(extracts_filtered) <= 0: 
-            return 
+            return
         return extracts_filtered
 
+ 
+    def build_combs(self, all_ind_extracts):
+        
+        for inds, extracts in all_ind_extracts:
+            vdms = []
+            for i in range(len(inds)):
+                vdms.append(self.cquerysss[i][inds[i]][extracts[i]])
+            self.combs.append(Comb(vdms))
+        if len(self.combs) > 0:
+            self.combs.sort(key = lambda x: x.total_score, reverse = True) 
 
-    def metal_distance_extract(self, target, inds):
+
+    def write_combs(self):      
+        outdir = self.workdir + '/combs/'
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+
+        rank = 1
+        for c in self.combs:
+            count = 1
+            for query in c.querys:
+                pdb_path = outdir + str(rank) + '_' + str(count) + '_' + str(round(c.total_score, 2)) + '_' + query.query.getTitle()
+                pr.writePDB(pdb_path, query.query)
+                count+=1
+            rank += 1
+
+
+    def write_comb_info(self):
+        with open(self.workdir + '/_summary.txt', 'w') as f:
+            f.write('total_score\ttotal_clu_number\tquerys\tscores\tclu_nums\n')
+            for v in self.combs:
+                f.write(v.to_tab_string() + '\n')  
+    
+
+    def run_search_struct_depre(self):
+        self.generate_cquerys()
+
+        ind_exts = self.generate_combs_depre()
+
+        self.build_combs(ind_exts)
+
+        self.write_combs()
+
+        self.write_comb_info()
+
+    def generate_combs_depre(self):   
+        _all_list = []
+        for i in range(len(self.queryss)):
+            _all_list.append(list(range(len(self.queryss[i]))))
+        
+        all_inds = list(itertools.product(*_all_list))
+
+        all_ind_extracts = []
+        for inds in all_inds:
+            extractss = self.metal_distance_extract_depre(self.target, inds)
+            if not extractss or len(extractss)<=0: continue
+            for exts in extractss:
+                all_ind_extracts.append((inds, exts))
+        
+        return all_ind_extracts
+
+    def metal_distance_extract_depre(self, target, inds):
         '''
         Extract ids that satisfy distance limitation and clash filters.
         '''
@@ -378,158 +533,3 @@ class Search_struct:
                 extract_all_filtered.append(the_extract)
 
         return extract_all_filtered
-
-
-    def build_combs(self, all_ind_extracts):
-        
-        for inds, extracts in all_ind_extracts:
-            vdms = []
-            for i in range(len(inds)):
-                vdms.append(self.cquerysss[i][inds[i]][extracts[i]])
-            self.vdms.append(Vdm(vdms))
-        if len(self.vdms) > 0:
-            self.vdms.sort(key = lambda x: x.total_score, reverse = True) 
-
-
-    def write_combs(self):      
-        outdir = self.workdir + '/combs/'
-        if not os.path.exists(outdir):
-            os.mkdir(outdir)
-
-        rank = 1
-        for c in self.vdms:
-            count = 1
-            for query in c.querys:
-                pdb_path = outdir + str(rank) + '_' + str(count) + '_' + str(round(c.total_score, 2)) + '_' + query.query.getTitle()
-                pr.writePDB(pdb_path, query.query)
-                count+=1
-            rank += 1
-
-    def write_comb_info(self):
-        with open(self.workdir + '/_summary.txt', 'w') as f:
-            f.write('total_score\ttotal_clu_number\tquerys\tscores\tclu_nums\n')
-            for v in self.vdms:
-                f.write(v.to_tab_string() + '\n')  
-    
-
-    def generate_combs_depre(self):   
-        for query in self.queryss[0]:
-            new_querys = supperimpose_target_bb(query, self.target, self.rmsd_cuts[0])
-            for q in new_querys:
-                self.queues.append(([q], self.num_iter - 1))
-
-        while len(self.queues) > 0:
-            print('--In the queues')
-            queue = self.queues.pop(0)
-            self.construct_comb(queue[0], queue[1])
-        
-        self.write_combs()
-
-
-    def construct_comb_depre(self, comb, num_iter):
-        ind = self.num_iter - num_iter
-
-        if ind == self.num_iter:
-            print('Generate final combination.')
-            self.vdms.append(Vdm(comb))
-            return
-
-        for query in self.queryss[ind]:
-            _querys = supperimpose_target_bb(query, self.target, self.rmsd_cuts[ind])
-            for q in _querys:
-                _comb = metal_distance_extract(self.target, comb, q, self.dist_cuts[ind])
-                if not _comb: continue
-                self.queues.append((_comb, num_iter-1))
-
-
-#The following functions are deprecated. 
-def write_query_pdbs_depre(outdir, win_extract):
-    if not os.path.exists(outdir):
-        os.mkdir(outdir)
-    count = 1
-    for wx in win_extract:
-        pr.writePDB(outdir + 'ex_' + str(count) + '_' + wx[0].getTitle(), wx[0])
-        count += 1
-
-def metal_distance_extract_depre(target, comb, query, dis_cut = 1, clash_dist = 2.3):
-    
-    #only calculate the distance with the first vdm superimposed to the target.
-    dist = pr.calcDistance(comb[0].query.select('ion or name NI MN ZN CO CU MG FE' ), query.query.select('ion or name NI MN ZN CO CU MG FE' ))
-
-    if dist > dis_cut: 
-        return 
-
-    if query_target_clash(query.query, query.win, target, clash_dist):
-            print('query target clash.')
-            return
-    for c in comb: 
-        if simple_clash(c.query, query.query, clash_dist): 
-            print('two query clash.')
-            return
-        
-    comb.append(query)
-    return comb 
-
-def metal_distance_extract_depre_depre(target, win_extract, win_extract_2nd, distance_cut = 1, clash_dist = 2.3):
-    xyzs = []
-    for win in win_extract:
-        xyzs.append(win[0].select('ion or name NI MN ZN CO CU MG FE' ).getCoords())
-    for win in win_extract_2nd:
-        xyzs.append(win[0].select('ion or name NI MN ZN CO CU MG FE' ).getCoords())
-
-    xyzs = np.vstack(xyzs)  
-    dists = cdist(xyzs, xyzs)
-
-    np.fill_diagonal(dists, 5)
-    extracts = np.argwhere(dists <= 1)
-
-    extracts = [(ex[0], ex[1] - len(win_extract)) for ex in extracts if ex[0] < len(win_extract) and ex[1] > len(win_extract)]
-    
-    extracts_filtered = []
-    for i, j in extracts:
-        if simple_clash(win_extract[i][0], win_extract_2nd[j][0], clash_dist): 
-            print('two query clash.')
-            continue
-        if query_target_clash(win_extract[i][0], [], target) or query_target_clash(win_extract_2nd[j][0], [], target, clash_dist) :
-            print('query target clash.')
-            continue
-        extracts_filtered.append((i, j))
-
-    return extracts_filtered
-
-def write_cores_depre(outdir, win_extract, win_extract_2nd, extracts):
-    if not os.path.exists(outdir):
-        os.mkdir(outdir)
-    count = 1
-
-    for i, j in extracts:
-        pr.writePDB(outdir + 'core_' + str(count) + '_' + win_extract[i][0].getTitle(), win_extract[i][0])
-        pr.writePDB(outdir + 'core_' + str(count) + '_' + win_extract_2nd[j][0].getTitle(), win_extract_2nd[j][0])
-        count += 1
-    
-def build_core_depre(outdir, target, query, query_2nd, rmsd_cut, rmsd_cut_2nd, distance_cut):
-    
-    print(query.getTitle())
-
-    print(query_2nd.getTitle())
-    
-    win_extract = supperimpose_target_bb(query, target, rmsd_cut)
-
-    win_extract_2nd = supperimpose_target_bb(query_2nd, target, rmsd_cut_2nd)
-
-    print(len(win_extract))
-
-    print(len(win_extract_2nd))
-
-    if len(win_extract) == 0 or len(win_extract_2nd) ==0: 
-        return len(win_extract), len(win_extract_2nd), None
-
-    extracts = metal_distance_extract(target, win_extract, win_extract_2nd, distance_cut)
-    if len(extracts) > 0:
-        print(outdir)
-        write_cores(outdir, win_extract, win_extract_2nd, extracts)
-
-    return len(win_extract), len(win_extract_2nd), extracts
-
-
-

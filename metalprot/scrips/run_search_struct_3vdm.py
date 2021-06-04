@@ -16,29 +16,31 @@ print(query_dir)
 
 #Get query pdbs 
 
-querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['cluster', '7_'], score_cut = 0, clu_num_cut = 10)
+querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['M1-1_AAMetalSc_HIS_cluster02'], score_cut = 1, clu_num_cut = 100)
+
+print(len(querys))
 
 queryss.append(querys)
 
 #Get query_2nd pdbs 
 
-query_2nds = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['cluster', '4_', '_sc'], score_cut = 1, clu_num_cut = 50)
+query_2nds = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['M1-1_AAMetalSc_HIS_cluster02'], score_cut = 1, clu_num_cut = 100)
 
 queryss.append(query_2nds)
 
 #Get query_3rd pdbs 
 
-query_3rds = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['cluster', '4_', '_sc'], score_cut = 1, clu_num_cut = 50)
+query_3rds = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['M1-1_AAMetalSc_HIS_cluster02'], score_cut = 1, clu_num_cut = 100)
 
 queryss.append(query_3rds)
 
 # run Search_struct
 
-workdir = '/mnt/e/DesignData/ligands/Design_Sam/'
+workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
 
-outdir = workdir + 'output_test_3vdm/'
+outdir = workdir + 'output_test_3vdm1/'
 
-target_path = workdir + '3into4_helix_assembly_renum.pdb'
+target_path = workdir + '5od1_zn.pdb'
 
 rmsd_cuts = [0.5, 0.5, 0.5]
 

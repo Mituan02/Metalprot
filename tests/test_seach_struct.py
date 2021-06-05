@@ -33,9 +33,12 @@ query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb/'
 #Get query pdbs 
 querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['M1-1_AAMetalSc_HIS_cluster02'], score_cut = 1, clu_num_cut = 100)
 #assert len(querys) == 14
-queryss.append(querys)
-queryss.append(querys)
-queryss.append(querys)
+queryss.append([querys[18], querys[20], querys[22]])
+queryss.append([querys[18], querys[20], querys[22]])
+queryss.append([querys[18], querys[20], querys[22]])
+# queryss.append(querys)
+# queryss.append(querys)
+# queryss.append(querys)
 
 workdir = '/mnt/e/GitHub_Design/Metalprot/tests/test_data/'
 #workdir = os.path.dirname(os.path.realpath(__file__)) + '/test_data/'
@@ -64,6 +67,8 @@ ss = search_struct.Search_struct(target_path, outdir, queryss, rmsd_cuts, dist_c
 
 ss.generate_cquerys()
 
+ss.run_iter_search_structure()
+
 all_inds = search_struct.generate_ind_combination_listoflist(ss.queryss)
 #assert len(all_inds) == 2744
 
@@ -72,7 +77,7 @@ all_inds = search_struct.generate_ind_combination_listoflist(ss.queryss)
 inds = all_inds[0]
 xys = list(itertools.combinations(range(len(inds)), 2))
 
-x, y = xys[0]
+x, y = xys[2]
 cquerys_a = ss.cquerysss[x][inds[x]]
 cquerys_b = ss.cquerysss[y][inds[y]]
 #assert len(cquerys_a) == len(cquerys_b)
@@ -85,9 +90,8 @@ extracts = ss.get_pair_extracts(inds, dist_cut = 1)
 assert ss.pair_extracts[x][y]
 '''
 
-
 #test get_pair_extracts
-
+'''
 comb_inds = []
 for inds in all_inds:
     extracts = ss.get_pair_extracts(inds, dist_cut = 1)
@@ -97,3 +101,39 @@ for inds in all_inds:
             comb_inds.append((inds, comb))
 
 ss.build_combs(comb_inds)
+ss.write_combs()
+ss.write_comb_info()
+'''
+
+ss.cquerysss = []
+ss.generate_cvdms(ss.target)
+
+# if not os.path.exists(workdir + 'test/'):
+#     os.mkdir(workdir + 'test/')
+# for t in ss.cquerysss[0][0]:
+#     pr.writePDB(workdir + 'test/' + t.query.getTitle(), t.query)
+import itertools
+xys = list(itertools.combinations(range(ss.num_iter), 2))
+ss.pair_extracts = [[0]* ss.num_iter]* ss.num_iter
+ss.pair_extracts = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+for x, y in xys:
+    ss.pair_extracts[x][y] = dict()
+
+all_inds = [[i]*ss.num_iter for i in range(len(ss.cquerysss[0]))]
+print(len(all_inds))
+
+comb_inds = []
+for inds in all_inds:
+    extracts = ss.get_pair_extracts(inds, dist_cut = 0.3)
+    if extracts and len(extracts)>0:
+        combs = search_struct.get_combs_from_pair_extract(ss.num_iter, extracts)
+        for comb in combs:
+            comb_inds.append((inds, comb))
+
+
+ss.combs = []
+ss.build_combs(comb_inds)
+
+ss.write_combs( outpath= '/mem_combs/')
+
+ss.write_comb_info( filename= '_summary_mem.txt')

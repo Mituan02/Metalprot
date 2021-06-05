@@ -1,0 +1,2 @@
+total_score	total_clu_number	querys	scores	clu_nums
+3.37	108	m1-1_cluster_18_mem_8_centroid_2z45_ZN_3_AAMetal_HIS_mem0||m1-1_cluster_20_mem_22_centroid_4lmy_ZN_1_AAMetal_HIS_mem2||m1-1_cluster_22_mem_30_centroid_5cio_ZN_2_AAMetal_HIS_mem1	1.18||1.12||1.07	38||36||34

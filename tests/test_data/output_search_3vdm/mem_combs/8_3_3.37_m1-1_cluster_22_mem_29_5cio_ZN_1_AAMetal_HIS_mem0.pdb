@@ -1,0 +1,12 @@
+REMARK AtomGroup m1-1_cluster_22_mem_29_5cio_ZN_1_AAMetal_HIS_mem0
+ATOM      1  N   HIS A  48      34.805   6.835  20.634  1.00 37.42           N
+ATOM      2  CA  HIS A  48      35.267   8.198  20.890  1.00 37.73           C
+ATOM      3  C   HIS A  48      36.254   8.229  22.048  1.00 42.45           C
+ATOM      4  O   HIS A  48      37.303   8.875  21.966  1.00 42.73           O
+ATOM      5  CB  HIS A  48      34.063   9.116  21.168  1.00 40.75           C
+ATOM      6  CG  HIS A  48      34.406  10.572  21.331  1.00 44.34           C
+ATOM      7  ND1 HIS A  48      33.470  11.516  21.708  1.00 46.15           N
+ATOM      8  CD2 HIS A  48      35.570  11.249  21.171  1.00 45.75           C
+ATOM      9  CE1 HIS A  48      34.041  12.708  21.774  1.00 44.24           C
+ATOM     10  NE2 HIS A  48      35.315  12.574  21.454  1.00 48.66           N
+HETATM   11  ZN  ZN  A 801      36.693  14.006  21.142  1.00 53.29          ZN

@@ -7,15 +7,16 @@ import prody as pr
 from scipy.spatial.distance import cdist, dice
 import datetime
 from .ligand_database import clu_info
-from .generate_sse import MergeAtomGroup
+from .ligand_database import get_all_pbd_prody
 
 class Query:
-    def __init__(self, query, score, clu_num, clu_total_num):
+    def __init__(self, query, score, clu_num, clu_total_num, win = None, path = None):
         self.query = query
         self.score = score
         self.clu_num = clu_num
         self.clu_total_num = clu_total_num
-        self.win = []
+        self.win = win
+        self.path = path
 
     def to_tab_string(self):
         query_info = self.query.getTitle() + '\t' + str(round(self.score, 2)) + '\t' + str(self.clu_num)  + '\t'+ str(self.clu_total_num)
@@ -63,13 +64,12 @@ def target_position_filter(window_inds, select_inds):
         for ind in inds:
             if not ind in select_inds:
                 exist = False
-                break
         if exist:
             filter_window_inds.append(inds)
     return np.array(filter_window_inds)
 
 
-def supperimpose_target_bb(query, target, rmsd_cut = 0.5):
+def supperimpose_target_bb(query, target, win_filter=None, rmsd_cut = 0.5):
     '''
     Two possible way:1. Master search; 2. prody calcrmsd.
     query: prody pdb
@@ -86,6 +86,9 @@ def supperimpose_target_bb(query, target, rmsd_cut = 0.5):
 
     window_inds = connectivity_filter(target.select('protein and name CA'), window_inds)
 
+    if win_filter:
+        window_inds = target_position_filter(window_inds, win_filter)
+
     new_querys = []
     for win in window_inds:
         target_sel = target.select('resindex ' + ' '.join([str(w) for w in win]))
@@ -97,8 +100,7 @@ def supperimpose_target_bb(query, target, rmsd_cut = 0.5):
         rmsd = pr.calcRMSD(target_sel.select('name N CA C O'), query.query.select('name N CA C O'))
 
         if rmsd < rmsd_cut:
-            new_query = Query(query.query.copy(), query.score, query.clu_num, query.clu_total_num)
-            new_query.win.extend(win)          
+            new_query = Query(query.query.copy(), query.score, query.clu_num, query.clu_total_num, win, query.path)       
             new_querys.append(new_query)
 
     return new_querys
@@ -202,7 +204,7 @@ def get_contact_map(target):
     return dist_array, id_array
     
 
-def supperimpose_target_bb_bydist(query, target, dist_array, id_array, tolerance = 0.5, rmsd_cut = 0.5):
+def supperimpose_target_bb_bydist(query, target, dist_array, id_array, winfilter, tolerance = 0.5, rmsd_cut = 0.5):
     '''
     Filter by contact map first with contact tolerance. 
     Then perform transformation and calculate RMSD. 
@@ -222,8 +224,9 @@ def supperimpose_target_bb_bydist(query, target, dist_array, id_array, tolerance
             rmsd = pr.calcRMSD(target_sel.select('name N CA C O'), query.query.select('name N CA C O'))
 
             if rmsd < rmsd_cut:
-                new_query = Query(query.query.copy(), query.score, query.clu_num, query.clu_total_num)
-                new_query.win.extend(win)          
+                new_query = Query(query.query.copy(), query.score, query.clu_num, query.clu_total_num, query.win, query.path)
+                #new_query.win = query.win    
+
                 new_querys.append(new_query)
 
     return new_querys
@@ -271,7 +274,7 @@ class Search_struct:
     '''
     The function to search comb
     '''
-    def __init__(self, target_pdb, workdir, queryss, rmsd_cuts, dist_cuts, num_iter, qt_clash_dist, qq_clash_dist, use_sep_aas, tolerance):
+    def __init__(self, target_pdb, workdir, queryss, rmsd_cuts, dist_cuts, num_iter, qt_clash_dist, qq_clash_dist, use_sep_aas, tolerance, win_filter = None):
         if workdir:
             _workdir = os.path.realpath(workdir)
             if not os.path.exists(_workdir):
@@ -295,16 +298,18 @@ class Search_struct:
         self.use_sep_aas = use_sep_aas
         self.tolerance = tolerance
 
+        self.win_filter = win_filter
+
         if len(queryss) < num_iter:
             print('--Please includes the correct number of query list.')
         self.queryss = queryss
 
         #---------------------------------
         self.combs = []
-        self.cquerysss = []
+        self.cquerysss = []  #check function generate_cquerys()
 
         xys = itertools.combinations(range(len(self.queryss)), 2)
-        self.pair_extracts = [[None]* len(self.queryss)]* len(self.queryss)
+        self.pair_extracts = [[0]*self.num_iter for i in range(self.num_iter)]
         for x, y in xys:
             self.pair_extracts[x][y] = dict()
 
@@ -319,12 +324,13 @@ class Search_struct:
         self.queues = []
 
 
-    def run_round_search_structure(self):
+    def run_iter_search_structure(self):
         '''
+        The searching step is follow '1st --> 2nd --> 3rd' 
         The searching speed is similar to run_search_struct. 
         '''     
-        self.generate_cquerys()
-        comb_inds = self.get_round_pair(dist_cut = 1)
+        self.generate_cquerys(self.win_filter)
+        comb_inds = self.get_iter_pair(dist_cut = 1.5)
 
         self.build_combs(comb_inds)
 
@@ -333,8 +339,10 @@ class Search_struct:
         self.write_comb_info()
 
         
-    def get_round_pair(self, dist_cut): 
-
+    def get_iter_pair(self, dist_cut): 
+        '''
+        Get pair follow '1st --> 2nd --> 3rd' 
+        '''
         comb_inds = []
         for i in range(1, self.num_iter):
             all_inds = generate_ind_combination_listoflist(self.queryss[0:i+1])
@@ -364,14 +372,14 @@ class Search_struct:
 
 
     def run_search_struct(self):
-        self.generate_cquerys()
+        self.generate_cquerys(self.win_filter)
 
         all_inds = generate_ind_combination_listoflist(self.queryss)
         print(len(all_inds))
 
         comb_inds = []
         for inds in all_inds:
-            extracts = self.get_pair_extracts(inds, dist_cut = 1)
+            extracts = self.get_pair_extracts(inds, dist_cut = 1.5)
             if extracts and len(extracts)>0:
                 combs = get_combs_from_pair_extract(self.num_iter, extracts)
                 for comb in combs:
@@ -383,17 +391,88 @@ class Search_struct:
 
         self.write_comb_info()
 
+    
+    
+    def run_search_structure_member(self):
+        #initialize self.cquerysss and self.pair_extracts
+        self.cquerysss = []
+        self.generate_cvdms(self.target)
 
-    def generate_cquerys(self):
+        xys = itertools.combinations(range(len(self.queryss)), 2)
+        self.pair_extracts = [[0]*self.num_iter for i in range(self.num_iter)]
+        for x, y in xys:
+            self.pair_extracts[x][y] = dict()
+
+        all_inds = [[i]*self.num_iter for i in range(len(self.cquerysss[0]))]
+        print(all_inds)
+
+        comb_inds = []
+        for inds in all_inds:
+            extracts = self.get_pair_extracts(inds, dist_cut = 0.3)
+            if extracts and len(extracts)>0:
+                combs = get_combs_from_pair_extract(self.num_iter, extracts)
+                for comb in combs:
+                    comb_inds.append((inds, comb))
+
+        self.combs = []
+        
+        self.build_combs(comb_inds)
+
+        self.write_combs(outpath= '/mem_combs/')
+
+        self.write_comb_info(filename= '_summary_mem.txt')
+
+
+    def generate_cquerys(self, win_filter = None):
+        '''
+        self.cquerysss example
+        [0, 1, 2]   num_iter
+        [26, 26, 26]    candidate for each iter
+        [88, 88, 88]    candidate possible superimpose match.
+
+        '''
         for ind in range(len(self.queryss)):
             cqueryss = []
             for query in self.queryss[ind]:   
                 if self.use_sep_aas[ind]:
-                    cquerys = supperimpose_target_bb_bydist(query, self.target, self.dist_array, self.id_array, self.tolerance, self.rmsd_cuts[ind])
+                    cquerys = supperimpose_target_bb_bydist(query, self.target, self.dist_array, self.id_array, win_filter, self.tolerance, self.rmsd_cuts[ind])
                 else:
-                    cquerys = supperimpose_target_bb(query, self.target, self.rmsd_cuts[ind])
+                    cquerys = supperimpose_target_bb(query, self.target, win_filter, self.rmsd_cuts[ind])
                 cqueryss.append(cquerys)
             self.cquerysss.append(cqueryss)
+
+
+    def generate_cvdms(self, target):
+        '''
+        self.cvdmsss is in same structrue with self.cquerysss.
+        cvdms is the members of each centroid candidates.
+        '''
+        for i in range(self.num_iter):
+            cvdmss = []         
+            for ind in range(len(self.combs)):
+                query = self.combs[ind].querys[i] 
+                cvdms = []             
+                vdms = self.get_vdm_mem(query)
+                for query in vdms:            
+                    target_sel = target.select('resindex ' + ' '.join([str(w) for w in query.win]))
+                    pr.calcTransformation(query.query.select('name N CA C O'), target_sel.select('name N CA C O')).apply(query.query)
+                    cvdms.append(query)
+                cvdmss.append(cvdms)
+            self.cquerysss.append(cvdmss)
+
+
+    def get_vdm_mem(self, query):
+        '''
+        load all members of one centroid.
+        '''
+        vdms = []
+        
+        pdbs = get_all_pbd_prody(query.path)
+
+        for pdb in pdbs:
+            vdms.append(Query(pdb, query.score, query.clu_num, query.clu_total_num, query.win, query.path))
+
+        return vdms
 
 
     def get_pair_extracts(self, inds, dist_cut):
@@ -402,7 +481,7 @@ class Search_struct:
 
         extractss = []
 
-        for x, y in xys:         
+        for x, y in xys:     
             #if already calculated, store
             if (inds[x], inds[y]) in self.pair_extracts[x][y].keys():
                 #print('See it in the dictionary.')
@@ -469,19 +548,29 @@ class Search_struct:
         return extracts_filtered
 
  
-    def build_combs(self, all_ind_extracts):
+    def build_combs(self, comb_inds):
+        '''
+        comb_inds example: 
+        [((18, 20, 22), [31, 59, 55]),
+        ((18, 21, 22), [31, 60, 55])]
         
-        for inds, extracts in all_ind_extracts:
+        '''
+        check_dup = set()
+        for inds, extracts in comb_inds:
             vdms = []
             for i in range(len(inds)):
                 vdms.append(self.cquerysss[i][inds[i]][extracts[i]])
+            if tuple([v.query.getTitle() for v in vdms]) in check_dup:
+                continue
+            for pm in itertools.permutations(range(len(vdms)), len(vdms)):
+                check_dup.add(tuple([vdms[p].query.getTitle() for p in pm]))
             self.combs.append(Comb(vdms))
         if len(self.combs) > 0:
             self.combs.sort(key = lambda x: x.total_score, reverse = True) 
 
 
-    def write_combs(self):      
-        outdir = self.workdir + '/combs/'
+    def write_combs(self, outpath = '/combs/'):      
+        outdir = self.workdir + outpath
         if not os.path.exists(outdir):
             os.mkdir(outdir)
 
@@ -495,8 +584,8 @@ class Search_struct:
             rank += 1
 
 
-    def write_comb_info(self):
-        with open(self.workdir + '/_summary.txt', 'w') as f:
+    def write_comb_info(self, filename = '/_summary.txt'):
+        with open(self.workdir + filename, 'w') as f:
             f.write('total_score\ttotal_clu_number\tquerys\tscores\tclu_nums\n')
             for v in self.combs:
                 f.write(v.to_tab_string() + '\n')  
@@ -512,6 +601,7 @@ class Search_struct:
         self.write_combs()
 
         self.write_comb_info()
+
 
     def generate_combs_depre(self):   
         _all_list = []

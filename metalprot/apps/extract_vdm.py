@@ -39,6 +39,7 @@ def extract_query(workdir, file_path = '_summary.txt', score_cut = 0, clu_num_cu
         centroid = [file for file in os.listdir(workdir  + str(info.clu_rank)) if 'centroid' in file][0]
         pbd = pr.parsePDB(workdir + str(info.clu_rank) + '/' + centroid)
         query = Query(pbd, info.score, info.clu_num, info.total_num)
+        query.path = workdir + str(info.clu_rank) + '/'
         querys.append(query)
 
     return querys
@@ -70,6 +71,7 @@ def extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_inc
         if exist: 
             qs = extract_query(subfolder + '/', file_path = '_summary.txt', score_cut = score_cut, clu_num_cut = clu_num_cut)
             querys.extend(qs)
+
 
     return querys
 

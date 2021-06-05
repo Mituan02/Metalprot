@@ -3,7 +3,7 @@ import sys
 import prody as pr
 
 #You can either add the python package path.
-sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
+#sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
 from metalprot import search_struct, extract_vdm
 
 # Generate queryss
@@ -59,4 +59,6 @@ tolerance = 0.5
 ss = search_struct.Search_struct(target_path, outdir, queryss, rmsd_cuts, dist_cuts, num_iter, clash_query_query, clash_query_target, use_sep_aas, tolerance)
 
 #ss.run_search_struct()
-ss.run_round_search_structure()
+ss.run_iter_search_structure()
+
+ss.run_search_structure_member()

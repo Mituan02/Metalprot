@@ -382,7 +382,137 @@ def extract_all_core(pdbs, metal_sel):
             cores.extend(core)
     return cores
 
-### Extract and Cluster Cores from the prepared database.
+### clustring
+
+def superimpose_aa_core(pdbs, rmsd = 0.5, len_sel = 5, align_sel = 'name C CA N O NI', min_cluster_size = 2):
+    '''
+    There are so many ways to superimpose aa and metal.
+    This method try to algin the C-CA-N_NI
+    '''
+    clu = cluster.Cluster()
+    clu.rmsd_cutoff = rmsd
+    clu.pdbs = []
+
+    for pdb in pdbs:
+        c = pdb.select(align_sel).getCoords()       
+        if len(c)!= len_sel: 
+            continue
+        clu.pdb_coords.append(c)
+        clu.pdbs.append(pdb)
+    if len(clu.pdb_coords) <= 0:
+        return 
+    clu.pdb_coords = np.array(clu.pdb_coords, dtype = 'float32')
+
+    clu.make_pairwise_rmsd_mat()  
+    if not clu._square:
+        clu.make_square()
+    if not clu._adj_mat:
+        clu.make_adj_mat()
+    clu.cluster(min_cluster_size = 2)
+
+    return clu
+
+def get_clu_info_write(outfile, pdbs, clu, rmsd = 0.5, metal_sel = 'NI', align_sel = 'name C CA N O NI'):
+    clu_infos = []
+    n_avg = sum([len(m) for m in clu.mems])/len(clu.mems)
+    for i in range(len(clu.mems)):
+        c = clu_info(Metal=metal_sel, clu_type = align_sel, 
+            clu_rmsd=rmsd, total_num = len(pdbs), clu_rank = i, 
+            clu_num=len(clu.mems[i]), score = np.log(len(clu.mems[i])/n_avg) )
+        clu_infos.append(c)
+    write_clu_info(outfile, clu_infos)
+    return clu_infos
+
+def print_cluster_pdbs(clu, outdir, rmsd = 0.5, tag = ''):
+
+    for i in range(len(clu.mems)):
+        cluster_out_dir = outdir + str(i) + '/'
+        # if not os.path.exists(cluster_out_dir):
+        #     os.mkdir(cluster_out_dir)
+        _print_cluster_rank_pdbs(clu, i, cluster_out_dir, tag)
+
+def _print_cluster_rank_pdbs(clu, rank, outdir='./', tag=''):
+    try: os.makedirs(outdir)
+    except: pass
+    try:
+        cent = clu.cents[rank]
+        mems = clu.mems[rank]
+
+        # Align backbone of cluster centroid to backbone of centroid of largest cluster.
+        R, m_com, t_com = transformation.get_rot_trans(clu.pdb_coords[cent],
+                                        clu.pdb_coords[clu.cents[0]])
+        cent_coords = np.dot((clu.pdb_coords[cent] - m_com), R) + t_com
+
+        for i, mem in enumerate(mems):
+            R, m_com, t_com = transformation.get_rot_trans(clu.pdb_coords[mem], cent_coords)
+            pdb = clu.pdbs[mem].copy()
+            pdb_coords = pdb.getCoords()
+            coords_transformed = np.dot((pdb_coords - m_com), R) + t_com
+            pdb.setCoords(coords_transformed)
+            is_cent = '_centroid' if mem == cent else ''
+            pr.writePDB(outdir + tag + 'cluster_' + str(rank) + '_mem_' + str(i)
+                         + is_cent + '_' + pdb.getTitle().split('.')[0] + '.pdb', pdb)
+
+    except IndexError:
+        print('Cluster', rank, 'does not exist.')
+
+def check_metal_diff(clu, metals = ['CA', 'CO', 'CU', 'FE', 'MG', 'MN', 'NI', 'ZN']):
+    metal_diffs = []
+    for rank in range(len(clu.mems)):
+        if not clu.mems[rank].any(): continue
+
+        mems = clu.mems[rank]  
+        metal_diff = [0]*len(metals)
+        for i, mem in enumerate(mems):
+            pdb = clu.pdbs[mem]
+
+            if pdb.select('ion and name CA'):
+                metal_diff[0]+=1
+            elif pdb.select('name CO'):
+                metal_diff[1]+=1
+            elif pdb.select('name CU'):
+                metal_diff[2]+=1
+            elif pdb.select('name FE'):
+                metal_diff[3]+=1
+            elif pdb.select('name MG'):
+                metal_diff[4]+=1                
+            elif pdb.select('name MN'):
+                metal_diff[5]+=1
+            elif pdb.select('name NI'):
+                metal_diff[6]+=1
+            elif pdb.select('name ZN'):
+                metal_diff[7]+=1
+
+        metal_diffs.append(metal_diff)
+    return metal_diffs    
+
+def write_metal_diff(workdir, metal_diffs, metals = ['CA', 'CO', 'CU', 'FE', 'MG', 'MN', 'NI', 'ZN']):
+    with open(workdir + 'metal_diff.txt', 'w') as f:
+        f.write('\t'.join(metals) + '\n')
+        for md in metal_diffs:
+            f.write('\t'.join([str(x) for x in md]) + '\n')
+
+
+# run cluster
+
+def run_cluster(_pdbs, workdir, outdir, rmsd, metal_sel, len_sel, align_sel, min_cluster_size = 2, tag = ''):
+    
+    clu = superimpose_aa_core(_pdbs, rmsd = rmsd, len_sel = len_sel, align_sel = align_sel, min_cluster_size = min_cluster_size)
+    
+    if not clu or len(clu.mems) == 0: return
+    
+    print_cluster_pdbs(clu, workdir + outdir, rmsd, tag)
+
+    metal_diffs = check_metal_diff(clu)
+
+    write_metal_diff(workdir + outdir, metal_diffs)
+
+    clu_infos = get_clu_info_write(workdir + outdir + '_summary.txt', _pdbs, clu, rmsd = rmsd, metal_sel = metal_sel, align_sel = align_sel)
+
+    plot_clu_info(clu_infos, workdir + outdir + '_score.png')
+
+
+### Extract and Cluster Cores from the prepared database. (deprecated)
 
 def get_aa_core(pdb_prody, metal_sel, aa = 'resname HIS', consider_phipsi = False, extention = 0):
     '''
@@ -628,117 +758,8 @@ def extract_all_core_aa(pdbs, metal_sel, aa = 'resname HIS', consider_phipsi = F
             all_aa_cores.extend(aa_cores)
     return all_aa_cores
 
-### clustring
 
-def superimpose_aa_core(pdbs, rmsd = 0.5, len_sel = 5, align_sel = 'name C CA N O NI', min_cluster_size = 2):
-    '''
-    There are so many ways to superimpose aa and metal.
-    This method try to algin the C-CA-N_NI
-    '''
-    clu = cluster.Cluster()
-    clu.rmsd_cutoff = rmsd
-    clu.pdbs = []
-
-    for pdb in pdbs:
-        c = pdb.select(align_sel).getCoords()       
-        if len(c)!= len_sel: 
-            continue
-        clu.pdb_coords.append(c)
-        clu.pdbs.append(pdb)
-    if len(clu.pdb_coords) <= 0:
-        return 
-    clu.pdb_coords = np.array(clu.pdb_coords, dtype = 'float32')
-
-    clu.make_pairwise_rmsd_mat()  
-    if not clu._square:
-        clu.make_square()
-    if not clu._adj_mat:
-        clu.make_adj_mat()
-    clu.cluster(min_cluster_size = 2)
-
-    return clu
-
-def get_clu_info_write(outfile, pdbs, clu, rmsd = 0.5, metal_sel = 'NI', align_sel = 'name C CA N O NI'):
-    clu_infos = []
-    n_avg = sum([len(m) for m in clu.mems])/len(clu.mems)
-    for i in range(len(clu.mems)):
-        c = clu_info(Metal=metal_sel, clu_type = align_sel, 
-            clu_rmsd=rmsd, total_num = len(pdbs), clu_rank = i, 
-            clu_num=len(clu.mems[i]), score = np.log(len(clu.mems[i])/n_avg) )
-        clu_infos.append(c)
-    write_clu_info(outfile, clu_infos)
-    return clu_infos
-
-def print_cluster_pdbs(clu, outdir, rmsd = 0.5, tag = ''):
-
-    for i in range(len(clu.mems)):
-        cluster_out_dir = outdir + str(i) + '/'
-        # if not os.path.exists(cluster_out_dir):
-        #     os.mkdir(cluster_out_dir)
-        _print_cluster_rank_pdbs(clu, i, cluster_out_dir, tag)
-
-def _print_cluster_rank_pdbs(clu, rank, outdir='./', tag=''):
-    try: os.makedirs(outdir)
-    except: pass
-    try:
-        cent = clu.cents[rank]
-        mems = clu.mems[rank]
-
-        # Align backbone of cluster centroid to backbone of centroid of largest cluster.
-        R, m_com, t_com = transformation.get_rot_trans(clu.pdb_coords[cent],
-                                        clu.pdb_coords[clu.cents[0]])
-        cent_coords = np.dot((clu.pdb_coords[cent] - m_com), R) + t_com
-
-        for i, mem in enumerate(mems):
-            R, m_com, t_com = transformation.get_rot_trans(clu.pdb_coords[mem], cent_coords)
-            pdb = clu.pdbs[mem].copy()
-            pdb_coords = pdb.getCoords()
-            coords_transformed = np.dot((pdb_coords - m_com), R) + t_com
-            pdb.setCoords(coords_transformed)
-            is_cent = '_centroid' if mem == cent else ''
-            pr.writePDB(outdir + tag + 'cluster_' + str(rank) + '_mem_' + str(i)
-                         + is_cent + '_' + pdb.getTitle().split('.')[0] + '.pdb', pdb)
-
-    except IndexError:
-        print('Cluster', rank, 'does not exist.')
-
-def check_metal_diff(clu, metals = ['CA', 'CO', 'CU', 'FE', 'MG', 'MN', 'NI', 'ZN']):
-    metal_diffs = []
-    for rank in range(len(clu.mems)):
-        if not clu.mems[rank].any(): continue
-
-        mems = clu.mems[rank]  
-        metal_diff = [0]*len(metals)
-        for i, mem in enumerate(mems):
-            pdb = clu.pdbs[mem]
-
-            if pdb.select('ion and name CA'):
-                metal_diff[0]+=1
-            elif pdb.select('name CO'):
-                metal_diff[1]+=1
-            elif pdb.select('name CU'):
-                metal_diff[2]+=1
-            elif pdb.select('name FE'):
-                metal_diff[3]+=1
-            elif pdb.select('name MG'):
-                metal_diff[4]+=1                
-            elif pdb.select('name MN'):
-                metal_diff[5]+=1
-            elif pdb.select('name NI'):
-                metal_diff[6]+=1
-            elif pdb.select('name ZN'):
-                metal_diff[7]+=1
-
-        metal_diffs.append(metal_diff)
-    return metal_diffs    
-
-def write_metal_diff(workdir, metal_diffs, metals = ['CA', 'CO', 'CU', 'FE', 'MG', 'MN', 'NI', 'ZN']):
-    with open(workdir + 'metal_diff.txt', 'w') as f:
-        f.write('\t'.join(metals) + '\n')
-        for md in metal_diffs:
-            f.write('\t'.join([str(x) for x in md]) + '\n')
-
-# Extract 3d angle
+# Extract 3d angle (deprecated)
 
 def get_atom_core(pdb_prody, metal_sel, tag = '_atom'):
     '''
@@ -772,21 +793,3 @@ def extract_all_atom_core(pdbs, metal_sel, tag  ='_atom'):
             all_atom_cores.extend(atom_cores)
     return all_atom_cores
 
-
-# run cluster
-
-def run_cluster(_pdbs, workdir, outdir, rmsd, metal_sel, len_sel, align_sel, min_cluster_size = 2, tag = ''):
-    
-    clu = superimpose_aa_core(_pdbs, rmsd = rmsd, len_sel = len_sel, align_sel = align_sel, min_cluster_size = min_cluster_size)
-    
-    if not clu or len(clu.mems) == 0: return
-    
-    print_cluster_pdbs(clu, workdir + outdir, rmsd, tag)
-
-    metal_diffs = check_metal_diff(clu)
-
-    write_metal_diff(workdir + outdir, metal_diffs)
-
-    clu_infos = get_clu_info_write(workdir + outdir + '_summary.txt', _pdbs, clu, rmsd = rmsd, metal_sel = metal_sel, align_sel = align_sel)
-
-    plot_clu_info(clu_infos, workdir + outdir + '_score.png')

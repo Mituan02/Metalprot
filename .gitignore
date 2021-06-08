@@ -21,3 +21,6 @@ gpu_run/
 # Others
 data/
 *.pyc
+*/*/output*/
+*output*/
+

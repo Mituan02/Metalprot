@@ -1,10 +1,10 @@
 import os
 import sys
 import prody as pr
-
+import numpy as np
 #You can either add the python package path.
 #sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
-from metalprot import search_struct, extract_vdm
+from metalprot import search_struct, extract_vdm, ligand_database
 
 # Generate queryss
 queryss = []
@@ -55,6 +55,18 @@ clash_query_target = 2.3
 use_sep_aas = [False, False, False]
 
 tolerance = 0.5
+
+_pdb = pr.parsePDB(target_path)
+
+cores = ligand_database.get_metal_core_seq(_pdb, metal_sel = 'ion or name NI MN ZN CO CU MG FE' , extend = 4)
+
+print(cores[0][1].select('name CA').getSequence())
+
+#pr.writePDB(target_path + '_core.pdb', cores[0][1])
+
+win_filter = [x for x in np.unique(cores[0][1].getResindices())]
+
+print(win_filter)
 
 ss = search_struct.Search_struct(target_path, outdir, queryss, rmsd_cuts, dist_cuts, num_iter, clash_query_query, clash_query_target, use_sep_aas, tolerance)
 

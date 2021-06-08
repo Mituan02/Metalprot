@@ -8,6 +8,7 @@ from scipy.spatial.distance import cdist, dice
 import datetime
 from .ligand_database import clu_info
 from .ligand_database import get_all_pbd_prody
+from . import core
 
 class Query:
     def __init__(self, query, score, clu_num, clu_total_num, win = None, path = None):
@@ -23,15 +24,23 @@ class Query:
         return query_info
 
 class Comb:
-    def __init__(self, querys):
+    def __init__(self, querys, min_contact_query = None, min_contact_rmsd = None):
         self.querys = querys       
         self.total_score = sum([q.score for q in querys])
         self.total_clu_number= sum([q.clu_num for q in querys])        
         self.scores = [q.score for q in querys]
         self.clu_nums= [q.clu_num for q in querys]
+        self.min_contact_query = min_contact_query
+        self.min_contact_rmsd = min_contact_rmsd
 
     def to_tab_string(self):
-        vdm_info = str(round(self.total_score, 2)) + '\t' + str(self.total_clu_number) + '\t' + '||'.join([q.query.getTitle() for q in self.querys]) + '\t' + '||'.join([str(round(n, 2)) for n in self.scores]) + '\t' + '||'.join([str(s) for s in self.clu_nums]) 
+        query_names = '||'.join([q.query.getTitle() for q in self.querys])
+        query_scores = '||'.join([str(round(n, 2)) for n in self.scores])
+        query_clu_nums = '||'.join([str(s) for s in self.clu_nums])
+        if self.min_contact_query:
+            vdm_info = str(round(self.total_score, 2)) + '\t' + str(self.total_clu_number) + '\t' + query_names + '\t' + query_scores + '\t' + query_clu_nums + '\t' + self.min_contact_query.query.getTitle() + '\t' + str(self.min_contact_query.score) + '\t' + str(self.min_contact_rmsd)
+        else:
+            vdm_info = str(round(self.total_score, 2)) + '\t' + str(self.total_clu_number) + '\t' + query_names + '\t' + query_scores + '\t' + query_clu_nums
         return vdm_info
 
 def _connectivity_filter(arr, inds):
@@ -177,10 +186,25 @@ def query_target_clash(query, win, target, clash_dist = 2.0):
         return True
     return False
 
-def geometry_filter():
+def geometry_filter(pdbs, contact_querys):
     '''
     There are only certain geometries for metal contact atoms.
+    Only work for 3 aa + metal so far.
     '''
+    contact_pdb = core.get_contact(pdbs)
+    min_rmsd = 0.5
+    min_query = None
+    for query in contact_querys:
+        if len(contact_pdb) != len(query.query):
+            continue
+        pr.calcTransformation(contact_pdb, query.query).apply(contact_pdb)
+        rmsd = pr.calcRMSD(contact_pdb, query.query)
+
+        if rmsd < min_rmsd:
+            min_query = query
+            min_rmsd = rmsd
+    return min_query, min_rmsd
+    
 
 def get_contact_map(target):
     '''
@@ -274,7 +298,7 @@ class Search_struct:
     '''
     The function to search comb
     '''
-    def __init__(self, target_pdb, workdir, queryss, rmsd_cuts, dist_cuts, num_iter, qt_clash_dist, qq_clash_dist, use_sep_aas, tolerance, win_filter = None):
+    def __init__(self, target_pdb, workdir, queryss, rmsd_cuts, dist_cuts, num_iter, qt_clash_dist, qq_clash_dist, use_sep_aas, tolerance, win_filter = None, contact_querys = None):
         if workdir:
             _workdir = os.path.realpath(workdir)
             if not os.path.exists(_workdir):
@@ -312,6 +336,10 @@ class Search_struct:
         self.pair_extracts = [[0]*self.num_iter for i in range(self.num_iter)]
         for x, y in xys:
             self.pair_extracts[x][y] = dict()
+        
+        #contact-----------------------
+        self.contact_querys = contact_querys
+
 
         #depre---------------------------- 
         #list of list of list(None), the len of list(None) equal to the len of queryss[0].
@@ -420,7 +448,7 @@ class Search_struct:
 
         self.write_combs(outpath= '/mem_combs/')
 
-        self.write_comb_info(filename= '_summary_mem.txt')
+        self.write_comb_info(filename= '/_summary_mem.txt')
 
 
     def generate_cquerys(self, win_filter = None):
@@ -564,7 +592,9 @@ class Search_struct:
                 continue
             for pm in itertools.permutations(range(len(vdms)), len(vdms)):
                 check_dup.add(tuple([vdms[p].query.getTitle() for p in pm]))
-            self.combs.append(Comb(vdms))
+            
+            min_query, min_rmsd = geometry_filter([v.query for v in vdms], self.contact_querys)
+            self.combs.append(Comb(vdms, min_query, min_rmsd))
         if len(self.combs) > 0:
             self.combs.sort(key = lambda x: x.total_score, reverse = True) 
 
@@ -586,7 +616,7 @@ class Search_struct:
 
     def write_comb_info(self, filename = '/_summary.txt'):
         with open(self.workdir + filename, 'w') as f:
-            f.write('total_score\ttotal_clu_number\tquerys\tscores\tclu_nums\n')
+            f.write('total_score\ttotal_clu_number\tquerys\tscores\tclu_nums\contact_query\contact_score\contact_rmsd\n')
             for v in self.combs:
                 f.write(v.to_tab_string() + '\n')  
     

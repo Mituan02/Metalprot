@@ -4,8 +4,9 @@ import os
 import shutil
 import prody as pr
 import itertools
+import numpy as np
 
-from metalprot import search_struct, extract_vdm
+from metalprot import search_struct, extract_vdm, ligand_database
 
 def test_generate_ind_combination_listoflist():
     _listoflist = [[1, 2], [3, 4], [5, 6]]
@@ -40,6 +41,8 @@ queryss.append([querys[18], querys[20], querys[22]])
 # queryss.append(querys)
 # queryss.append(querys)
 
+contact_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['M8_AtomContact4_clusters'], score_cut = 0, clu_num_cut = 2)
+
 workdir = '/mnt/e/GitHub_Design/Metalprot/tests/test_data/'
 #workdir = os.path.dirname(os.path.realpath(__file__)) + '/test_data/'
 
@@ -61,7 +64,7 @@ use_sep_aas = [False, False, False]
 
 tolerance = 0.5
 
-ss = search_struct.Search_struct(target_path, outdir, queryss, rmsd_cuts, dist_cuts, num_iter, clash_query_query, clash_query_target, use_sep_aas, tolerance)
+ss = search_struct.Search_struct(target_path, outdir, queryss, rmsd_cuts, dist_cuts, num_iter, clash_query_query, clash_query_target, use_sep_aas, tolerance, contact_querys = contact_querys)
 
 #ss.run_search_struct()
 
@@ -136,4 +139,4 @@ ss.build_combs(comb_inds)
 
 ss.write_combs( outpath= '/mem_combs/')
 
-ss.write_comb_info( filename= '_summary_mem.txt')
+ss.write_comb_info( filename= '/_summary_mem.txt')

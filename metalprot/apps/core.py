@@ -1,5 +1,7 @@
+import itertools
 from logging import NullHandler
 import os
+from numpy.core.fromnumeric import argmin
 import prody as pr
 from scipy.spatial.distance import cdist
 from dataclasses import dataclass
@@ -17,6 +19,40 @@ from . import ligand_database
 
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
 
+def get_contact(pdbs):
+    metal_coords = []
+    contact_aas = []
+
+    for pdb in pdbs:
+        metal = pdb.select(metal_sel)[0]
+        metal_coords.append(metal.getCoords())
+        _contact_aas = pdb.select('protein and not carbon and not hydrogen and within 2.83 of resindex ' + str(metal.getResindex()))
+        if len(_contact_aas) > 1:
+            dists = [None]*len(_contact_aas)
+            for i in len(_contact_aas):
+                dist = pr.calcDistance(metal, _contact_aas[i])
+                dists[i] = dist
+            contact_aa = _contact_aas[argmin(dists)]
+        else:
+            contact_aa = _contact_aas[0]
+        contact_aas.append(contact_aa)
+
+    names = [c.getName() for c in contact_aas]
+    names.append(metal.getName())
+
+    contact_aas_coords = []
+    metal_coord = np.sum(metal_coords, 0)/(len(metal_coords))
+    for c in contact_aas:
+        contact_aas_coords.append(c.getCoords())
+    contact_aas_coords.append(metal_coord)
+
+    coords = np.array(contact_aas_coords)
+    atom_contact_pdb = pr.AtomGroup('atom_contact')
+    atom_contact_pdb.setCoords(coords)
+    atom_contact_pdb.setNames(names)
+        
+    return atom_contact_pdb
+
 class Core:
     def __init__(self, full_pdb):
         self.full_pdb = full_pdb
@@ -24,7 +60,7 @@ class Core:
         self.metal = full_pdb.select(metal_sel)[0]
         self.metal_resind = self.metal.getResindex()
 
-        self.contact_aas = self.full_pdb.select('protein and within 2.83 of resindex ' + str(self.metal.getResindex()))
+        self.contact_aas = self.full_pdb.select('protein and not carbon and not hydrogen and within 2.83 of resindex ' + str(self.metal.getResindex()))
         self.contact_aa_resinds = np.unique(self.contact_aas.getResindices())    
 
         # Inside the atomGroupDict. We will generate different type of pdb for clustering into vdM.
@@ -35,6 +71,19 @@ class Core:
             self.atomGroupDict[key] = []
         self.atomGroupDict[key].append(sel_pdb_prody)
 
+
+    def write_vdM(self, outdir, key):
+        if not key in self.atomGroupDict.keys():
+            return
+
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+
+        count = 0
+        for ag in self.atomGroupDict[key]:
+            pr.writePDB(outdir + self.full_pdb.getTitle() + '_' + key + '_mem' + str(count) + '.pdb', ag)
+            count+=1
+            
         
     def generate_AA_Metal(self, AA = 'HIS', key = 'AAMetal_HIS'):
         aa_sel = 'resname ' + AA
@@ -188,16 +237,25 @@ class Core:
         return
 
 
-    def write_vdM(self, outdir, key):
-        if not key in self.atomGroupDict.keys():
-            return
+    def generate_binary_contact(self, key = 'BinaryAtomContact'):
+        '''
+        # For geometry purpose.
+        binary contact is defined as: atom-Metal-atom. 
+        '''
+        atom_inds = np.unique(self.contact_aas.getIndices())
+        for xs in itertools.combinations(atom_inds, 3):
+            sel_pdb_prody = self.full_pdb.select('index ' + ' '.join([str(x) for x in xs])+ ' ' + str(self.metal.getIndex()))
 
-        if not os.path.exists(outdir):
-            os.mkdir(outdir)
+            self.add2atomGroupDict(key, sel_pdb_prody)            
+        return 
 
-        count = 0
-        for ag in self.atomGroupDict[key]:
-            pr.writePDB(outdir + self.full_pdb.getTitle() + '_' + key + '_mem' + str(count) + '.pdb', ag)
-            count+=1
-            
+    def generate_atom_contact(self, key = 'AtomContact'):
+        '''
+        # For geometry purpose.
+        '''
+        atom_inds = np.unique(self.contact_aas.getIndices())
 
+        sel_pdb_prody = self.full_pdb.select('index ' + ' '.join([str(x) for x in atom_inds])+ ' ' + str(self.metal.getIndex()))
+        _key = key + str(len(sel_pdb_prody))
+        self.add2atomGroupDict(_key, sel_pdb_prody)            
+        return 

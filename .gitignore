@@ -23,4 +23,5 @@ data/
 *.pyc
 */*/output*/
 *output*/
+.pytest_cache
 

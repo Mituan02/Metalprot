@@ -4,24 +4,33 @@ import numpy as np
 import itertools
 from numpy.lib.function_base import extract
 import prody as pr
+from prody.measure.transform import superpose
+from prody.proteins.pdbfile import writePDB
 from scipy.spatial.distance import cdist, dice
 import datetime
 from .ligand_database import clu_info
 from .ligand_database import get_all_pbd_prody
 from . import core
 
+metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
+
 class Query:
-    def __init__(self, query, score, clu_num, clu_total_num, win = None, path = None):
+    def __init__(self, query, score, clu_num, clu_total_num, win = None, path = None, ag = None):
         self.query = query
         self.score = score
         self.clu_num = clu_num
         self.clu_total_num = clu_total_num
         self.win = win
         self.path = path
+        self.ag = ag
+        self._2nd_shells = []
 
     def to_tab_string(self):
         query_info = self.query.getTitle() + '\t' + str(round(self.score, 2)) + '\t' + str(self.clu_num)  + '\t'+ str(self.clu_total_num)
         return query_info
+
+    def copy(self):
+        return Query(self.query.copy(), self.score, self.clu_num, self.clu_total_num, self.win, self.path, self.ag)
 
 class Comb:
     def __init__(self, querys, min_contact_query = None, min_contact_rmsd = None):
@@ -294,11 +303,96 @@ def get_combs_from_pair_extract(xys_len, extracts):
 
     return comb_inds
 
+def convert_query_2ndshellVdm(query):
+    '''
+    A query for 2nd shell can have different atom orders as an prody.atomGroup.
+    The function is supposed to get the atomGroup of the query with the right atom order.
+    '''
+
+    metal = query.query.select(metal_sel)[0]
+    metal_resind = metal.getResindex()
+
+    contact_aa = query.query.select('protein and not carbon and not hydrogen and within 2.83 of resindex ' + str(metal_resind))
+    _1stshell = query.query.select('name N C CA O and resindex ' + ' '.join([str(x) for x in contact_aa.getResindices()]))
+    _1stshell_inds = _1stshell.getResindices()
+    all_resinds = query.query.select('protein').getResindices()
+    _2ndshell_resinds = [x for x in all_resinds if x not in _1stshell_inds]
+    if len(_2ndshell_resinds) == 0:
+        return None
+    _2ndshell = query.query.select('name N C CA O and resindex ' + ' '.join([str(x) for x in _2ndshell_resinds]))
+
+    neary_aas_coords = []
+    neary_aas_coords.extend([x for x in _2ndshell.getCoords()])
+    neary_aas_coords.extend([x for x in _1stshell.getCoords()])
+    neary_aas_coords.append(metal.getCoords())
+    coords = np.array(neary_aas_coords)
+
+    names = []
+    names.extend(_2ndshell.getNames())
+    names.extend(_1stshell.getNames())
+    names.append(metal.getName())
+
+    ag = pr.AtomGroup(query.query.getTitle())
+    ag.setCoords(coords)
+    ag.setNames(names)
+
+    return ag
+
+
+def constructy_pseudo_2ndshellVdm(target, query, contact_resind):
+    '''
+    Find the resind of the vdm on target. Then extract resinds of atoms within a distance. 
+    Followed by extracting the vdm resind and the atoms resind pairs together with the metal. 
+    '''
+        
+    nearby_aas = target.select('protein and not carbon and not hydrogen and within 10 of resindex ' + str(contact_resind))
+    nearby_aa_resinds = np.unique(nearby_aas.getResindices())    
+
+
+    ags = []
+    count = 0
+    for resind in nearby_aa_resinds:
+        if query.win and resind in query.win:
+            continue
+        neary_aas_coords = []
+        neary_aas_coords.extend(target.select('name N C CA O and resindex ' + str(resind)).getCoords())
+        neary_aas_coords.extend(query.query.select('bb or ion or name NI MN ZN CO CU MG FE').getCoords())
+        coords = np.array(neary_aas_coords)
+
+        names = []
+        names.extend(target.select('name N C CA O and resindex ' + str(resind)).getNames())
+        names.extend(query.query.select('bb or ion or name NI MN ZN CO CU MG FE').getNames())
+        
+        atom_contact_pdb = pr.AtomGroup('nearby_bb' + str(count))
+        atom_contact_pdb.setCoords(coords)
+        atom_contact_pdb.setNames(names)
+        ags.append(atom_contact_pdb)
+        count +=1
+
+    return ags
+    
+    
+def supperimpose_2ndshell(ag, query_2nd, rmsd_cut):
+    '''
+    supperimpose query to ag. 
+    '''
+    #print('supperimpose_2ndshell ' + query_2nd.query.getTitle())
+    transform = pr.calcTransformation(query_2nd.ag, ag)
+    transform.apply(query_2nd.ag)
+    transform.apply(query_2nd.query)
+    rmsd = pr.calcRMSD(ag, query_2nd.ag)
+
+    if rmsd <= rmsd_cut:
+        candidate = Query(query_2nd.query.copy(),  query_2nd.score, query_2nd.clu_num, query_2nd.clu_total_num, query_2nd.win, query_2nd.path)
+        return candidate
+    return None
+
+
 class Search_struct:
     '''
     The function to search comb
     '''
-    def __init__(self, target_pdb, workdir, queryss, rmsd_cuts, dist_cuts, num_iter, qt_clash_dist, qq_clash_dist, use_sep_aas, tolerance, win_filter = None, contact_querys = None):
+    def __init__(self, target_pdb, workdir, queryss, rmsd_cuts, dist_cuts, num_iter, qt_clash_dist, qq_clash_dist, use_sep_aas, tolerance, fine_dist_cut = 0.3, win_filter = None, contact_querys = None, secondshell_querys = None):
         if workdir:
             _workdir = os.path.realpath(workdir)
             if not os.path.exists(_workdir):
@@ -322,6 +416,7 @@ class Search_struct:
         self.use_sep_aas = use_sep_aas
         self.tolerance = tolerance
 
+        self.fine_dist_cut = fine_dist_cut
         self.win_filter = win_filter
 
         if len(queryss) < num_iter:
@@ -340,6 +435,7 @@ class Search_struct:
         #contact-----------------------
         self.contact_querys = contact_querys
 
+        self.secondshell_querys = secondshell_querys
 
         #depre---------------------------- 
         #list of list of list(None), the len of list(None) equal to the len of queryss[0].
@@ -358,16 +454,16 @@ class Search_struct:
         The searching speed is similar to run_search_struct. 
         '''     
         self.generate_cquerys(self.win_filter)
-        comb_inds = self.get_iter_pair(dist_cut = 1.5)
+        comb_inds = self.get_iter_pair()
 
         self.build_combs(comb_inds)
 
-        self.write_combs()
+        self.write_combs(outpath= '/combs/')
 
         self.write_comb_info()
 
         
-    def get_iter_pair(self, dist_cut): 
+    def get_iter_pair(self): 
         '''
         Get pair follow '1st --> 2nd --> 3rd' 
         '''
@@ -379,7 +475,7 @@ class Search_struct:
             comb_inds.clear()
 
             for inds in all_inds:
-                extracts = self.get_pair_extracts(inds, dist_cut)
+                extracts = self.get_pair_extracts(inds, self.dist_cuts)
                 if extracts and len(extracts)>0:
                     combs = get_combs_from_pair_extract(i+1, extracts)
                     for comb in combs:
@@ -407,7 +503,7 @@ class Search_struct:
 
         comb_inds = []
         for inds in all_inds:
-            extracts = self.get_pair_extracts(inds, dist_cut = 1.5)
+            extracts = self.get_pair_extracts(inds, self.dist_cuts)
             if extracts and len(extracts)>0:
                 combs = get_combs_from_pair_extract(self.num_iter, extracts)
                 for comb in combs:
@@ -415,7 +511,7 @@ class Search_struct:
 
         self.build_combs(comb_inds)
 
-        self.write_combs()
+        self.write_combs(outpath= '/combs/')
 
         self.write_comb_info()
 
@@ -436,7 +532,7 @@ class Search_struct:
 
         comb_inds = []
         for inds in all_inds:
-            extracts = self.get_pair_extracts(inds, dist_cut = 0.3)
+            extracts = self.get_pair_extracts(inds, dist_cuts = [self.fine_dist_cut]*self.num_iter)
             if extracts and len(extracts)>0:
                 combs = get_combs_from_pair_extract(self.num_iter, extracts)
                 for comb in combs:
@@ -503,7 +599,7 @@ class Search_struct:
         return vdms
 
 
-    def get_pair_extracts(self, inds, dist_cut):
+    def get_pair_extracts(self, inds, dist_cuts):
 
         xys = itertools.combinations(range(len(inds)), 2)
 
@@ -528,7 +624,7 @@ class Search_struct:
                 self.pair_extracts[x][y][(inds[x], inds[y])] = None
                 return
 
-            extracts = self._metal_distance_extract(cquerys_a, cquerys_b, dist_cut)
+            extracts = self._metal_distance_extract(cquerys_a, cquerys_b, dist_cuts[y])
             extracts_filtered = self.distance_extracts_filter(cquerys_a, cquerys_b,extracts)
             #store
             self.pair_extracts[x][y][(inds[x], inds[y])] = extracts_filtered
@@ -587,14 +683,16 @@ class Search_struct:
         for inds, extracts in comb_inds:
             vdms = []
             for i in range(len(inds)):
-                vdms.append(self.cquerysss[i][inds[i]][extracts[i]])
+                vdms.append(self.cquerysss[i][inds[i]][extracts[i]].copy())
             if tuple([v.query.getTitle() for v in vdms]) in check_dup:
                 continue
             for pm in itertools.permutations(range(len(vdms)), len(vdms)):
                 check_dup.add(tuple([vdms[p].query.getTitle() for p in pm]))
-            
-            min_query, min_rmsd = geometry_filter([v.query for v in vdms], self.contact_querys)
-            self.combs.append(Comb(vdms, min_query, min_rmsd))
+            if self.contact_querys:
+                min_query, min_rmsd = geometry_filter([v.query for v in vdms], self.contact_querys)           
+                self.combs.append(Comb(vdms, min_query, min_rmsd))
+            else:
+                self.combs.append(Comb(vdms))
         if len(self.combs) > 0:
             self.combs.sort(key = lambda x: x.total_score, reverse = True) 
 
@@ -620,6 +718,68 @@ class Search_struct:
             for v in self.combs:
                 f.write(v.to_tab_string() + '\n')  
     
+
+    def search_2ndshellvmds(self, ag, rmsd):
+        candidates = []
+        for query in self.secondshell_querys:
+            if not query.ag:
+                query_ag = convert_query_2ndshellVdm(query)
+                if query_ag:
+                    query.ag = query_ag
+                else:
+                    print('This query do not have 2nd shell: ' + query.query.getTitle())
+                    continue
+            candidate = supperimpose_2ndshell(ag, query, rmsd)
+            if candidate:
+                candidates.append(candidate)
+        return candidates
+
+    def search_2ndshell(self, rank, rmsd = 0.5):
+        '''
+        For the queries in each comb, search the 2nd shell vdms. Then store them in the query._2nd_shell. 
+        '''
+        comb = self.combs[rank]
+        for query in comb.querys:
+            contact_resind = query.win[int((len(query.win) - 1)/2)]
+            ags = constructy_pseudo_2ndshellVdm(self.target, query, contact_resind)
+
+            for ag in ags:                    
+                candidates = self.search_2ndshellvmds(ag, rmsd)
+                if len(candidates) > 0:
+                    query._2nd_shells.extend(candidates)
+        return
+
+    def write_2ndshell(self, rank, outpath = '/mem_combs/'):
+        '''
+        #Could be combined in write_comb_info.
+        '''
+        outdir = self.workdir + outpath
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+
+        comb = self.combs[rank]
+        count = 1
+        for query in comb.querys:
+            count2 = 1
+            for _2ndshell in query._2nd_shells:
+                pdb_path = outdir + str(rank + 1) + '_' + str(count) + '_2ndshell_' + str(count2) + '_' + str(round(_2ndshell.score, 2)) + '_' + _2ndshell.query.getTitle()
+                pr.writePDB(pdb_path, _2ndshell.query)
+                count2+=1
+            count+=1
+
+        return 
+
+    def run_search_2nshells(self, outpath = '/mem_combs/', rmsd = 0.5):
+        '''
+        After find the self.combs, for each vdM in each combs, try to select the nearby aa bb to construct a pseudo 2ndshell vdM.
+        Then compare with the 2ndshell vdM library. Keep the one within the rmsd limitation.
+        '''
+        for rank in range(len(self.combs)):
+            self.search_2ndshell(rank, rmsd)
+
+        for rank in range(len(self.combs)):
+            self.write_2ndshell(rank, outpath)
+
 
     def run_search_struct_depre(self):
         self.generate_cquerys()

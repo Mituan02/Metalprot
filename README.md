@@ -9,3 +9,5 @@ conda activate env_conda
 pip install -e .
 ```
 
+# How to test a specific function in Metalprot.
+pytest tests/test_core.py -k 'test_2ndshell'

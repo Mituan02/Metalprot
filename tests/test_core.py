@@ -4,7 +4,7 @@ import os
 import shutil
 import prody as pr
 
-from metalprot import ligand_database as ldb
+from metalprot import ligand_database
 from metalprot import core
 
 def test_core_kMetal():
@@ -64,4 +64,25 @@ def test_contact():
     assert len(contact_pdb) == 4
     assert contact_pdb.getNames()[0] == 'ND1'
     assert contact_pdb.getNames()[-1] == 'ZN'
+
+def test_2ndshell():
+
+    workdir = os.path.dirname(os.path.realpath(__file__)) + '/test_data/'
+
+    pdb_prody = pr.parsePDB(workdir + '5od1_ZN_1_2nd.pdb')
+
+    core = Core(pdb_prody)
+
+    key = '_2ndShell'
+
+    core.generate_AA_2ndShell_Metal(key, filter_AA=True, AA='HIS')
+
+    core.write_vdM(workdir + 'output/', key)
+
+    assert len(core.atomGroupDict[key]) == 1
+
+
+    resind = core.contact_aa_resinds[2]
+    _2nshell_resinds = ligand_database.get_2ndshell_indices([resind], pdb_prody, pdb_prody.select('name ZN')[0].getIndex())
+    assert len(_2nshell_resinds) == 0
 

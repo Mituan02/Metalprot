@@ -226,8 +226,8 @@ def get_2ndshell_indices(inds, pdb_prody, ni_index):
                 index = pdb_prody.select('resindex ' + str(ind) + ' name OE1')[0].getIndex()
                 resindex = pdb_prody.select('resindex ' + str(ind) + ' name OE1')[0].getResindex()
         else:
-            return _2nd_resindices          
-        all_near = pdb_prody.select('heavy and within 3.4 of index ' + str(index) + ' and not resindex ' + str(resindex))
+            continue     
+        all_near = pdb_prody.select('protein and heavy and within 3.4 of index ' + str(index) + ' and not resindex ' + str(resindex))
         if not all_near or not all_near.select('nitrogen or oxygen or sulfur'):
             continue
         inds_2nshell = all_near.select('nitrogen or oxygen or sulfur').getResindices()
@@ -259,7 +259,7 @@ def get_metal_core_seq_2ndshell(pdb_prody, metal_sel, extend = 4):
         metal_cores.append((pdb_prody.getTitle() + '_' + metal + '_'+ str(count), sel_pdb_prody))        
     return metal_cores
 
-def extract_all_core_seq_from_path(workdir, metal_sel, extend = 3, extract_2ndshell = False):
+def extract_all_core_seq_from_path(workdir, metal_sel, extend = 4, extract_2ndshell = False):
     cores = []
     for pdb_path in os.listdir(workdir):
         if not pdb_path.endswith(".pdb"):
@@ -277,7 +277,7 @@ def extract_all_core_seq_from_path(workdir, metal_sel, extend = 3, extract_2ndsh
             print('not sure')   
     return cores
 
-def extract_all_core_seq(pdbs, metal_sel, extend = 3):
+def extract_all_core_seq(pdbs, metal_sel, extend = 4):
     cores = []
     for pdb in pdbs:
         core = get_metal_core_seq(pdb, metal_sel, extend)
@@ -354,33 +354,6 @@ def extract_rep_and_writepdb(pdbs, clusters, metal_sel, outdir):
 
     superimpose_core_and_writepdb(sel_pdbs, sel_pdbs[0], metal_sel, outdir)
 
-### Extract Cores from the prepared database. //For manucheck. 
-
-def get_metal_core(pdb_prody, metal_sel):
-    nis = pdb_prody.select(metal_sel)
-
-    # A pdb can contain more than one NI.
-    if not nis:
-        return []
-    
-    metal_cores = []
-    count = 0
-    for ni in nis:
-        ni_index = ni.getIndex()
-        all_near = pdb_prody.select('not water and within 2.83 of index ' + str(ni_index))
-        inds = all_near.getResindices()
-        count += 1
-        metal_cores.append((pdb_prody.getTitle(), pdb_prody.select('resindex ' + ' '.join([str(ind) for ind in inds]))))
-            
-    return metal_cores
-
-def extract_all_core(pdbs, metal_sel):
-    cores = []
-    for pdb in pdbs:
-        core = get_metal_core(pdb, metal_sel)
-        if core:
-            cores.extend(core)
-    return cores
 
 ### clustring
 
@@ -511,285 +484,4 @@ def run_cluster(_pdbs, workdir, outdir, rmsd, metal_sel, len_sel, align_sel, min
 
     plot_clu_info(clu_infos, workdir + outdir + '_score.png')
 
-
-### Extract and Cluster Cores from the prepared database. (deprecated)
-
-def get_aa_core(pdb_prody, metal_sel, aa = 'resname HIS', consider_phipsi = False, extention = 0):
-    '''
-    extract amino acid core + metal.
-    if consider_phipsi == True. Extract 
-    '''
-    aa_name = aa.split(' ')[-1]
-    nis = pdb_prody.select(metal_sel)
-
-    # A pdb can contain more than one NI.
-    if not nis:
-        print('No NI?' + pdb_prody.getTitle())
-        return
-    
-    ni = nis[0]
-    aa_cores = []
-    count = 0
-
-    all_aa = pdb_prody.select(aa + ' and within 2.83 of index ' + str(ni.getIndex()))
-    if not all_aa:
-        return          
-    inds = np.unique(all_aa.getResindices())
-    for ind in inds:
-        count += 1
-        if consider_phipsi:
-            ext_inds = extend_res_indices([ind], pdb_prody, extend =1)
-            if len(ext_inds) != 3:
-                continue
-            print(pdb_prody.getTitle() + '+' + '-'.join([str(x) for x in ext_inds]))
-            atom_inds = []
-            atom_inds.extend(pdb_prody.select('resindex ' + str(ind-1)).select('name C O').getIndices())
-            atom_inds.extend(pdb_prody.select('resindex ' + str(ind)).getIndices())
-            atom_inds.extend(pdb_prody.select('resindex ' + str(ind+1)).select('name N CA').getIndices())
-            sel_pdb_prody = pdb_prody.select('index ' + ' '.join([str(x) for x in atom_inds]) + ' '+ str(ni.getIndex()))
-        elif extention != 0:
-            ext_inds = extend_res_indices([ind], pdb_prody, extend =extention)
-            if len(ext_inds) != 2*extention + 1:
-                continue
-            print(pdb_prody.getTitle() + '+' + '-'.join([str(x) for x in ext_inds]))
-            sel_pdb_prody = pdb_prody.select('resindex ' + ' '.join([str(ind) for ind in ext_inds]) + ' '+ str(ni.getResindex()))
-        else:
-            sel_pdb_prody = pdb_prody.select('resindex ' + str(ind) + ' '+ str(ni.getResindex()))
-        aa_cores.append((pdb_prody.getTitle() + '_' + aa_name + '_' + str(count), sel_pdb_prody))                
-    return aa_cores
-        
-def get_2aa_core(pdb_prody, metal_sel, filter_aas = False, aas = ['HIS', 'HIS'], extention = 3, extention_out = 0):
-    '''
-    extract 2 amino acid core + metal.
-
-    extention: useful in M4 clustering method. Decide the gap between two extracted aa. Example, extention = 3, aaa-HIS-aaa will be check overlap with aaa-GLU-aaa
-
-    extention_out: useful in M4 clustering method. Decide the N and C terminal extention. Example, extention_out = 1, a-HIS-aa-HIS-a; extention_out = 2, aa-HIS-aa-HIS-aa;
-
-    aas: useful in M4 clustering method. Decide which two type of aa are extracted.
-
-    '''
-    if aas:
-        aa_name = '_'.join(aas)
-    else:
-        aa_name = 'Any'
-    nis = pdb_prody.select(metal_sel)
-
-    # A pdb can contain more than one NI.
-    if not nis:
-        print('No NI?' + pdb_prody.getTitle())
-        return
-    
-    ni = nis[0]
-    aa_cores = []
-    count = 0
-
-    all_aa = pdb_prody.select('protein and within 2.83 of index ' + str(ni.getIndex()))
-    if not all_aa:
-        return          
-    inds = np.unique(all_aa.getResindices())
-    exts = []
-    for ind in inds:
-        ext_inds = extend_res_indices([ind], pdb_prody, extend =extention)
-        exts.append(ext_inds)
-    
-    pairs = []
-    pairs_ind = []
-    for i in range(len(inds) - 1):
-        for j in range(i+1, len(inds)):
-            overlap = list(set(exts[i]) & set(exts[j]))
-            if len(overlap) ==0: continue
-
-            if filter_aas:
-                filtered = True
-                if aas and len(aas)==2:
-                    if pdb_prody.select('resindex ' + str(inds[i])).getResnames()[0] == aas[0] and pdb_prody.select('resindex ' + str(inds[j])).getResnames()[0] == aas[1]:
-                        filtered= False
-                    elif pdb_prody.select('resindex ' + str(inds[i])).getResnames()[0] == aas[1] and pdb_prody.select('resindex ' + str(inds[j])).getResnames()[0] == aas[0]:
-                        filtered= False
-                if filtered: continue
-
-            pairs.append((i, j))
-            if inds[i] < inds[j]:
-                pairs_ind.append((inds[i], inds[j]))
-            else:
-                pairs_ind.append((inds[j], inds[i]))
-    
-    for v in range(len(pairs)):
-        i = pairs[v][0]
-        j = pairs[v][1]
-        count += 1
-        ext_inds = list(set(exts[i]) | set(exts[j]))
-        ext_inds = [x for x in ext_inds if x >= pairs_ind[v][0]-extention_out and x <= pairs_ind[v][1]+extention_out]
-        sel_pdb_prody = pdb_prody.select('resindex ' + ' '.join([str(ind) for ind in ext_inds]) + ' '+ str(ni.getResindex()))
-        aa_cores.append((pdb_prody.getTitle() + '_' + aa_name + '_' + str(count), sel_pdb_prody))                
-    return aa_cores
-
-def get_2aa_sep_core(pdb_prody, metal_sel, filter_aas = False, aas = ['HIS', 'HIS'], extention = 3, extention_out = 0):
-    '''
-    Extract 2 amino acid core + metal, without considering they are connected.
-
-    extention: useful in M4 clustering method. Decide the gap between two extracted aa. Example, extention = 3, aaa-HIS-aaa will be check overlap with aaa-GLU-aaa
-
-    extention_out: useful in M4 clustering method. Decide the N and C terminal extention. Example, extention_out = 1, a-HIS-aa-HIS-a; extention_out = 2, aa-HIS-aa-HIS-aa;
-
-    aas: useful in M4 clustering method. Decide which two type of aa are extracted.
-
-    '''
-    if aas:
-        aa_name = '_'.join(aas)
-    else:
-        aa_name = 'Any'
-    nis = pdb_prody.select(metal_sel)
-
-    # A pdb can contain more than one NI.
-    if not nis:
-        print('No NI?' + pdb_prody.getTitle())
-        return
-    
-    ni = nis[0]
-    aa_cores = []
-    count = 0
-
-    all_aa = pdb_prody.select('protein and within 2.83 of index ' + str(ni.getIndex()))
-    if not all_aa:
-        return          
-    inds = np.unique(all_aa.getResindices())
-    
-    pairs = []
-    pairs_ind = []
-    for i in range(len(inds) - 1):
-        for j in range(i+1, len(inds)):
-
-            if filter_aas:
-                filtered = True
-                if aas and len(aas)==2:
-                    if pdb_prody.select('resindex ' + str(inds[i])).getResnames()[0] == aas[0] and pdb_prody.select('resindex ' + str(inds[j])).getResnames()[0] == aas[1]:
-                        filtered= False
-                    elif pdb_prody.select('resindex ' + str(inds[i])).getResnames()[0] == aas[1] and pdb_prody.select('resindex ' + str(inds[j])).getResnames()[0] == aas[0]:
-                        filtered= False
-                if filtered: continue
-
-            pairs_ind.append((inds[i], inds[j]))
-            pairs_ind.append((inds[j], inds[i]))  # In the database, we don't know the order of the two aa.
-    
-    for p in pairs_ind:
-
-        count += 1
-
-        sel_pdb_prody = pdb_prody.select('resindex ' + str(p[0]) + ' ' +  str(p[1]) + ' '+ str(ni.getResindex()))
-        aa_cores.append((pdb_prody.getTitle() + '_' + aa_name + '_' + str(count), sel_pdb_prody))                
-    return aa_cores
-
-def get_inds_from_resind(pdb_prody, resind, aa = 'resname HIS'):
-    if aa == 'resname HIS':
-        inds = pdb_prody.select('name ND1 NE2 and resindex ' + str(resind)).getIndices()
-    elif aa == 'resname ASP':
-        inds = pdb_prody.select('name OD1 OD2 and resindex ' + str(resind)).getIndices()
-    elif aa == 'resname GLU':
-        inds = pdb_prody.select('name OE1 OE2 and resindex ' + str(resind)).getIndices()
-    else:
-        inds = []
-    return inds
-
-def get_aa_2ndshell_core(pdb_prody, metal_sel, aa = 'resname HIS'):
-    '''
-    extract amino acid core + metal + 2ndshell.
-
-    '''
-    aa_name = aa.split(' ')[-1]
-    nis = pdb_prody.select(metal_sel)
-
-    # A pdb can contain more than one NI.
-    if not nis:
-        print('No NI?' + pdb_prody.getTitle())
-        return
-    
-    ni = nis[0]
-    aa_cores = []
-    count = 0
-
-    all_aa = pdb_prody.select(aa + ' and within 2.83 of index ' + str(ni.getIndex()))
-    if not all_aa:
-        return          
-    resinds = np.unique(all_aa.getResindices())
-    for resind in resinds:      
-        #inds = get_inds_from_resind(pdb_prody, resind, aa)
-        _2nshell_resinds = get_2ndshell_indices([resind], pdb_prody, ni.getIndex())
-        if len(_2nshell_resinds) > 0:
-            for _2resind in _2nshell_resinds:
-                count += 1
-                print(pdb_prody.getTitle() + '+' + '-'.join([str(x) for x in _2nshell_resinds]))
-                sel_pdb_prody = pdb_prody.select('resindex ' + str(resind) + ' ' + str(_2resind) + ' ' + str(ni.getResindex()))
-                #sel_pdb_prody = pdb_prody.select('resindex ' + str(_2resind) + ' or index ' + ' '.join([str(ind) for ind in inds]) + ' ' + str(ni.getIndex()))
-                aa_cores.append((pdb_prody.getTitle() + '_' + aa_name + '_' + str(count), sel_pdb_prody))                
-    return aa_cores
-
-def extract_all_core_aa(pdbs, metal_sel, aa = 'resname HIS', consider_phipsi = False, extention_out = 0, extract2aa = False, extention = 0, filter_aas = False, aas = None,  extract2aa_sep = False, extract2ndshell = False):
-    '''
-    consider_phipsi: trigger M2 clustering method.
-
-    extention: trigger M3 clustering method.
-
-    extract2aa: trigger M4 clustering method.
-
-    extention: useful in M4 clustering method. Decide the gap between two extracted aa. Example, extention = 3, aaa-HIS-aaa will be check overlap with aaa-GLU-aaa
-
-    extention_out: useful in M4 clustering method. Decide the N and C terminal extention. Example, extention_out = 1, a-HIS-aa-HIS-a; extention_out = 2, aa-HIS-aa-HIS-aa;
-
-    aas: useful in M4 clustering method. Decide which two type of aa are extracted.
-
-    extract2aa_sep: trigger M5 clustering method.
-
-    extract2ndshell: trigger 2ndshell method.
-    '''
-    all_aa_cores = []
-    for pdb in pdbs:
-        if extract2aa:
-            aa_cores = get_2aa_core(pdb, metal_sel, aas, extention, extention_out)
-        elif extract2aa_sep:
-            aa_cores = get_2aa_sep_core(pdb, metal_sel, filter_aas = filter_aas, aas = aas)
-        elif extract2ndshell:
-            aa_cores = get_aa_2ndshell_core(pdb, metal_sel, aa)
-        else:
-            aa_cores = get_aa_core(pdb, metal_sel, aa, consider_phipsi, extention_out)
-
-        if aa_cores:
-            all_aa_cores.extend(aa_cores)
-    return all_aa_cores
-
-
-# Extract 3d angle (deprecated)
-
-def get_atom_core(pdb_prody, metal_sel, tag = '_atom'):
-    '''
-    extract all nearby atoms
-    '''
-    nis = pdb_prody.select(metal_sel)
-
-    # A pdb can contain more than one NI.
-    if not nis:
-        print('No Metal?' + pdb_prody.getTitle())
-        return
-    
-    ni = nis[0]
-    atom_cores = []
-    count = 0
-
-    all_atom = pdb_prody.select('protein and within 2.83 of index ' + str(ni.getIndex())).select('nitrogen or oxygen or sulfur')
-    if not all_atom:
-        return     
-    atom_inds = np.unique(all_atom.getIndices())
-    sel_pdb_prody = pdb_prody.select('index ' + ' '.join([str(x) for x in atom_inds]) + ' '+ str(ni.getIndex()))
-    atom_cores.append(( pdb_prody.getTitle() + tag, sel_pdb_prody))   
-
-    return atom_cores
-
-def extract_all_atom_core(pdbs, metal_sel, tag  ='_atom'):
-    all_atom_cores = []
-    for pdb in pdbs:
-        atom_cores = get_atom_core(pdb, metal_sel, tag)
-        if atom_cores:
-            all_atom_cores.extend(atom_cores)
-    return all_atom_cores
-
+    return

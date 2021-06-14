@@ -29,7 +29,7 @@ def get_contact(pdbs):
         _contact_aas = pdb.select('protein and not carbon and not hydrogen and within 2.83 of resindex ' + str(metal.getResindex()))
         if len(_contact_aas) > 1:
             dists = [None]*len(_contact_aas)
-            for i in len(_contact_aas):
+            for i in range(len(_contact_aas)):
                 dist = pr.calcDistance(metal, _contact_aas[i])
                 dists[i] = dist
             contact_aa = _contact_aas[argmin(dists)]
@@ -210,12 +210,14 @@ class Core:
         return inds
 
 
-    def generate_AA_2ndShell_Metal(self, key = 'AA2ndShellMetal'):
-        for resind in self.contact_aa_resinds:      
+    def generate_AA_2ndShell_Metal(self, key = 'AA2ndShellMetal', filter_AA = False, AA = 'HIS'):
+        for resind in self.contact_aa_resinds:
+            if filter_AA and not self.full_pdb.select('resname ' + AA + ' and resindex ' + str(resind)):
+                continue      
             #inds = get_inds_from_resind(pdb_prody, resind, aa)
-            _2nshell_resinds = self.get_2ndshell_indices([resind], self.full_pdb, self.metal_resind.getIndex())
+            _2nshell_resinds = ligand_database.get_2ndshell_indices([resind], self.full_pdb, self.metal.getIndex())
             if len(_2nshell_resinds) > 0:
-                for _2resind in _2nshell_resinds:
+                for _2resind in _2nshell_resinds:      
                     #print(self.full_pdb.getTitle() + '+' + '-'.join([str(x) for x in _2nshell_resinds]))
                     sel_pdb_prody = self.full_pdb.select('resindex ' + str(resind) + ' ' + str(_2resind) + ' ' + str(self.metal_resind))
                   

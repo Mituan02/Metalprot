@@ -21,15 +21,15 @@ def extract_vdm(cores, outdir, AA, key, extention, n, key_out):
 
 ### set up parameters
 
-workdir = "/mnt/e/DesignData/ligands/ZN_rcsb/"
+workdir = "/mnt/e/DesignData/ligands/FE_MN_CO/20210610/"
 
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
 align_sel_backbone = 'name C CA N O NI MN ZN CO CU MG FE or ion'
 
-cores = ldb.load_cores(workdir + '2_seq_cores_reps/')
+cores = ldb.load_cores(workdir + '_Seq_cores_reps/')
 
 
-AA = 'GLU'
+AA = 'CYS'
 
 len_sel = 5
 

@@ -7,7 +7,7 @@ import numpy as np
 from metalprot import search_struct, extract_vdm, ligand_database
 
 '''
-python /mnt/e/GitHub_Design/Metalprot/metalprot/scrips/run_search_struct_3vdm.py
+python /mnt/e/GitHub_Design/Metalprot/metalprot/scrips/run_search_struct_bivalence.py
 '''
 
 # Generate queryss
@@ -20,7 +20,7 @@ print(query_dir)
 
 #Get query pdbs 
 
-querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['M1-1_AAMetalSc_HIS_cluster02'], score_cut = 1, clu_num_cut = 100)
+querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['M5_AAdAAMetal_HIS_HIS_clusters02'], score_cut = 0.5, clu_num_cut = 100)
 
 print(len(querys))
 
@@ -28,28 +28,29 @@ queryss.append(querys)
 
 #Get query_2nd pdbs 
 
-query_2nds = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['M1-1_AAMetalSc_HIS_cluster02'], score_cut = 1, clu_num_cut = 100)
+query_2nds = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['M5_AAdAAMetal_HIS_HIS_clusters02'], score_cut = 0.5, clu_num_cut = 100)
 
 queryss.append(query_2nds)
 
 #Get query_3rd pdbs 
 
-query_3rds = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['M1-1_AAMetalSc_HIS_cluster02'], score_cut = 1, clu_num_cut = 100)
+query_3rds = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['M5_AAdAAMetal_HIS_HIS_clusters02'], score_cut = 0.5, clu_num_cut = 100)
 
 queryss.append(query_3rds)
 
+contact_querys = None
+_2nd_querys = None
+#contact_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['M8_AtomContact4_clusters'], score_cut = 0, clu_num_cut = 2)
 
-contact_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['M8_AtomContact4_clusters'], score_cut = 0, clu_num_cut = 2)
+#_2nd_querys = extract_vdm.extract_all_centroid(query_dir + '20210608/', summary_name = '_summary.txt', file_name_includes = ['M7_AA2sMetal-HIS_clusters'], score_cut = 0, clu_num_cut = 0)
 
-_2nd_querys = extract_vdm.extract_all_centroid(query_dir + '20210608/', summary_name = '_summary.txt', file_name_includes = ['M7_AA2sMetal-HIS_clusters'], score_cut = 0, clu_num_cut = 0)
-
-print(len(_2nd_querys))
+#print(len(_2nd_querys))
 
 # run Search_struct
 
 workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
 
-outdir = workdir + 'output_test_3vdm2/'
+outdir = workdir + 'output_test_bivalence/'
 
 target_path = workdir + '5od1_zn.pdb'
 
@@ -63,7 +64,7 @@ clash_query_query = 2.3
 
 clash_query_target = 2.3
 
-use_sep_aas = [False, False, False]
+use_sep_aas = [True, True, True]
 
 tolerance = 0.5
 
@@ -92,12 +93,11 @@ ss = search_struct.Search_struct(target_path, outdir, queryss, rmsd_cuts, dist_c
     tolerance, fine_dist_cut = fine_dist_cut, win_filter = win_filter, contact_querys = contact_querys, secondshell_querys=_2nd_querys)
 
 #ss.run_search_struct()
-ss.run_iter_search_structure()
+ss.run_bivalence_search_structure()
 
-ss.run_search_structure_member()
+##ss.run_search_structure_member()
 
-ss.run_search_2nshells(outpath = '/mem_combs/', rmsd=0.5)
+#ss.run_search_2nshells(outpath = '/mem_combs/', rmsd=0.5)
 ### If only search 2nshell for a specific comb.
 #ss.search_2ndshell(4)
 #ss.write_2ndshell(4)
-

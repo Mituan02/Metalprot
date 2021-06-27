@@ -26,7 +26,7 @@ class Query:
         self.path = path
         self.ag = ag
         self._2nd_shells = []
-        if self.win and '_win_' not in self.query.getTitle():
+        if self.win is not None and '_win_' not in self.query.getTitle():
             self.query.setTitle(self.query.getTitle().split('.pdb')[0] + '_win_' + '_'.join([str(w) for w in self.win]) + '.pdb')
 
     def to_tab_string(self):
@@ -95,7 +95,7 @@ def target_position_filter(window_inds, select_inds):
     return np.array(filter_window_inds)
 
 
-def supperimpose_target_bb(query, target, win_filter=None, rmsd_cut = 0.5):
+def supperimpose_target_bb(query, target, win_filter=None, rmsd_cut = 0.5, validateOriginStruct = False):
     '''
     Two possible way:1. Master search; 2. prody calcrmsd.
     query: prody pdb
@@ -119,6 +119,8 @@ def supperimpose_target_bb(query, target, win_filter=None, rmsd_cut = 0.5):
     for win in window_inds:
         target_sel = target.select('resindex ' + ' '.join([str(w) for w in win]))
         if len(query.query.select('name N CA C O')) != len(target_sel.select('name N CA C O')):
+            continue
+        if validateOriginStruct and target_sel.select('name CA').getResnames()[0] != query.query.select('name CA').getResnames()[0]:
             continue
         #TO DO: The calcTransformation here will change the position of pdb. 
         #This will make the output pdb not align well. Current solved by re align.
@@ -188,7 +190,7 @@ def query_target_clash(query, win, target, clash_dist = 2.0):
     for c in query_contact_sc.getCoords():
         xyzs.append(c)
 
-    for c in target.select('bb and not resindex ' + ' '.join([str(ind) for ind in win])).getCoords():
+    for c in target.select('bb and within 5 of resindex ' + ' '.join([str(ind) for ind in win]) + ' and not resindex ' + ' '.join([str(ind) for ind in win])).getCoords():
         xyzs.append(c)
 
     xyzs = np.vstack(xyzs)  
@@ -277,6 +279,45 @@ def supperimpose_target_bb_bivalence(query, target, dist_array, id_array, win_fi
                 new_querys.append(new_query)
 
     return new_querys
+
+def extract_win_filter_by_bivalence(query, target, dist_array, id_array, tolerance = 0.5, rmsd_cut = 0.5, validateOriginStruct = True):
+    win_filter = set()
+    cas = query.query.select('protein and name CA')
+    dist = pr.calcDistance(cas[0], cas[1])
+    left = np.searchsorted(dist_array, dist - tolerance)
+    right = np.searchsorted(dist_array, dist + tolerance, side = 'right')
+
+    if right >= left:
+        for i in range(left, right+1):
+            idi, idj = id_array[i]
+            # if win_filter:
+            #     if idi not in win_filter or idj not in win_filter:
+            #         continue          
+            target_sel = target.select('resindex ' + str(idi) + ' ' + str(idj))
+            if validateOriginStruct:
+                if not target_sel.select('name CA').getResnames()[0] == cas.getResnames()[0]:
+                    continue
+                if not target_sel.select('name CA').getResnames()[1] == cas.getResnames()[1]:
+                    continue
+            if len(query.query.select('name N CA C O')) != len(target_sel.select('name N CA C O')):
+                continue
+            pr.calcTransformation(query.query.select('name N CA C O'), target_sel.select('name N CA C O')).apply(query.query)
+            rmsd = pr.calcRMSD(target_sel.select('name N CA C O'), query.query.select('name N CA C O'))
+
+            if rmsd < rmsd_cut:
+                win_filter.add(idi)
+                win_filter.add(idj)
+
+    return win_filter
+
+def extract_all_win_filter_by_bivalence(querys, target, tolerance = 0.5, rmsd_cut = 0.5, validateOriginStruct = True):
+    win_filters = set()
+    dist_array, id_array = get_contact_map(target)
+    for query in querys:
+        win_filter = extract_win_filter_by_bivalence(query, target, dist_array, id_array, tolerance, rmsd_cut, validateOriginStruct)
+        for w in win_filter:
+            win_filters.add(w)
+    return win_filters
 
 def generate_ind_combination_listoflist(_listoflist):
     _all_list = []
@@ -406,7 +447,9 @@ class Search_struct:
     '''
     The function to search comb
     '''
-    def __init__(self, target_pdb, workdir, queryss, rmsd_cuts, dist_cuts, num_iter, qt_clash_dist, qq_clash_dist, use_sep_aas, tolerance, fine_dist_cut = 0.3, win_filter = None, contact_querys = None, secondshell_querys = None):
+    def __init__(self, target_pdb, workdir, queryss, rmsd_cuts, dist_cuts, num_iter, qt_clash_dist, 
+    qq_clash_dist, use_sep_aas, tolerance, fine_dist_cut = 0.3, win_filter = None, 
+    contact_querys = None, secondshell_querys = None, validateOriginStruct = False):
         if workdir:
             _workdir = os.path.realpath(workdir)
             if not os.path.exists(_workdir):
@@ -433,6 +476,7 @@ class Search_struct:
 
         self.fine_dist_cut = fine_dist_cut
         self.win_filter = win_filter
+        self.validateOriginStruct = validateOriginStruct
 
         if len(queryss) < num_iter:
             print('--Please includes the correct number of query list.')
@@ -577,7 +621,7 @@ class Search_struct:
                 if self.use_sep_aas[ind]:
                     cquerys = supperimpose_target_bb_bivalence(query, self.target, self.dist_array, self.id_array, win_filter, self.tolerance, self.rmsd_cuts[ind])
                 else:
-                    cquerys = supperimpose_target_bb(query, self.target, win_filter, self.rmsd_cuts[ind])
+                    cquerys = supperimpose_target_bb(query, self.target, win_filter, self.rmsd_cuts[ind], self.validateOriginStruct)
                 cqueryss.append(cquerys)
             self.cquerysss.append(cqueryss)
 
@@ -792,7 +836,7 @@ class Search_struct:
                     for comb in combs:
                         if len(comb) == self.num_iter: 
                             if self.overlap_all(inds, comb, self.num_iter):
-                                print(win)
+                                #print(win)
                                 comb_inds.append((inds, comb))
                         else:
                             comb_inds.append((inds, comb))

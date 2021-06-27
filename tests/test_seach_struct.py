@@ -9,6 +9,21 @@ from metalprot.apps.core import Core
 from metalprot.apps.search_struct import Query, constructy_pseudo_2ndshellVdm, convert_query_2ndshellVdm
 from metalprot import search_struct, extract_vdm, ligand_database
 
+def test_query_target_clash():
+    #workdir = '/mnt/e/GitHub_Design/Metalprot/tests/test_data/'
+    workdir = os.path.dirname(os.path.realpath(__file__)) + '/test_data/'
+    target_path = workdir + '5od1_zn.pdb'
+    target = pr.parsePDB(target_path)
+
+    query_pdb = pr.parsePDB(workdir + '5_3_3.37_m1-1_cluster_22_mem_31_5od1_ZN_1_AAMetal_HIS_mem1.pdb')
+    query = Query(query_pdb, 0, 0, 0, win = [60])
+    
+    win = [60]
+    test = target.select('bb and within 6 of resindex ' + ' '.join([str(ind) for ind in win]) + ' and not resindex ' + ' '.join([str(ind) for ind in win]))
+
+    clash = search_struct.query_target_clash(query, win, target, clash_dist = 2.0)
+    assert clash == False
+
 def test_generate_ind_combination_listoflist():
     _listoflist = [[1, 2], [3, 4], [5, 6]]
     all_inds = search_struct.generate_ind_combination_listoflist(_listoflist)

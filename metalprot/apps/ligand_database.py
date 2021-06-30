@@ -180,7 +180,7 @@ def get_metal_core_seq(pdb_prody, metal_sel, extend = 4):
     for ni in nis:
         ni_index = ni.getIndex()
         #all_near = pdb_prody.select('nitrogen or oxygen or sulfur').select('not water and within 2.83 of index ' + str(ni_index))
-        all_near = pdb_prody.select('protein and within 2.83 of index ' + str(ni_index))
+        all_near = pdb_prody.select('resname HIS GLU ASP CYS and within 2.83 of index ' + str(ni_index))
         if not all_near or not all_near.select('nitrogen or oxygen or sulfur') or len(all_near.select('nitrogen or oxygen or sulfur')) < 3:
             continue          
         inds = all_near.select('nitrogen or oxygen or sulfur').getResindices()

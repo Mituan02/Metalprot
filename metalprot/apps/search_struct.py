@@ -15,11 +15,12 @@ from . import core
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
 
 class Query:
-    def __init__(self, query, score = 0, clu_num = 0, clu_total_num = 0, win = None, path = None, ag = None):
+    def __init__(self, query, score = 0, clu_num = 0, clu_total_num = 0, is_bivalent = False, win = None, path = None, ag = None):
         self.query = query
         self.score = score
         self.clu_num = clu_num
         self.clu_total_num = clu_total_num
+        self.is_bivalent = is_bivalent
 
         #Extra properties for special usage.
         self.win = win
@@ -28,14 +29,23 @@ class Query:
         self._2nd_shells = []
         if self.win is not None and '_win_' not in self.query.getTitle():
             self.query.setTitle(self.query.getTitle().split('.pdb')[0] + '_win_' + '_'.join([str(w) for w in self.win]) + '.pdb')
+        
+    def set_win(self, win):
+        self.win = win
+        if self.win is not None and '_win_' not in self.query.getTitle():
+            self.query.setTitle(self.query.getTitle().split('.pdb')[0] + '_win_' + '_'.join([str(w) for w in self.win]) + '.pdb')
+        
 
     def to_tab_string(self):
         query_info = self.query.getTitle() + '\t' + str(round(self.score, 2)) + '\t' + str(self.clu_num)  + '\t'+ str(self.clu_total_num)
         return query_info
 
     def copy(self):
-        return Query(self.query.copy(), self.score, self.clu_num, self.clu_total_num, self.win, self.path, self.ag)
+        return Query(self.query.copy(), self.score, self.clu_num, self.clu_total_num, self.is_bivalent, self.win, self.path, self.ag)
     
+    def win_str(self):
+        return '-'.join([str(w) for w in self.win])
+
     def write(self, outpath):
         pr.writePDB(outpath, self.query)
 
@@ -54,10 +64,11 @@ class Comb:
         query_names = '||'.join([q.query.getTitle() for q in self.querys])
         query_scores = '||'.join([str(round(n, 2)) for n in self.scores])
         query_clu_nums = '||'.join([str(s) for s in self.clu_nums])
+        wins = '||'.join([q.win_str() for q in self.querys])
         if self.min_contact_query:
-            vdm_info = str(round(self.total_score, 2)) + '\t' + str(self.total_clu_number) + '\t' + query_names + '\t' + query_scores + '\t' + query_clu_nums + '\t' + self.min_contact_query.query.getTitle() + '\t' + str(self.min_contact_query.score) + '\t' + str(self.min_contact_rmsd)
+            vdm_info = str(round(self.total_score, 2)) + '\t' + str(self.total_clu_number) + '\t' + query_names + '\t' + query_scores + '\t' + query_clu_nums + '\t' + wins + '\t' + self.min_contact_query.query.getTitle() + '\t' + str(self.min_contact_query.score) + '\t' + str(self.min_contact_rmsd)
         else:
-            vdm_info = str(round(self.total_score, 2)) + '\t' + str(self.total_clu_number) + '\t' + query_names + '\t' + query_scores + '\t' + query_clu_nums
+            vdm_info = str(round(self.total_score, 2)) + '\t' + str(self.total_clu_number) + '\t' + query_names + '\t' + query_scores + '\t' + query_clu_nums + '\t' + wins
         return vdm_info
 
 def _connectivity_filter(arr, inds):
@@ -114,21 +125,22 @@ def supperimpose_target_bb(query, target, win_filter=None, rmsd_cut = 0.5, valid
 
     if win_filter:
         window_inds = target_position_filter(window_inds, win_filter)
-
+    
     new_querys = []
     for win in window_inds:
+        new_query = query.copy()
         target_sel = target.select('resindex ' + ' '.join([str(w) for w in win]))
-        if len(query.query.select('name N CA C O')) != len(target_sel.select('name N CA C O')):
+        if len(new_query.query.select('name N CA C O')) != len(target_sel.select('name N CA C O')):
             continue
-        if validateOriginStruct and target_sel.select('name CA').getResnames()[0] != query.query.select('name CA').getResnames()[0]:
+        if validateOriginStruct and target_sel.select('name CA').getResnames()[0] != new_query.query.select('name CA').getResnames()[0]:
             continue
         #TO DO: The calcTransformation here will change the position of pdb. 
         #This will make the output pdb not align well. Current solved by re align.
-        pr.calcTransformation(query.query.select('name N CA C O'), target_sel.select('name N CA C O')).apply(query.query)
-        rmsd = pr.calcRMSD(target_sel.select('name N CA C O'), query.query.select('name N CA C O'))
-
-        if rmsd < rmsd_cut:
-            new_query = Query(query.query.copy(), query.score, query.clu_num, query.clu_total_num, win, query.path)       
+        pr.calcTransformation(new_query.query.select('name N CA C O'), target_sel.select('name N CA C O')).apply(new_query.query)
+        rmsd = pr.calcRMSD(target_sel.select('name N CA C O'), new_query.query.select('name N CA C O'))
+        if rmsd < rmsd_cut and not query_target_clash(new_query.query, win, target):
+        #if rmsd < rmsd_cut:
+            new_query.set_win(win)   
             new_querys.append(new_query)
 
     return new_querys
@@ -238,6 +250,7 @@ def get_contact_map(target, win_filter = None):
 
     dist_array = []
     id_array = []
+
     for i in range(len(xyzs)):
         for j in range(i+1, len(xyzs)):
             if win_filter:
@@ -245,10 +258,30 @@ def get_contact_map(target, win_filter = None):
                     continue
             dist_array.append(dists[i, j])  
             id_array.append((i, j))
-
     dist_array, id_array = zip(*sorted(zip(dist_array, id_array)))
-    return dist_array, id_array
+    return dist_array, id_array, dists
+
+
+def check_pair_distance_satisfy(wx, wy, dists):
+    '''
+    wx, wy could be int or tuple
+    '''
+    wins = []
+    if isinstance(wx, tuple):
+        wins.extend(wx)
+    else:
+        wins.append(wx)
+
+    if isinstance(wy, tuple):
+        wins.extend(wy)
+    else:
+        wins.append(wy)
     
+    for _wx, _wy in itertools.combinations(wins, 2):
+        _x, _y = (_wx, _wy) if _wx < _wy else (_wy, _wx) 
+        if dists[_x, _y] > 15:
+            return False, wins
+    return True, wins
 
 def supperimpose_target_bb_bivalence(query, target, dist_array, id_array, win_filter = None, tolerance = 0.5, rmsd_cut = 0.5):
     '''
@@ -266,15 +299,14 @@ def supperimpose_target_bb_bivalence(query, target, dist_array, id_array, win_fi
     if right >= left:
         for i in range(left, right+1):
             idi, idj = id_array[i]
-            # if win_filter:
-            #     if idi not in win_filter or idj not in win_filter:
-            #         continue
+            if win_filter and len(win_filter) > 0:
+                if idi not in win_filter or idj not in win_filter:
+                    continue
             target_sel = target.select('resindex ' + str(idi) + ' ' + str(idj))
             pr.calcTransformation(query.query.select('name N CA C O'), target_sel.select('name N CA C O')).apply(query.query)
             rmsd = pr.calcRMSD(target_sel.select('name N CA C O'), query.query.select('name N CA C O'))
-
-            if rmsd < rmsd_cut:
-                win = [idi, idj]
+            win = [idi, idj]
+            if rmsd < rmsd_cut and query_target_clash(query, win, target):             
                 new_query = Query(query.query.copy(), query.score, query.clu_num, query.clu_total_num, win, query.path)
                 new_querys.append(new_query)
 
@@ -467,10 +499,7 @@ class Search_struct:
         self.qq_clash_dist = qq_clash_dist
 
         #Distance map for 2aa_sep database.
-        dist_array, id_array = get_contact_map(self.target, win_filter)
-        print(len(id_array))
-        self.dist_array = dist_array
-        self.id_array = id_array
+        self.dist_array, self.id_array, self.dists = get_contact_map(self.target, win_filter)
         self.use_sep_aas = use_sep_aas
         self.tolerance = tolerance
 
@@ -478,14 +507,16 @@ class Search_struct:
         self.win_filter = win_filter
         self.validateOriginStruct = validateOriginStruct
 
-        if len(queryss) < num_iter:
-            print('--Please includes the correct number of query list.')
+        if len(queryss) < num_iter: 
+            print('--You can run win based search.')
+        else:
+            print('--You can run comb based search.')
         self.queryss = queryss
 
         #---------------------------------
         self.combs = []
         self.cquerysss = []  #check function generate_cquerys()
-
+      
         xys = itertools.combinations(range(len(self.queryss)), 2)
         self.pair_extracts = [[0]*self.num_iter for i in range(self.num_iter)]
         for x, y in xys:
@@ -496,8 +527,168 @@ class Search_struct:
 
         self.secondshell_querys = secondshell_querys
 
+        #New searching strategy----------
+        self.win_querys = queryss[0]
+        self.win_query_dict = dict() # 93: [<metalprot.apps.search_struct.Query at 0x7f7f58daeb20>, None, None, None, <metalprot.apps.search_struct.Query at 0x7f7f59275c10>]
+        self.win_extract_dict = dict() # (33, 37): [(0, 24), (4, 24)]
+        self.win_comb_dict = dict() # (33, 37, 56): [[0, 24, 0], [0, 24, 19], [4, 24, 0], [4, 24, 19]]
+
         #end---------------------------- 
 
+
+    #region Win based search
+ 
+    def generate_win_query_dict(self):
+        '''
+        self.query_dict is a dictionary [win, [query1, query2, query3, None,  ...]], where win is the target position. win could be int or tuple for bivalent vdM.
+        '''
+        # check if we should consider bivalent vdm
+        contain_bivalent_vdm = False
+        ind = 0
+        while ind < len(self.win_querys) - 1 and not contain_bivalent_vdm:
+            query = self.win_querys[ind]
+            if query.is_bivalent:
+                contain_bivalent_vdm = True
+            ind += 1
+
+        # generate wins
+        wins = []
+        if self.win_filter:
+            wins.extend([w for w in self.win_filter])
+            if contain_bivalent_vdm:
+                wins.extend(itertools.combinations(self.win_filter, 2))
+        else:
+            t = self.target.select('name CA').getResindices()
+            wins.extend(([w for w in t]))
+            if contain_bivalent_vdm:
+                wins.extend(itertools.combinations(self.win_filter, 2)) 
+        
+        print('wins: {}'.format(wins))
+        # for each win, add the querys into the self.win_query_dict.
+        for w in wins:     
+            cquerys = []
+            for ind in range(len(self.win_querys)):
+                query = self.win_querys[ind]  
+                if isinstance(w, tuple) and query.is_bivalent:
+                    cquery = supperimpose_target_bb_bivalence(query, self.target, self.dist_array, self.id_array, w, self.tolerance, self.rmsd_cuts[0])
+                elif not isinstance(w, tuple) and not query.is_bivalent:                    
+                    cquery = supperimpose_target_bb(query, self.target, [w], self.rmsd_cuts[0], self.validateOriginStruct)
+                cquerys.append(cquery[0] if len(cquery) > 0 else None)
+            if len(cquerys) > 0:
+                self.win_query_dict[w] = cquerys
+        return
+
+
+    def iter_all_wins(self):
+        wins = list(self.win_query_dict.keys())
+        for inx in range(len(wins)):
+            for iny in range(inx + 1, len(wins)):
+                wx = wins[inx]
+                wy = wins[iny]  
+                dist_ok, ws = check_pair_distance_satisfy(wx, wy, self.dists)
+                if not dist_ok:
+                    continue
+                extracts = self.win_dist_cal(wx, wy, self.dist_cuts[0])
+                if len(extracts) > 0:
+                    self.win_extract_dict[(wx, wy)] = extracts
+        
+        win_combs = itertools.combinations(wins, self.num_iter)
+        for win_comb in win_combs:
+            #print(win_comb)
+            ind_combs = self.win_2_ind_comb(win_comb)
+            
+            if len(ind_combs) > 0:
+                self.win_comb_dict[win_comb] = ind_combs
+        return
+
+    def win_2_ind_comb(self, win_comb):
+        ind_combs = []
+
+        #For each pair of win combination, check if they satisfy dist_cut and contain extract. 
+        _the_win_comb = []
+        for i, j in itertools.combinations(range(self.num_iter), 2):
+            wx = win_comb[i]
+            wy = win_comb[j]
+            if not (wx, wy) in self.win_extract_dict.keys():
+                return ind_combs
+            _the_win_comb.append((wx, wy))
+
+        #For all extracts for the win_comb, check if any of the extract members are OK with the num_iter.
+        extss = [self.win_extract_dict[wc] for wc in _the_win_comb]
+        for xt in itertools.product(*extss):
+            #xt: ((0, 0), (0, 2), (0, 2))
+            ind_comb = dict()
+            tuples = list(itertools.combinations(range(self.num_iter), 2))
+            
+            ab_ac_bc = True
+            ind_xt = 0
+            while ind_xt < len(xt) and ab_ac_bc:              
+                i, j = tuples[ind_xt]              
+                if i not in ind_comb.keys():
+                    ind_comb[i] = xt[ind_xt][0]
+                elif ind_comb[i] != xt[ind_xt][0]:
+                    ind_comb[i] = -1
+                    ab_ac_bc = False
+                if j not in ind_comb.keys():
+                    ind_comb[j] = xt[ind_xt][1]
+                elif ind_comb[j] != xt[ind_xt][1]:
+                    ind_comb[j] = -1
+                    ab_ac_bc = False
+                ind_xt +=1
+
+            if not ab_ac_bc:
+                continue
+            ind_combs.append(list(ind_comb.values()))
+
+        return ind_combs
+
+    def win_dist_cal(self, wx, wy, dist_cut):
+
+        xs = self.win_query_dict[wx]
+        ys = self.win_query_dict[wy]
+
+        xyzs = []
+        for cq in xs:
+            if not cq:
+                xyzs.append(np.array([1000, 1000, 1000]))
+            else:
+                xyzs.append(cq.query.select('ion or name NI MN ZN CO CU MG FE')[0].getCoords())
+        for cq in ys:
+            if not cq:
+                xyzs.append(np.array([2000, 2000, 2000]))
+            else:
+                xyzs.append(cq.query.select('ion or name NI MN ZN CO CU MG FE')[0].getCoords())
+
+        xyzs = np.vstack(xyzs)  
+        dists = cdist(xyzs, xyzs)
+
+        np.fill_diagonal(dists, 5)
+        extracts = np.argwhere(dists <= dist_cut)
+
+        extracts = [(ex[0], ex[1] - len(xs)) for ex in extracts if ex[0] < len(xs) and ex[1] >= len(ys)]
+        
+        return extracts
+
+
+    def build_win_combs(self): 
+        '''
+        build win based combs
+        '''     
+        for key in self.win_comb_dict.keys():
+            for vs in self.win_comb_dict[key]:
+                comb = []
+                for i in range(len(key)):
+                    k = key[i]
+                    v = vs[i]
+                    query = self.win_query_dict[k][v]                  
+                    comb.append(query)
+                self.combs.append(Comb(comb))
+        if len(self.combs) > 0:
+            self.combs.sort(key = lambda x: x.total_score, reverse = True) 
+
+    #endregion
+
+    #region query based search
 
     def run_iter_search_structure(self):
         '''
@@ -775,10 +966,13 @@ class Search_struct:
 
     def write_comb_info(self, filename = '/_summary.txt'):
         with open(self.workdir + filename, 'w') as f:
-            f.write('total_score\ttotal_clu_number\tquerys\tscores\tclu_nums\tcontact_query\tcontact_score\tcontact_rmsd\n')
+            f.write('total_score\ttotal_clu_number\tquerys\tscores\tclu_nums\twins\tcontact_query\tcontact_score\tcontact_rmsd\n')
             for v in self.combs:
                 f.write(v.to_tab_string() + '\n')  
 
+    #endregion
+
+    #region bivalence based search
 
     def run_bivalence_search_structure(self):
         '''
@@ -935,8 +1129,11 @@ class Search_struct:
                 return False
         return True
 
+    #endregion bivalence based search
 
-    def run_search_2nshells(self, outpath = '/mem_combs/', rmsd = 0.5):
+    #region 2nd shell search
+
+    def run_search_2ndshells(self, outpath = '/mem_combs/', rmsd = 0.5):
         '''
         After find the self.combs, for each vdM in each combs, try to select the nearby aa bb to construct a pseudo 2ndshell vdM.
         Then compare with the 2ndshell vdM library. Keep the one within the rmsd limitation.
@@ -1000,5 +1197,5 @@ class Search_struct:
 
         return 
 
-
+    #endregion 2nd shell search
 

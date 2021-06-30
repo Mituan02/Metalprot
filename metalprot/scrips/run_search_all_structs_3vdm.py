@@ -39,16 +39,16 @@ query_3rds = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summar
 
 queryss.append(query_3rds)
 
-
-contact_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['M8_AtomContact4_clusters'], score_cut = 0, clu_num_cut = 2)
+contact_querys = None
+#contact_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['M8_AtomContact4_clusters'], score_cut = 0, clu_num_cut = 2)
 
 _2nd_querys = None
 #_2nd_querys = extract_vdm.extract_all_centroid(query_dir + '20210608/', summary_name = '_summary.txt', file_name_includes = ['M7_AA2sMetal-HIS_clusters'], score_cut = 0, clu_num_cut = 0)
 
 #print(len(_2nd_querys))
 
-query_bivalences = extract_vdm.extract_all_centroid('/mnt/e/DesignData/ligands/ZN_rcsb/20210527', summary_name = '_summary.txt', file_name_includes = ['M5_2aa_sep_cores_bb_clusters'], score_cut = 1, clu_num_cut = 10)
-print(len(query_bivalences))
+# query_bivalences = extract_vdm.extract_all_centroid('/mnt/e/DesignData/ligands/ZN_rcsb/20210527', summary_name = '_summary.txt', file_name_includes = ['M5_2aa_sep_cores_bb_clusters'], score_cut = 1, clu_num_cut = 10)
+# print(len(query_bivalences))
 
 # run Search_struct
 def run_search(workdir, target_file, queryss, contact_querys, _2nd_querys):
@@ -84,10 +84,13 @@ def run_search(workdir, target_file, queryss, contact_querys, _2nd_querys):
     win_extract = []
     for c in metal_cores:
         win_extract.extend(c[1].select('name CA').getResindices())
-
-
-    win_filters = search_struct.extract_all_win_filter_by_bivalence(query_bivalences, target)
-    win_filter = [w for w in win_filters]
+    win_extract.sort()
+    # try:
+    #     win_filters = search_struct.extract_all_win_filter_by_bivalence(query_bivalences, target)
+    #     win_filter = [w for w in win_filters]
+    # except:
+    #     win_filters = [None]   
+    win_filters = None  
 
     ss = search_struct.Search_struct(target_path, outdir, queryss, rmsd_cuts, dist_cuts, num_iter, clash_query_query, clash_query_target, use_sep_aas, 
         tolerance, fine_dist_cut = fine_dist_cut, win_filter = win_filter, contact_querys = contact_querys, secondshell_querys=_2nd_querys, validateOriginStruct = validateOriginStruct)
@@ -103,7 +106,7 @@ def run_search(workdir, target_file, queryss, contact_querys, _2nd_querys):
         #ss.search_2ndshell(4)
         #ss.write_2ndshell(4)
     except:
-        return (target_file, False, win_filter.sort(), win_extract.sort(), [None], False, False, False)
+        return (target_file, False, win_filter, win_extract, None, False, False, False)
 
     win_search = set()
     for c in ss.combs:
@@ -111,22 +114,24 @@ def run_search(workdir, target_file, queryss, contact_querys, _2nd_querys):
             for w in q.win:
                 win_search.add(w)
     win_search = [w for w in win_search] 
+    win_search.sort()
 
     extract_in_search = [True if e in win_search else False for e in win_extract]
 
     search_in_extract = [True if e in win_extract else False for e in win_search]
     
-    return (target_file, True, win_filter.sort(), win_extract.sort, win_search.sort(), True, all(extract_in_search), all(search_in_extract))
+    return (target_file, True, win_filter, win_extract, win_search, True, all(extract_in_search), all(search_in_extract))
 
 
 num_cores = int(mp.cpu_count())
 pool = mp.Pool(num_cores)
 
-workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/_test_full_pdbs/'
+workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/_test_full_pdbs_sub2/'
 
 target_files = []
 for target_file in os.listdir(workdir):
-    target_files.append(target_file)
+    if target_file.endswith('.pdb'):
+        target_files.append(target_file)
 
 results = [pool.apply_async(run_search, args=(workdir, target_file, queryss, None, None)) for target_file in target_files]
 results = [p.get() for p in results]
@@ -137,11 +142,12 @@ with open(workdir + '_summary.txt', 'w') as f:
         try:
             f.write(r[0] + '\t')
             f.write(str(r[1]) + '\t')
-            f.write(','.join(str(x) for x in r[2]) + '\t')
-            f.write(','.join(str(x) for x in r[3]) + '\t')
-            f.write(','.join(str(x) for x in r[4]) + '\t')
+            f.write(r[2] if r[2] == None else ','.join(str(x) for x in r[2]) + '\t')
+            f.write(r[3] if r[3] == None else ','.join(str(x) for x in r[3]) + '\t')
+            f.write(r[4] if r[4] == None else ','.join(str(x) for x in r[4]) + '\t')
             f.write(str(r[5]) + '\t')
             f.write(str(r[6]) + '\t')
             f.write(str(r[7]) + '\t\n')
         except:
             f.write(r[0] + '\t\n')
+

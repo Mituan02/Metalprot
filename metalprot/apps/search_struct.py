@@ -9,67 +9,13 @@ from prody.proteins.pdbfile import writePDB
 from scipy.spatial.distance import cdist, dice
 import datetime
 from .ligand_database import clu_info
-from .ligand_database import get_all_pbd_prody
+from .extract_vdm import get_vdm_mem
+from .quco import Query, Comb
 from . import core
+
 
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
 
-class Query:
-    def __init__(self, query, score = 0, clu_num = 0, clu_total_num = 0, is_bivalent = False, win = None, path = None, ag = None):
-        self.query = query
-        self.score = score
-        self.clu_num = clu_num
-        self.clu_total_num = clu_total_num
-        self.is_bivalent = is_bivalent
-
-        #Extra properties for special usage.
-        self.win = win
-        self.path = path
-        self.ag = ag
-        self._2nd_shells = []
-        if self.win is not None and '_win_' not in self.query.getTitle():
-            self.query.setTitle(self.query.getTitle().split('.pdb')[0] + '_win_' + '_'.join([str(w) for w in self.win]) + '.pdb')
-        
-    def set_win(self, win):
-        self.win = win
-        if self.win is not None and '_win_' not in self.query.getTitle():
-            self.query.setTitle(self.query.getTitle().split('.pdb')[0] + '_win_' + '_'.join([str(w) for w in self.win]) + '.pdb')
-        
-
-    def to_tab_string(self):
-        query_info = self.query.getTitle() + '\t' + str(round(self.score, 2)) + '\t' + str(self.clu_num)  + '\t'+ str(self.clu_total_num)
-        return query_info
-
-    def copy(self):
-        return Query(self.query.copy(), self.score, self.clu_num, self.clu_total_num, self.is_bivalent, self.win, self.path, self.ag)
-    
-    def win_str(self):
-        return '-'.join([str(w) for w in self.win])
-
-    def write(self, outpath):
-        pr.writePDB(outpath, self.query)
-
-
-class Comb:
-    def __init__(self, querys, min_contact_query = None, min_contact_rmsd = None):
-        self.querys = querys       
-        self.total_score = sum([q.score for q in querys])
-        self.total_clu_number= sum([q.clu_num for q in querys])        
-        self.scores = [q.score for q in querys]
-        self.clu_nums= [q.clu_num for q in querys]
-        self.min_contact_query = min_contact_query
-        self.min_contact_rmsd = min_contact_rmsd
-
-    def to_tab_string(self):
-        query_names = '||'.join([q.query.getTitle() for q in self.querys])
-        query_scores = '||'.join([str(round(n, 2)) for n in self.scores])
-        query_clu_nums = '||'.join([str(s) for s in self.clu_nums])
-        wins = '||'.join([q.win_str() for q in self.querys])
-        if self.min_contact_query:
-            vdm_info = str(round(self.total_score, 2)) + '\t' + str(self.total_clu_number) + '\t' + query_names + '\t' + query_scores + '\t' + query_clu_nums + '\t' + wins + '\t' + self.min_contact_query.query.getTitle() + '\t' + str(self.min_contact_query.score) + '\t' + str(self.min_contact_rmsd)
-        else:
-            vdm_info = str(round(self.total_score, 2)) + '\t' + str(self.total_clu_number) + '\t' + query_names + '\t' + query_scores + '\t' + query_clu_nums + '\t' + wins
-        return vdm_info
 
 def _connectivity_filter(arr, inds):
     d = np.diff(arr[inds, :], axis=0)
@@ -149,12 +95,17 @@ def simple_clash(query, query_2nd, clash_dist = 2.0):
     '''
     If the two query has CA within 2, then it is a crash.
     '''
+    overlap = [w for w in query.win if w in query_2nd.win]
+    if len(overlap) > 0:
+        return True
+    return False
+    '''
     xyzs = []
     try:
-        ni_index = query.select('ion or name NI MN ZN CO CU MG FE')[0].getIndex()
-        all_near = query.select('protein and within 2.84 of index ' + str(ni_index))
+        ni_index = query.query.select('ion or name NI MN ZN CO CU MG FE')[0].getIndex()
+        all_near = query.query.select('protein and within 2.84 of index ' + str(ni_index))
         inds = all_near.select('nitrogen or oxygen or sulfur').getResindices()
-        query_contact_sc = query.select('protein and heavy and resindex ' + ' '.join([str(ind) for ind in inds]))
+        query_contact_sc = query.query.select('protein and heavy and resindex ' + ' '.join([str(ind) for ind in inds]))
     except:
         print('clashing fail: ' + query.getTitle())
         return True
@@ -162,10 +113,10 @@ def simple_clash(query, query_2nd, clash_dist = 2.0):
     for c in query_contact_sc.getCoords():
         xyzs.append(c)
     try:
-        ni_index2 = query_2nd.select('ion or name NI MN ZN CO CU MG FE')[0].getIndex()
-        all_near2 = query_2nd.select('protein and within 2.84 of index ' + str(ni_index2))
+        ni_index2 = query_2nd.query.select('ion or name NI MN ZN CO CU MG FE')[0].getIndex()
+        all_near2 = query_2nd.query.select('protein and within 2.84 of index ' + str(ni_index2))
         inds2 = all_near2.select('nitrogen or oxygen or sulfur').getResindices()
-        query_contact_sc2 = query_2nd.select('protein and heavy and resindex ' + ' '.join([str(ind) for ind in inds2]))
+        query_contact_sc2 = query_2nd.query.select('protein and heavy and resindex ' + ' '.join([str(ind) for ind in inds2]))
     except:
         print('clashing fail: ' + query_2nd.getTitle())
         return True
@@ -184,6 +135,7 @@ def simple_clash(query, query_2nd, clash_dist = 2.0):
     if len(extracts) > 0:
         return True
     return False
+    '''
 
 def query_target_clash(query, win, target, clash_dist = 2.0):
     xyzs = []
@@ -307,7 +259,7 @@ def supperimpose_target_bb_bivalence(query, target, dist_array, id_array, win_fi
             rmsd = pr.calcRMSD(target_sel.select('name N CA C O'), query.query.select('name N CA C O'))
             win = [idi, idj]
             if rmsd < rmsd_cut and query_target_clash(query, win, target):             
-                new_query = Query(query.query.copy(), query.score, query.clu_num, query.clu_total_num, win, query.path)
+                new_query = Query(query.query.copy(), query.score, query.clu_num, query.clu_total_num, True, win, query.path)
                 new_querys.append(new_query)
 
     return new_querys
@@ -327,29 +279,68 @@ def extract_win_filter_by_bivalence(query, target, dist_array, id_array, toleran
             #         continue          
             target_sel = target.select('resindex ' + str(idi) + ' ' + str(idj))
             if validateOriginStruct:
-                if not target_sel.select('name CA').getResnames()[0] == cas.getResnames()[0]:
-                    continue
-                if not target_sel.select('name CA').getResnames()[1] == cas.getResnames()[1]:
+                try:
+                    if not target_sel.select('name CA').getResnames()[0] == cas.getResnames()[0]:
+                        continue
+                    if not target_sel.select('name CA').getResnames()[1] == cas.getResnames()[1]:
+                        continue
+                except:
+                    print(query.query.getTitle())
                     continue
             if len(query.query.select('name N CA C O')) != len(target_sel.select('name N CA C O')):
                 continue
             pr.calcTransformation(query.query.select('name N CA C O'), target_sel.select('name N CA C O')).apply(query.query)
             rmsd = pr.calcRMSD(target_sel.select('name N CA C O'), query.query.select('name N CA C O'))
 
-            if rmsd < rmsd_cut:
-                win_filter.add(idi)
-                win_filter.add(idj)
+            if rmsd < rmsd_cut:       
+                #win_filter.add(idi)
+                #win_filter.add(idj)
+                win_filter.add((idi, idj))
 
     return win_filter
 
+
 def extract_all_win_filter_by_bivalence(querys, target, tolerance = 0.5, rmsd_cut = 0.5, validateOriginStruct = True):
     win_filters = set()
-    dist_array, id_array = get_contact_map(target)
+    dist_array, id_array, dists = get_contact_map(target)
     for query in querys:
         win_filter = extract_win_filter_by_bivalence(query, target, dist_array, id_array, tolerance, rmsd_cut, validateOriginStruct)
         for w in win_filter:
             win_filters.add(w)
-    return win_filters
+    print('win_filters {}'.format(win_filters))
+    win_filter_inds = set([w for win in win_filters for w in win])
+    #TO DO: The filter below is Not working yet.
+    #win_filter_inds = filter_bivalence_win_by_comb(win_filters)
+    return win_filter_inds
+
+def pair_win_overlap_one(win_x, win_y):
+    if win_x[0] in win_y and win_x[1] not in win_y:
+        return True
+    if win_x[1] in win_y and win_x[0] not in win_y:
+        return True
+    return False
+
+def filter_bivalence_win_by_comb(win_filters_set):
+    '''
+    The idea is simple. A binding core must contain at least 3 contact amino acids if this is the case. 
+    For example the extracted wins could be {[1, 2], [2, 3], [3, 1]} There mush have such an combination. 
+    '''
+    win_filter_inds = set() 
+    win_filters = list(win_filters_set)
+    for x in range(len(win_filters)):
+        for y in range(x + 1, len(win_filters)):
+            if not pair_win_overlap_one(win_filters[x], win_filters[y]):
+                continue
+            for z in range(y + 1, len(win_filters)):
+                if pair_win_overlap_one(win_filters[x], win_filters[z]) and pair_win_overlap_one(win_filters[y], win_filters[z]):
+                    win_filter_inds.add(win_filters[x][0])
+                    win_filter_inds.add(win_filters[x][1])
+                    win_filter_inds.add(win_filters[y][0])
+                    win_filter_inds.add(win_filters[y][1])
+                    win_filter_inds.add(win_filters[z][0])
+                    win_filter_inds.add(win_filters[z][1])
+    return win_filter_inds
+                    
 
 def generate_ind_combination_listoflist(_listoflist):
     _all_list = []
@@ -470,7 +461,7 @@ def supperimpose_2ndshell(ag, query_2nd, rmsd_cut):
     rmsd = pr.calcRMSD(ag, query_2nd.ag)
 
     if rmsd <= rmsd_cut:
-        candidate = Query(query_2nd.query.copy(),  query_2nd.score, query_2nd.clu_num, query_2nd.clu_total_num, query_2nd.win, query_2nd.path)
+        candidate = Query(query_2nd.query.copy(),  query_2nd.score, query_2nd.clu_num, query_2nd.clu_total_num, query_2nd.is_bivalent, query_2nd.win, query_2nd.path)
         return candidate
     return None
 
@@ -508,13 +499,14 @@ class Search_struct:
         self.validateOriginStruct = validateOriginStruct
 
         if len(queryss) < num_iter: 
-            print('--You can run win based search.')
+            print('--You can only run win based search.')
         else:
-            print('--You can run comb based search.')
+            print('--You can run comb or win based search.')
         self.queryss = queryss
 
         #---------------------------------
         self.combs = []
+        self.member_combs = dict()
         self.cquerysss = []  #check function generate_cquerys()
       
         xys = itertools.combinations(range(len(self.queryss)), 2)
@@ -525,9 +517,10 @@ class Search_struct:
         #contact-----------------------
         self.contact_querys = contact_querys
 
+        #secondshell-----------------------
         self.secondshell_querys = secondshell_querys
 
-        #New searching strategy----------
+        #Win based searching strategy----------
         self.win_querys = queryss[0]
         self.win_query_dict = dict() # 93: [<metalprot.apps.search_struct.Query at 0x7f7f58daeb20>, None, None, None, <metalprot.apps.search_struct.Query at 0x7f7f59275c10>]
         self.win_extract_dict = dict() # (33, 37): [(0, 24), (4, 24)]
@@ -535,9 +528,47 @@ class Search_struct:
 
         #end---------------------------- 
 
+    #region common functions
+
+    def write_combs(self, combs, outpath = '/combs/'):      
+        outdir = self.workdir + outpath
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+
+        rank = 1
+        for c in combs:
+            count = 1
+            for query in c.querys:
+                pdb_path = outdir + str(rank) + '_' + str(count) + '_' + str(round(c.total_score, 2)) + '_' + query.query.getTitle()
+                pr.writePDB(pdb_path, query.query)
+                count+=1
+            rank += 1
+
+
+    def write_comb_info(self, combs, filename = '/_summary.txt'):
+        with open(self.workdir + filename, 'w') as f:
+            f.write('total_score\ttotal_clu_number\tquerys\tscores\tclu_nums\twins\tcontact_query\tcontact_score\tcontact_rmsd\tpair_dists\tpair_angles\n')
+            for v in combs:
+                f.write(v.to_tab_string() + '\n')  
+
+    #endregion
+
 
     #region Win based search
- 
+    def run_win_based_search(self):
+
+        self.generate_win_query_dict()
+
+        self.iter_all_wins(self.dist_cuts[0]) 
+
+        self.combs.extend(self.build_win_combs())
+
+        self.write_combs(self.combs)
+
+        self.write_comb_info(self.combs)
+
+        
+
     def generate_win_query_dict(self):
         '''
         self.query_dict is a dictionary [win, [query1, query2, query3, None,  ...]], where win is the target position. win could be int or tuple for bivalent vdM.
@@ -563,7 +594,7 @@ class Search_struct:
             if contain_bivalent_vdm:
                 wins.extend(itertools.combinations(self.win_filter, 2)) 
         
-        print('wins: {}'.format(wins))
+        #print('wins: {}'.format(wins))
         # for each win, add the querys into the self.win_query_dict.
         for w in wins:     
             cquerys = []
@@ -579,7 +610,7 @@ class Search_struct:
         return
 
 
-    def iter_all_wins(self):
+    def iter_all_wins(self, dist_cut):
         wins = list(self.win_query_dict.keys())
         for inx in range(len(wins)):
             for iny in range(inx + 1, len(wins)):
@@ -588,10 +619,11 @@ class Search_struct:
                 dist_ok, ws = check_pair_distance_satisfy(wx, wy, self.dists)
                 if not dist_ok:
                     continue
-                extracts = self.win_dist_cal(wx, wy, self.dist_cuts[0])
+                extracts = self.win_dist_cal(wx, wy, dist_cut)
                 if len(extracts) > 0:
                     self.win_extract_dict[(wx, wy)] = extracts
         
+        #TO DO: Not working for bivalent yet.
         win_combs = itertools.combinations(wins, self.num_iter)
         for win_comb in win_combs:
             #print(win_comb)
@@ -674,6 +706,7 @@ class Search_struct:
         '''
         build win based combs
         '''     
+        combs = []
         for key in self.win_comb_dict.keys():
             for vs in self.win_comb_dict[key]:
                 comb = []
@@ -682,11 +715,55 @@ class Search_struct:
                     v = vs[i]
                     query = self.win_query_dict[k][v]                  
                     comb.append(query)
-                self.combs.append(Comb(comb))
-        if len(self.combs) > 0:
-            self.combs.sort(key = lambda x: x.total_score, reverse = True) 
+                combs.append(Comb(comb))
+        if len(combs) > 0:
+            combs.sort(key = lambda x: x.total_score, reverse = True) 
+        return combs
 
     #endregion
+
+
+    #region win based search for members
+
+    def run_win_search_structure_member(self):
+        print('combs count {}'.format(len(self.combs)))
+        for i in range(len(self.combs)):          
+            self.win_query_dict.clear()
+            self.win_comb_dict.clear()
+            wins = tuple(sorted([w for q in self.combs[i].querys for w in q.win]))
+            if wins in self.member_combs.keys() and len(self.member_combs[wins]) > 0:
+                continue
+
+            for q in self.combs[i].querys:
+                cvdms = []
+                vdms = get_vdm_mem(q)
+                for _query in vdms:            
+                    target_sel = self.target.select('resindex ' + ' '.join([str(w) for w in _query.win]))
+                    pr.calcTransformation(_query.query.select('name N CA C O'), target_sel.select('name N CA C O')).apply(_query.query)
+                    cvdms.append(_query)
+                self.win_query_dict[tuple(q.win)] = cvdms
+            
+            print(len(self.win_query_dict))           
+            self.iter_all_wins(self.fine_dist_cut)
+            print(len(self.win_comb_dict))
+            combs = self.build_win_combs()          
+            self.member_combs[wins] = combs
+            print(len(self.member_combs))
+
+        if len(self.member_combs) > 0:
+            self.member_combs.sort(key = lambda x: x.total_score, reverse = True) 
+        
+        for c in self.member_combs:
+            c.calc_pair_geometry()    
+
+        self.write_combs(self.member_combs, outpath= '/mem_combs/')
+
+        self.write_comb_info(self.member_combs, filename= '/_summary_mem.txt')
+            
+        return
+
+    #endregion
+
 
     #region query based search
 
@@ -698,11 +775,11 @@ class Search_struct:
         self.generate_cquerys(self.win_filter)
         comb_inds = self.get_iter_pair()
 
-        self.build_combs(comb_inds)
+        self.combs.extend(self.build_combs(comb_inds))
 
-        self.write_combs(outpath= '/combs/')
+        self.write_combs(self.combs, outpath= '/combs/')
 
-        self.write_comb_info()
+        self.write_comb_info(self.combs)
 
     
     def get_iter_pair(self): 
@@ -757,45 +834,11 @@ class Search_struct:
                 for comb in combs:
                     comb_inds.append((inds, comb))
 
-        self.build_combs(comb_inds)
+        self.combs.extend(self.build_combs(comb_inds))
 
-        self.write_combs(outpath= '/combs/')
+        self.write_combs(self.combs, outpath= '/combs/')
 
-        self.write_comb_info()
-
-    
-    
-    def run_search_structure_member(self):
-        '''
-        Fine search step. To search into each cluster members. 
-        '''
-        #initialize self.cquerysss and self.pair_extracts
-        self.cquerysss.clear()
-        self.generate_cvdms(self.target)
-
-        xys = itertools.combinations(range(len(self.queryss)), 2)
-        self.pair_extracts = [[0]*self.num_iter for i in range(self.num_iter)]
-        for x, y in xys:
-            self.pair_extracts[x][y] = dict()
-
-        all_inds = [[i]*self.num_iter for i in range(len(self.cquerysss[0]))]
-        print(all_inds)
-
-        comb_inds = []
-        for inds in all_inds:
-            extracts = self.get_pair_extracts(inds, dist_cuts = [self.fine_dist_cut]*self.num_iter)
-            if extracts and len(extracts)>0:
-                combs = get_combs_from_pair_extract(self.num_iter, extracts)
-                for comb in combs:
-                    comb_inds.append((inds, comb))
-
-        self.combs.clear()
-        
-        self.build_combs(comb_inds)
-
-        self.write_combs(outpath= '/mem_combs/')
-
-        self.write_comb_info(filename= '/_summary_mem.txt')
+        self.write_comb_info(self.combs)
 
 
     def generate_cquerys(self, win_filter = None):
@@ -815,39 +858,6 @@ class Search_struct:
                     cquerys = supperimpose_target_bb(query, self.target, win_filter, self.rmsd_cuts[ind], self.validateOriginStruct)
                 cqueryss.append(cquerys)
             self.cquerysss.append(cqueryss)
-
-
-    def generate_cvdms(self, target):
-        '''
-        self.cvdmsss is in same structrue with self.cquerysss.
-        cvdms is the members of each centroid candidates.
-        '''
-        for i in range(self.num_iter):
-            cvdmss = []         
-            for ind in range(len(self.combs)):
-                query = self.combs[ind].querys[i] 
-                cvdms = []             
-                vdms = self.get_vdm_mem(query)
-                for query in vdms:            
-                    target_sel = target.select('resindex ' + ' '.join([str(w) for w in query.win]))
-                    pr.calcTransformation(query.query.select('name N CA C O'), target_sel.select('name N CA C O')).apply(query.query)
-                    cvdms.append(query)
-                cvdmss.append(cvdms)
-            self.cquerysss.append(cvdmss)
-
-
-    def get_vdm_mem(self, query):
-        '''
-        load all members of one centroid.
-        '''
-        vdms = []
-        
-        pdbs = get_all_pbd_prody(query.path)
-
-        for pdb in pdbs:
-            vdms.append(Query(pdb, query.score, query.clu_num, query.clu_total_num, query.win, query.path))
-
-        return vdms
 
 
     def get_pair_extracts(self, inds, dist_cuts):
@@ -910,7 +920,7 @@ class Search_struct:
             return
     
         for i, j in extracts:
-            if simple_clash(cquerys_0[i].query, cquerys_ind[j].query, self.qq_clash_dist): 
+            if simple_clash(cquerys_0[i], cquerys_ind[j], self.qq_clash_dist): 
                 #print('two query clash.')
                 continue
             if query_target_clash(cquerys_0[i].query, cquerys_0[i].win, self.target, self.qt_clash_dist) or query_target_clash(cquerys_ind[j].query, cquerys_ind[j].win, self.target, self.qt_clash_dist) :
@@ -930,6 +940,7 @@ class Search_struct:
         ((18, 21, 22), [31, 60, 55])]
         
         '''
+        combs = []
         check_dup = set()
         for inds, extracts in comb_inds:
             vdms = []
@@ -942,35 +953,76 @@ class Search_struct:
                 check_dup.add(tuple([vdms[p].query.getTitle() for p in pm]))
             if self.contact_querys:
                 min_query, min_rmsd = geometry_filter([v.query for v in vdms], self.contact_querys)           
-                self.combs.append(Comb(vdms, min_query, min_rmsd))
+                combs.append(Comb(vdms, min_query, min_rmsd))
             else:
-                self.combs.append(Comb(vdms))
-        if len(self.combs) > 0:
-            self.combs.sort(key = lambda x: x.total_score, reverse = True) 
-
-
-    def write_combs(self, outpath = '/combs/'):      
-        outdir = self.workdir + outpath
-        if not os.path.exists(outdir):
-            os.mkdir(outdir)
-
-        rank = 1
-        for c in self.combs:
-            count = 1
-            for query in c.querys:
-                pdb_path = outdir + str(rank) + '_' + str(count) + '_' + str(round(c.total_score, 2)) + '_' + query.query.getTitle()
-                pr.writePDB(pdb_path, query.query)
-                count+=1
-            rank += 1
-
-
-    def write_comb_info(self, filename = '/_summary.txt'):
-        with open(self.workdir + filename, 'w') as f:
-            f.write('total_score\ttotal_clu_number\tquerys\tscores\tclu_nums\twins\tcontact_query\tcontact_score\tcontact_rmsd\n')
-            for v in self.combs:
-                f.write(v.to_tab_string() + '\n')  
+                combs.append(Comb(vdms))
+        if len(combs) > 0:
+            combs.sort(key = lambda x: x.total_score, reverse = True)
+        return combs 
 
     #endregion
+
+
+    #region query based search for members
+
+    def run_search_structure_member(self):
+        '''
+        Fine search step. To search into each cluster members. 
+        '''
+        #initialize self.cquerysss and self.pair_extracts
+        self.cquerysss.clear()
+        self.generate_cvdms(self.target)
+
+        xys = itertools.combinations(range(len(self.queryss)), 2)
+        self.pair_extracts = [[0]*self.num_iter for i in range(self.num_iter)]
+        for x, y in xys:
+            self.pair_extracts[x][y] = dict()
+
+        all_inds = [[i]*self.num_iter for i in range(len(self.cquerysss[0]))]
+        print(all_inds)
+
+        comb_inds = []
+        for inds in all_inds:
+            extracts = self.get_pair_extracts(inds, dist_cuts = [self.fine_dist_cut]*self.num_iter)
+            if extracts and len(extracts)>0:
+                combs = get_combs_from_pair_extract(self.num_iter, extracts)
+                for comb in combs:
+                    comb_inds.append((inds, comb))
+
+        self.combs.clear()
+        
+        self.combs.extend(self.build_combs(comb_inds))
+
+        for c in self.combs:
+            c.calc_pair_geometry()    
+
+        self.write_combs(self.combs, outpath= '/mem_combs/')
+
+        self.write_comb_info(self.combs, filename= '/_summary_mem.txt')
+
+        return 
+
+    def generate_cvdms(self, target):
+        '''
+        self.cvdmsss is in same structrue with self.cquerysss.
+        cvdms is the members of each centroid candidates.
+        '''
+        for i in range(self.num_iter):
+            cvdmss = []         
+            for ind in range(len(self.combs)):
+                query = self.combs[ind].querys[i] 
+                cvdms = []             
+                vdms = get_vdm_mem(query)
+                for query in vdms:            
+                    target_sel = target.select('resindex ' + ' '.join([str(w) for w in query.win]))
+                    pr.calcTransformation(query.query.select('name N CA C O'), target_sel.select('name N CA C O')).apply(query.query)
+                    cvdms.append(query)
+                cvdmss.append(cvdms)
+            self.cquerysss.append(cvdmss)
+
+
+    #endregion
+
 
     #region bivalence based search
 
@@ -1003,11 +1055,11 @@ class Search_struct:
                         #print(win)
                         comb_inds.append((inds, comb))
 
-        self.build_combs(comb_inds)
+        self.combs.extend(self.build_combs(comb_inds))
 
-        self.write_combs(outpath= '/combs/')
+        self.write_combs(self.combs, outpath= '/combs/')
 
-        self.write_comb_info()
+        self.write_comb_info(self.combs)
 
 
     def get_bivalence_pair(self):
@@ -1130,6 +1182,7 @@ class Search_struct:
         return True
 
     #endregion bivalence based search
+
 
     #region 2nd shell search
 

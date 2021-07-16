@@ -11,8 +11,8 @@ import multiprocessing as mp
 python /mnt/e/GitHub_Design/Metalprot/metalprot/scrips/run_search_all_structs_3vdm_post_analysis.py
 '''
 
-#query_bivalences = extract_vdm.extract_all_centroid('/mnt/e/DesignData/ligands/ZN_rcsb/20210527', summary_name = '_summary.txt', file_name_includes = ['M5_2aa_sep_cores_bb_clusters'], score_cut = 1, clu_num_cut = 10)
-#print(len(query_bivalences))
+query_bivalences = extract_vdm.extract_all_centroid('/mnt/e/DesignData/ligands/ZN_rcsb/20210527', summary_name = '_summary.txt', file_name_includes = ['M5_2aa_sep_cores_bb_clusters'], score_cut = 1, clu_num_cut = 10)
+print(len(query_bivalences))
 
 ###------------------------------------------------------------
 # Post analysis.
@@ -31,13 +31,12 @@ def run_post_analysis(workdir, target_file):
         win_extract.extend(c[1].select('name CA').getResindices())
     win_extract.sort()
 
-    # try:
-    #     win_filter = search_struct.extract_all_win_filter_by_bivalence(query_bivalences, target)
-    #     win_filter = [w for w in win_filter]
-    #     win_filter.sort()
-    # except:
-    #     win_filter = None
-    win_filter = None
+
+    win_filter = search_struct.extract_all_win_filter_by_bivalence(query_bivalences, target, tolerance=0.75, rmsd_cut=0.75)
+    win_filter = [w for w in win_filter]
+    win_filter.sort()
+
+    #win_filter = None
 
     win_search = set()
     out_comb_dir = workdir + 'output_' + target_file.split('.')[0] + '/combs'

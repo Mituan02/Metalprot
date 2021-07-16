@@ -37,7 +37,7 @@ def test_win_based_search():
 
     contact_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['M8_AtomContact4_clusters'], score_cut = 1, clu_num_cut = 2)
 
-    outdir = workdir + 'output_search_3vdm/'
+    outdir = workdir + 'output_win_search_3vdm/'
 
     target_path = workdir + '5od1_zn.pdb'
 
@@ -55,7 +55,7 @@ def test_win_based_search():
 
     tolerance = 0.5
 
-    ss = search_struct.Search_struct(target_path, outdir, queryss, rmsd_cuts, dist_cuts, num_iter, clash_query_query, clash_query_target, use_sep_aas, tolerance, contact_querys = contact_querys)
+    ss = search_struct.Search_struct(target_path, outdir, queryss, rmsd_cuts, dist_cuts, num_iter, clash_query_query, clash_query_target, use_sep_aas, tolerance, contact_querys = contact_querys, validateOriginStruct=True)
 
     ss.generate_win_query_dict()
 

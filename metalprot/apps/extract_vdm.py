@@ -3,8 +3,8 @@ import numpy as np
 import itertools
 import prody as pr
 from scipy.spatial.distance import cdist
-from .ligand_database import clu_info
-from .search_struct import Query
+from .ligand_database import clu_info, get_all_pbd_prody
+from .quco import Query, Comb
 
 
 def read_cluster_info(file_path):
@@ -76,5 +76,21 @@ def extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_inc
     return querys
 
 
+def get_vdm_mem(query, random = None):
+    '''
+    load all members of one centroid.
+    '''
+    vdms = []
+    
+    pdbs = get_all_pbd_prody(query.path)
 
+    ks = list(range(len(pdbs)))
+
+    if random and len(ks) > random:
+        ks = np.random.choice(ks, random, replace=False)
+    for ind in ks:
+        pdb = pdbs[ind]
+        vdms.append(Query(pdb, query.score, query.clu_num, query.clu_total_num, query.is_bivalent, query.win, query.path))
+
+    return vdms
 

@@ -92,11 +92,12 @@ ss = search_struct.Search_struct(target_path, outdir, queryss, rmsd_cuts, dist_c
     tolerance, fine_dist_cut = fine_dist_cut, win_filter = win_filter, contact_querys = contact_querys, secondshell_querys=_2nd_querys)
 
 #ss.run_search_struct()
-ss.run_iter_search_structure()
+#ss.run_iter_search_structure()
+ss.run_hull_based_search()
 
-ss.run_search_structure_member()
+#ss.run_search_structure_member()
 
-ss.run_search_2nshells(outpath = '/mem_combs/', rmsd=0.5)
+#ss.run_search_2nshells(outpath = '/mem_combs/', rmsd=0.5)
 ### If only search 2nshell for a specific comb.
 #ss.search_2ndshell(4)
 #ss.write_2ndshell(4)

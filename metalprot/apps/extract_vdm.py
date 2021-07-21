@@ -5,7 +5,7 @@ import prody as pr
 from scipy.spatial.distance import cdist
 from .ligand_database import clu_info, get_all_pbd_prody
 from .quco import Query, Comb
-
+from .hull import transfer2pdb
 
 def read_cluster_info(file_path):
     clu_infos = []
@@ -94,3 +94,12 @@ def get_vdm_mem(query, random = None):
 
     return vdms
 
+
+def extract_mem_metal_point(query, metal_sel = 'ion or name NI MN ZN CO CU MG FE'):
+
+    pdbs = get_all_pbd_prody(query.path)
+    points = []
+    for pdb in pdbs:
+        points.append(pdb.select(metal_sel)[0].getCoords())
+
+    query.hull_ag = transfer2pdb(points)

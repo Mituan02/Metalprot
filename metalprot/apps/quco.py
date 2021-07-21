@@ -5,7 +5,7 @@ metal_sel = 'ion or name NI MN ZN CO CU MG FE'
 
 
 class Query:
-    def __init__(self, query, score = 0, clu_num = 0, clu_total_num = 0, is_bivalent = False, win = None, path = None, ag = None):
+    def __init__(self, query, score = 0, clu_num = 0, clu_total_num = 0, is_bivalent = False, win = None, path = None, ag = None, hull_ag = None):
         self.query = query
         self.score = score
         self.clu_num = clu_num
@@ -19,7 +19,12 @@ class Query:
         self._2nd_shells = []
         if self.win is not None and '_win_' not in self.query.getTitle():
             self.query.setTitle(self.query.getTitle().split('.pdb')[0] + '_win_' + '_'.join([str(w) for w in self.win]) + '.pdb')
-        
+        #Extra properties for hull usage. 
+        self.hull_ag = hull_ag
+    
+    def get_hull_points(self):
+        return self.hull_ag.getCoords()
+
     def set_win(self, win):
         self.win = win
         if self.win is not None and '_win_' not in self.query.getTitle():
@@ -31,7 +36,11 @@ class Query:
         return query_info
 
     def copy(self):
-        return Query(self.query.copy(), self.score, self.clu_num, self.clu_total_num, self.is_bivalent, self.win, self.path, self.ag)
+        hull_ag = None
+        if self.hull_ag:
+            hull_ag = self.hull_ag.copy()
+        
+        return Query(self.query.copy(), self.score, self.clu_num, self.clu_total_num, self.is_bivalent, self.win, self.path, self.ag, hull_ag)
     
     def win_str(self):
         return '-'.join([str(w) for w in self.win])
@@ -97,3 +106,17 @@ class Comb:
             angle_pair.append((angle + angle2)/2)
         self.pair_dists = dist_pair
         self.pair_angles = angle_pair   
+
+
+class Cluster:
+    def __init__(self, querys):      
+        self.querys = querys       
+        self.total_score = sum([q.score for q in querys])
+        self.total_clu_number= sum([q.clu_num for q in querys])        
+        self.scores = [q.score for q in querys]
+        self.clu_nums= [q.clu_num for q in querys]
+        self.centroid = [q for q in querys if 'centroid' in q.query.getTitle()][0]
+
+        
+
+

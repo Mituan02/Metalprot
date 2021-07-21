@@ -12,6 +12,7 @@ from .ligand_database import clu_info
 from .extract_vdm import get_vdm_mem
 from .quco import Query, Comb
 from . import core
+from . import hull
 
 
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
@@ -52,7 +53,7 @@ def target_position_filter(window_inds, select_inds):
     return np.array(filter_window_inds)
 
 
-def supperimpose_target_bb(query, target, win_filter=None, rmsd_cut = 0.5, validateOriginStruct = False):
+def supperimpose_target_bb(query, target, win_filter=None, rmsd_cut = 0.5, align_sel = 'name N CA C O', validateOriginStruct = False):
     '''
     Two possible way:1. Master search; 2. prody calcrmsd.
     query: prody pdb
@@ -76,19 +77,21 @@ def supperimpose_target_bb(query, target, win_filter=None, rmsd_cut = 0.5, valid
     for win in window_inds:
         new_query = query.copy()
         target_sel = target.select('resindex ' + ' '.join([str(w) for w in win]))
-        if len(new_query.query.select('name N CA C O')) != len(target_sel.select('name N CA C O')):
+        if len(new_query.query.select(align_sel)) != len(target_sel.select(align_sel)):
             continue
         if validateOriginStruct and target_sel.select('name CA').getResnames()[0] != new_query.query.select('name CA').getResnames()[0]:
             continue
         #TO DO: The calcTransformation here will change the position of pdb. 
         #This will make the output pdb not align well. Current solved by re align.
-        pr.calcTransformation(new_query.query.select('name N CA C O'), target_sel.select('name N CA C O')).apply(new_query.query)
-        rmsd = pr.calcRMSD(target_sel.select('name N CA C O'), new_query.query.select('name N CA C O'))
+        transform = pr.calcTransformation(new_query.query.select(align_sel), target_sel.select(align_sel))
+        transform.apply(new_query.query)
+        if new_query.hull_ag:
+            transform.apply(new_query.hull_ag)
+        rmsd = pr.calcRMSD(target_sel.select(align_sel), new_query.query.select(align_sel))
         if rmsd < rmsd_cut and not query_target_clash(new_query.query, win, target):
         #if rmsd < rmsd_cut:
             new_query.set_win(win)   
             new_querys.append(new_query)
-
     return new_querys
 
 def simple_clash(query, query_2nd, clash_dist = 2.0):
@@ -526,6 +529,11 @@ class Search_struct:
         self.win_extract_dict = dict() # (33, 37): [(0, 24), (4, 24)]
         self.win_comb_dict = dict() # (33, 37, 56): [[0, 24, 0], [0, 24, 19], [4, 24, 0], [4, 24, 19]]
 
+        #hull based searching strategy---------
+        self.hull_query_dict = dict() # 93: [<metalprot.apps.search_struct.Query at 0x7f7f58daeb20>, None, None, None, <metalprot.apps.search_struct.Query at 0x7f7f59275c10>]
+        self.hull_extract_dict = dict() # (33, 37): {(0, 24):(overlap, xs, ys), (4, 24):(overlap, xs,ys)}
+        self.hull_comb_dict = dict() # Please check hull_overlap()
+
         #end---------------------------- 
 
     #region common functions
@@ -554,7 +562,183 @@ class Search_struct:
     #endregion
 
 
+    #region hull based search
+    def run_hull_based_search(self):
+
+        self.hull_generate_query_dict()
+
+        self.hull_based_iter_all_wins() 
+
+        #self.combs.extend(self.build_win_combs())
+
+        #self.write_combs(self.combs)
+
+        #self.write_comb_info(self.combs)
+
+    
+    def hull_generate_query_dict(self):
+        '''
+        self.query_dict is a dictionary [win, [query1, query2, query3, None,  ...]], where win is the target position. win could be int.
+        '''
+        # generate wins
+        wins = []
+        if self.win_filter:
+            wins.extend([w for w in self.win_filter])
+        else:
+            t = self.target.select('name CA').getResindices()
+            wins.extend(([w for w in t]))
+        
+        #print('wins: {}'.format(wins))
+        # for each win, add the querys into the self.hull_query_dict.
+        for w in wins:     
+            cquerys = []
+            for ind in range(len(self.win_querys)):
+                query = self.win_querys[ind]  
+                cquery = supperimpose_target_bb(query, self.target, [w], self.rmsd_cuts[0], align_sel='name N CA C', validateOriginStruct = self.validateOriginStruct)
+                cquerys.append(cquery[0] if len(cquery) > 0 else None)
+            if len(cquerys) > 0:
+                self.hull_query_dict[w] = cquerys
+        return
+
+
+    def hull_generate_pairwise_win_dict(self):
+        wins = list(self.hull_query_dict.keys())
+        for inx in range(len(wins)):
+            for iny in range(inx + 1, len(wins)):
+                wx = wins[inx]
+                wy = wins[iny]  
+                dist_ok, ws = check_pair_distance_satisfy(wx, wy, self.dists)
+                if not dist_ok:
+                    continue
+                extracts = self.hull_cal(wx, wy)
+                self.hull_extract_dict[(wx, wy)] = extracts
+        return
+
+
+    def hull_cal(self, wx, wy):
+        '''
+        For each pair of aa positions, calculate the hull of all possible combination of members.
+        extracts: (0, 24):(overlap, xs, ys)
+        '''
+        extracts = {}
+        for i in range(len(self.hull_query_dict[wx])):
+            for j in range(len(self.hull_query_dict[wy])):
+                if not self.hull_query_dict[wx][i] or not self.hull_query_dict[wy][j]:
+                    continue
+                p1s = self.hull_query_dict[wx][i].get_hull_points()
+                p2s = self.hull_query_dict[wy][j].get_hull_points()
+
+                hull_info = hull.calc_pairwise_hull(p1s, p2s)
+                if hull_info[0]:
+                    extracts[(i, j)] = hull_info
+        return extracts
+
+
+    def hull_win2indcomb(self, win_comb):
+        #For each pair of win combination, check if they satisfy dist_cut and contain extract. 
+        _the_win_comb = []
+        for i, j in itertools.combinations(range(self.num_iter), 2):
+            wx = win_comb[i]
+            wy = win_comb[j]
+            if not (wx, wy) in self.hull_extract_dict.keys():
+                return
+            _the_win_comb.append((wx, wy))
+
+        #For all extracts for the win_comb, check if any of the extract members are OK with the num_iter.
+        extss = [self.hull_extract_dict[wc].keys() for wc in _the_win_comb]
+        for xt in itertools.product(*extss):
+            #xt: ((0, 0), (0, 2), (0, 2))
+            ind_comb = dict()
+            tuples = list(itertools.combinations(range(self.num_iter), 2))
+            
+            ab_ac_bc = True
+            ind_xt = 0
+            while ind_xt < len(xt) and ab_ac_bc:              
+                i, j = tuples[ind_xt]              
+                if i not in ind_comb.keys():
+                    ind_comb[i] = xt[ind_xt][0]
+                elif ind_comb[i] != xt[ind_xt][0]:
+                    ind_comb[i] = -1
+                    ab_ac_bc = False
+                if j not in ind_comb.keys():
+                    ind_comb[j] = xt[ind_xt][1]
+                elif ind_comb[j] != xt[ind_xt][1]:
+                    ind_comb[j] = -1
+                    ab_ac_bc = False
+                ind_xt +=1
+
+            if not ab_ac_bc:
+                continue
+        
+            self.hull_overlap(win_comb, _the_win_comb, tuple(ind_comb.values()), xt)
+        return
+
+
+    def hull_overlap(self, win_comb, win_comb_pair, clu_comb, clu_comb_pair):
+        '''
+        win_comb_pair: [(a, b), (a, c), (b, c)]. protein position a, b, c
+        clu_comb_pair: ((0, 0), (0, 2), (0, 2)). for cluster a:0, b:0, c:2 
+
+        hull_comb_dict[((a, b, c), (0, 0, 2))] = {(a, 0) : [T, F, T, F, F], (b, 0) : [T, F, T, F, F], (c, 2) : [T, F, T, F, F]}
+        '''
+        count = len(clu_comb_pair)
+
+        overlap_mems = dict()
+        for id in range(count):
+            w1, w2 = win_comb_pair[id]
+            c1, c2 = clu_comb_pair[id]
+
+            firsts = self.hull_extract_dict[(w1, w2)][(c1, c2)][1]
+
+            seconds = self.hull_extract_dict[(w1, w2)][(c1, c2)][2]
+
+            if (w1, c1) in overlap_mems.keys():
+                overlap_mems[(w1, c1)] = [overlap_mems[(w1, c1)][i] if firsts[i] else False for i in range(len(firsts))]
+            else:
+                overlap_mems[(w1, c1)] = firsts
+
+            if (w2, c2) in overlap_mems.keys():
+                overlap_mems[(w2, c2)] = [overlap_mems[(w2, c2)][i] if seconds[i] else False for i in range(len(seconds))]
+            else:
+                overlap_mems[(w2, c2)] = seconds
+        # print(win_comb)
+        # print(win_comb_pair)
+        # print(clu_comb)
+        # print(clu_comb_pair)
+        self.hull_comb_dict[(win_comb, clu_comb)] = overlap_mems
+
+        
+    def hull_iter_win(self):
+        wins = list(self.hull_query_dict.keys())
+        win_combs = itertools.combinations(wins, self.num_iter)
+        for win_comb in win_combs:
+            print(win_comb)
+            self.hull_win2indcomb(win_comb)
+        return
+
+    
+    def hull_write(self, outpath = '/mems/'):  
+        outdir = self.workdir + outpath
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+
+        for key in self.hull_comb_dict.keys():
+            val = self.hull_comb_dict[key]
+
+            tag = 'win_' + '-'.join([str(k) for k in key[0]]) + 'clu' + '-'.join(str(k) for k in key[1])
+            for i in range(len(key[0])):
+                win = key[0][i]
+                clu = key[1][i] 
+                query = self.hull_query_dict[win][clu]
+                points = query.get_hull_points()[val[(win, clu)]]
+                hull.write2pymol(points, outdir, tag + '_points.pdb')
+                
+                pdb_path = outdir + tag + '_' + query.query.getTitle()
+                pr.writePDB(pdb_path, query.query)
+
+
     #region Win based search
+
     def run_win_based_search(self):
 
         self.generate_win_query_dict()
@@ -566,8 +750,7 @@ class Search_struct:
         self.write_combs(self.combs)
 
         self.write_comb_info(self.combs)
-
-        
+       
 
     def generate_win_query_dict(self):
         '''
@@ -633,6 +816,7 @@ class Search_struct:
                 self.win_comb_dict[win_comb] = ind_combs
         return
 
+
     def win_2_ind_comb(self, win_comb):
         ind_combs = []
 
@@ -673,6 +857,7 @@ class Search_struct:
             ind_combs.append(list(ind_comb.values()))
 
         return ind_combs
+
 
     def win_dist_cal(self, wx, wy, dist_cut):
 

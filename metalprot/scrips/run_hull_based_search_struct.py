@@ -13,15 +13,18 @@ python /mnt/e/GitHub_Design/Metalprot/metalprot/scrips/run_search_struct_3vdm.py
 ### Generate queryss
 queryss = []
 
-query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb/'
+query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/'
 
 # Get query pdbs, Add the cluster metal points into the query.hull_points
 
-querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['M1-1_AAMetalSc_HIS_cluster02'], score_cut = 0, clu_num_cut = 50)
+querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['AAMetalPhiPsi_HIS_cluster05'], score_cut = 1, clu_num_cut = 50)
 
 for query in querys:
-    extract_vdm.extract_mem_metal_point(query)
-
+    clu = extract_vdm.get_vdm_cluster(query)
+    clu.realign_by_CCAN(target = query)
+    query.cluster = clu
+    query.extract_mem_metal_point()
+    
 print(len(querys))
 
 queryss.append(querys)
@@ -36,7 +39,7 @@ _2nd_querys = None
 
 workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
 
-outdir = workdir + 'output_hull_test/'
+outdir = workdir + 'output_hull_test2/'
 
 target_path = workdir + '5od1_zn.pdb'
 
@@ -79,13 +82,16 @@ win_filter = [34,  60,  64]
 ss = search_struct.Search_struct(target_path, outdir, queryss, rmsd_cuts, dist_cuts, num_iter, clash_query_query, clash_query_target, use_sep_aas, 
     tolerance, fine_dist_cut = fine_dist_cut, win_filter = win_filter, contact_querys = contact_querys, secondshell_querys=_2nd_querys, validateOriginStruct=True)
 
+#cquery = supperimpose_target_bb(query, ss.target, [34], ss.rmsd_cuts[0], query_align_sel='name N CA C and resindex ' + str(query.contact_resind), target_align_sel='name N CA C', validateOriginStruct = ss.validateOriginStruct)
 
 #ss.run_hull_based_search()
 ss.hull_generate_query_dict()
 ss.hull_generate_pairwise_win_dict()
 #ss.hull_iter_win()
 ss.hull_win2indcomb((34, 60, 64))
+ss.hull_construct()
 ss.hull_write()
+
 #ss.run_search_2nshells(outpath = '/mem_combs/', rmsd=0.5)
 ### If only search 2nshell for a specific comb.
 #ss.search_2ndshell(4)

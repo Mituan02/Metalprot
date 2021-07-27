@@ -53,14 +53,14 @@ def target_position_filter(window_inds, select_inds):
     return np.array(filter_window_inds)
 
 
-def supperimpose_target_bb(query, target, win_filter=None, rmsd_cut = 0.5, align_sel = 'name N CA C O', validateOriginStruct = False):
+def supperimpose_target_bb(query, target, win_filter=None, rmsd_cut = 0.5, query_align_sel = 'name N CA C O', target_align_sel = 'name N CA C O', validateOriginStruct = False):
     '''
     Two possible way:1. Master search; 2. prody calcrmsd.
     query: prody pdb
     target: prody pdb
     '''
     try:
-        query_len = len(query.query.select('protein and name CA'))
+        query_len = len(query.query.select('name CA ' + query_align_sel))
         target_len = len(target.select('protein and name CA'))
     except:
         print(query.query.getTitle())
@@ -72,22 +72,22 @@ def supperimpose_target_bb(query, target, win_filter=None, rmsd_cut = 0.5, align
 
     if win_filter:
         window_inds = target_position_filter(window_inds, win_filter)
-    
+
     new_querys = []
     for win in window_inds:
         new_query = query.copy()
         target_sel = target.select('resindex ' + ' '.join([str(w) for w in win]))
-        if len(new_query.query.select(align_sel)) != len(target_sel.select(align_sel)):
+        if len(new_query.query.select(query_align_sel)) != len(target_sel.select(target_align_sel)):
             continue
         if validateOriginStruct and target_sel.select('name CA').getResnames()[0] != new_query.query.select('name CA').getResnames()[0]:
             continue
         #TO DO: The calcTransformation here will change the position of pdb. 
         #This will make the output pdb not align well. Current solved by re align.
-        transform = pr.calcTransformation(new_query.query.select(align_sel), target_sel.select(align_sel))
+        transform = pr.calcTransformation(new_query.query.select(query_align_sel), target_sel.select(target_align_sel))
         transform.apply(new_query.query)
         if new_query.hull_ag:
             transform.apply(new_query.hull_ag)
-        rmsd = pr.calcRMSD(target_sel.select(align_sel), new_query.query.select(align_sel))
+        rmsd = pr.calcRMSD(target_sel.select(target_align_sel), new_query.query.select(query_align_sel))
         if rmsd < rmsd_cut and not query_target_clash(new_query.query, win, target):
         #if rmsd < rmsd_cut:
             new_query.set_win(win)   
@@ -484,7 +484,7 @@ class Search_struct:
             _workdir = os.getcwd() + '/output_' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S')          
             os.mkdir(_workdir)
 
-        self.workdir = _workdir
+        self.workdir = _workdir + '/'
         self.target = pr.parsePDB(target_pdb)
         self.rmsd_cuts = rmsd_cuts
         self.dist_cuts = dist_cuts
@@ -581,6 +581,7 @@ class Search_struct:
         self.query_dict is a dictionary [win, [query1, query2, query3, None,  ...]], where win is the target position. win could be int.
         '''
         # generate wins
+        print('hull_generate_query_dict')
         wins = []
         if self.win_filter:
             wins.extend([w for w in self.win_filter])
@@ -594,7 +595,7 @@ class Search_struct:
             cquerys = []
             for ind in range(len(self.win_querys)):
                 query = self.win_querys[ind]  
-                cquery = supperimpose_target_bb(query, self.target, [w], self.rmsd_cuts[0], align_sel='name N CA C', validateOriginStruct = self.validateOriginStruct)
+                cquery = supperimpose_target_bb(query, self.target, [w], self.rmsd_cuts[0], query_align_sel='name N CA C and resindex ' + str(query.contact_resind), target_align_sel='name N CA C', validateOriginStruct = self.validateOriginStruct)
                 cquerys.append(cquery[0] if len(cquery) > 0 else None)
             if len(cquerys) > 0:
                 self.hull_query_dict[w] = cquerys
@@ -602,6 +603,7 @@ class Search_struct:
 
 
     def hull_generate_pairwise_win_dict(self):
+        print('hull_generate_pairwise_win_dict')
         wins = list(self.hull_query_dict.keys())
         for inx in range(len(wins)):
             for iny in range(inx + 1, len(wins)):
@@ -635,6 +637,7 @@ class Search_struct:
 
 
     def hull_win2indcomb(self, win_comb):
+        print('hull_win2indcomb')
         #For each pair of win combination, check if they satisfy dist_cut and contain extract. 
         _the_win_comb = []
         for i, j in itertools.combinations(range(self.num_iter), 2):
@@ -705,7 +708,9 @@ class Search_struct:
         # print(win_comb_pair)
         # print(clu_comb)
         # print(clu_comb_pair)
-        self.hull_comb_dict[(win_comb, clu_comb)] = overlap_mems
+        if all([any(v) for v in overlap_mems.values()]):
+            self.hull_comb_dict[(win_comb, clu_comb)] = overlap_mems
+        return 
 
         
     def hull_iter_win(self):
@@ -716,25 +721,57 @@ class Search_struct:
             self.hull_win2indcomb(win_comb)
         return
 
-    
-    def hull_write(self, outpath = '/mems/'):  
-        outdir = self.workdir + outpath
-        if not os.path.exists(outdir):
-            os.mkdir(outdir)
 
-        for key in self.hull_comb_dict.keys():
+    def hull_construct(self):
+        '''
+        After the point overlap calculation to get self.hull_comb_dict. 
+        Extract the member comb. 
+        '''
+        print('hull_construct')
+        for key in self.hull_comb_dict.keys():       
+
             val = self.hull_comb_dict[key]
-
-            tag = 'win_' + '-'.join([str(k) for k in key[0]]) + 'clu' + '-'.join(str(k) for k in key[1])
+            tag = 'win_' + '-'.join([str(k) for k in key[0]]) + '_clu_' + '-'.join(str(k) for k in key[1])    
             for i in range(len(key[0])):
                 win = key[0][i]
                 clu = key[1][i] 
                 query = self.hull_query_dict[win][clu]
-                points = query.get_hull_points()[val[(win, clu)]]
-                hull.write2pymol(points, outdir, tag + '_points.pdb')
-                
+                cand_bool = val[(win, clu)]
+                query.candidates_points = query.get_hull_points()[cand_bool]         
+                query.realign_by_CCAN_candidates([i for i in range(len(cand_bool)) if cand_bool[i]])
+
+
+    def hull_write(self):  
+        print('hull_write')
+        for key in self.hull_comb_dict.keys():       
+            outpath = 'win_' + '-'.join([str(k) for k in key[0]]) + '/'
+            outdir = self.workdir + outpath
+            if not os.path.exists(outdir):
+                os.mkdir(outdir)
+            tag = 'win_' + '-'.join([str(k) for k in key[0]]) + '_clu_' + '-'.join(str(k) for k in key[1])    
+            for i in range(len(key[0])):
+                win = key[0][i]
+                clu = key[1][i] 
+                query = self.hull_query_dict[win][clu]
+
+                hull.write2pymol(query.candidates_points, outdir, tag + '_win_' + str(win) +'_points.pdb')
+                hull.write2pymol(query.get_hull_points(), outdir, tag + '_win_' + str(win) +'_all_points.pdb')
+
                 pdb_path = outdir + tag + '_' + query.query.getTitle()
                 pr.writePDB(pdb_path, query.query)
+
+                ### If there are too many candidates, the output will be ugly. So it is better to write this only when specified. Or write it in a smart way.
+                for c in query.candidates:
+                    pdb_path = outdir + tag + '_w_' + str(win) + '_' + c.query.getTitle()
+                    pr.writePDB(pdb_path, c.query)
+
+        return
+
+
+    def hull_write_summary():
+        
+
+        return 
 
 
     #region Win based search

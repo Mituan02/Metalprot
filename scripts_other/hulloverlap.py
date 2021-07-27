@@ -11,12 +11,6 @@ import numpy as np
 from prody.atomic import pointer
 from scipy.spatial import Delaunay
 
-workdir = '/mnt/e/DesignData/ligands/CoiledCoil/C4_rosetta/Rosetta_Output/eva_out_CUNI_M1-1/mems/'
-
-outdir = workdir + 'hull_visualization/'
-
-if not os.path.exists(outdir):
-    os.mkdir(outdir)
 
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
 
@@ -91,6 +85,13 @@ def hull2pymol(pointss, hull_dict, points_rec, outdir):
     filename = 'all_psvs'
     write2pymol(points_rec, outdir, filename)
 
+
+workdir = '/mnt/e/DesignData/ligands/CoiledCoil/C4_rosetta/Rosetta_Output/eva_out_CUNI_M1-1/mems/'
+
+outdir = workdir + 'hull_visualization/'
+
+if not os.path.exists(outdir):
+    os.mkdir(outdir)
 
 pdbs = extract_vdm.get_all_pbd_prody(workdir)
 

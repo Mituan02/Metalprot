@@ -4,7 +4,7 @@ import itertools
 import prody as pr
 from scipy.spatial.distance import cdist
 from .ligand_database import clu_info, get_all_pbd_prody
-from .quco import Query, Comb
+from .quco import Query, Comb, Cluster
 from .hull import transfer2pdb
 
 def read_cluster_info(file_path):
@@ -72,10 +72,31 @@ def extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_inc
             qs = extract_query(subfolder + '/', file_path = '_summary.txt', score_cut = score_cut, clu_num_cut = clu_num_cut)
             querys.extend(qs)
 
-
     return querys
 
 
+def get_vdm_cluster(query):
+    '''
+    load all members of one centroid and build the cluster. 
+    '''
+    querys = []
+    
+    pdbs = get_all_pbd_prody(query.path)
+
+    ks = list(range(len(pdbs)))
+
+    for ind in ks:
+        pdb = pdbs[ind]
+        querys.append(Query(pdb, query.score, query.clu_num, query.clu_total_num, query.is_bivalent, query.win, query.path))
+
+    cluster = Cluster(querys)
+
+    return cluster
+
+
+'''
+Deprecated. The function will be used similar as get_vdm_cluster.
+'''
 def get_vdm_mem(query, random = None):
     '''
     load all members of one centroid.
@@ -95,11 +116,20 @@ def get_vdm_mem(query, random = None):
     return vdms
 
 
-def extract_mem_metal_point(query, metal_sel = 'ion or name NI MN ZN CO CU MG FE'):
+'''
+Deprecated. The function will be transfered into Cluster.
+'''
+def extract_mem_metal_point(query, align_sel = 'name N C CA', metal_sel = 'ion or name NI MN ZN CO CU MG FE'):
 
     pdbs = get_all_pbd_prody(query.path)
     points = []
     for pdb in pdbs:
+
+        pr.calcTransformation(pdb.select(align_sel), query.query.select(align_sel)).apply(pdb)
+
         points.append(pdb.select(metal_sel)[0].getCoords())
 
     query.hull_ag = transfer2pdb(points)
+
+    return
+

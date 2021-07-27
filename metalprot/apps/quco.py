@@ -1,15 +1,24 @@
 import prody as pr
 import itertools
+import numpy as np
+from prody.atomic import pointer
+from .hull import transfer2pdb, write2pymol
 
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
 
 
 class Query:
-    def __init__(self, query, score = 0, clu_num = 0, clu_total_num = 0, is_bivalent = False, win = None, path = None, ag = None, hull_ag = None):
+    def __init__(self, query, score = 0, clu_num = 0, clu_total_num = 0, is_bivalent = False, win = None, path = None, ag = None, hull_ag = None, cluster = None):
         self.query = query
         self.score = score
         self.clu_num = clu_num
         self.clu_total_num = clu_total_num
+
+        #Get contact_resind
+        cen_inds = np.unique(self.query.getResindices())
+        self.contact_resind = cen_inds[int(cen_inds.shape[0]/2)-1]
+
+        #Bivalent vdm usage.
         self.is_bivalent = is_bivalent
 
         #Extra properties for special usage.
@@ -19,11 +28,71 @@ class Query:
         self._2nd_shells = []
         if self.win is not None and '_win_' not in self.query.getTitle():
             self.query.setTitle(self.query.getTitle().split('.pdb')[0] + '_win_' + '_'.join([str(w) for w in self.win]) + '.pdb')
+
         #Extra properties for hull usage. 
         self.hull_ag = hull_ag
-    
+        self.cluster = cluster  #The cluster is used as a reference. Many Query will share the same cluster to save memory. Be careful about the change of alignment.
+        self.candidates = None
+        self.candidates_points = None
+
+        #Extra properties for phipsi.
+        self.phi = None
+        self.psi = None
+
+    def get_phi_psi(self):
+        indices = self.query.select('name N C CA O').getIndices() 
+        atoms = [self.query.select('index ' + str(i)) for i in indices]
+        self.phi = pr.calcDihedral(atoms[0], atoms[1], atoms[2], atoms[3])
+        self.psi = pr.calcDihedral(atoms[4], atoms[5], atoms[6], atoms[7])
+
+        # for p in self.query.iterResidues():
+        #     try:
+        #         self.phi = pr.calcPhi(p)
+        #     except:
+        #         pass
+
+        #     try:
+        #         self.psi= pr.calcPsi(p)
+        #     except:
+        #         pass
+        return 
+
+    def realign_by_CCAN_candidates(self, cand_ids, align_sel = 'name N CA C'):
+        '''
+        realign certain members of the clusters to the target. 
+        '''
+        candidates = []
+        for i in cand_ids:
+            q = self.cluster.querys[i].copy()
+            inds = np.unique(q.query.getResindices())
+            ind = inds[int(inds.shape[0]/2)-1]
+
+            transform = pr.calcTransformation(q.query.select(align_sel + ' and resindex ' + str(ind)), self.query.select(align_sel + ' and resindex ' + str(self.contact_resind)))
+            transform.apply(q.query)
+        self.candidates = candidates
+        return
+
+    def extract_mem_metal_point(self):
+        '''
+        Only use when load the data to generate hull_ag. As cluster is used as a reference and shared by other Query at different position of the protein bb.
+        '''
+        points = []
+        for q in self.cluster.querys:
+            points.append(q.query.select(metal_sel)[0].getCoords())
+        self.hull_ag = transfer2pdb(points)
+        return
+
+
     def get_hull_points(self):
+        if not self.hull_ag:
+            return None
         return self.hull_ag.getCoords()
+
+
+    def write_points(self, outdir):
+        points = self.get_hull_points()
+        write2pymol(points, outdir, self.query.getTitle())
+
 
     def set_win(self, win):
         self.win = win
@@ -40,7 +109,7 @@ class Query:
         if self.hull_ag:
             hull_ag = self.hull_ag.copy()
         
-        return Query(self.query.copy(), self.score, self.clu_num, self.clu_total_num, self.is_bivalent, self.win, self.path, self.ag, hull_ag)
+        return Query(self.query.copy(), self.score, self.clu_num, self.clu_total_num, self.is_bivalent, self.win, self.path, self.ag, hull_ag, self.cluster)
     
     def win_str(self):
         return '-'.join([str(w) for w in self.win])
@@ -110,13 +179,27 @@ class Comb:
 
 class Cluster:
     def __init__(self, querys):      
-        self.querys = querys       
+        self.querys = querys
         self.total_score = sum([q.score for q in querys])
         self.total_clu_number= sum([q.clu_num for q in querys])        
         self.scores = [q.score for q in querys]
         self.clu_nums= [q.clu_num for q in querys]
         self.centroid = [q for q in querys if 'centroid' in q.query.getTitle()][0]
 
-        
+    def realign_by_CCAN(self, target, align_sel = 'name N CA C'):
+        for q in self.querys:
+            inds = np.unique(q.query.getResindices())
+            ind = inds[int(inds.shape[0]/2)-1]
+            transform = pr.calcTransformation(q.query.select(align_sel + ' and resindex ' + str(ind)), target.query.select(align_sel + ' and resindex ' + str(target.contact_resind)))
+            transform.apply(q.query)
+        return
+
+
+    def write(self, outpath):
+        for q in self.querys:
+            q.write(outpath)
+        return
+
+
 
 

@@ -5,19 +5,18 @@ import prody as pr
 from metalprot import ligand_database as ldb
 
 
-def extract_vdm(cores, outdir, AA, key, extention, n, key_out):
+def extract_single_vdm(cores, outdir, AA, key, basic = True, extention = None, n = None, key_out = None, phipsi = False):
     for c in cores:   
-        if extention:
-            c.generate_AA_ext_Metal(AA, extention, key)
-        else:
+        if basic:
             c.generate_AA_Metal(AA, key)
-
-        if n:
-            c.generate_AA_kMetal(AA, n, key, key_out)
-            c.write_vdM(outdir, key = key_out)
-        else:
-            c.write_vdM(outdir, key = key)
-
+        elif extention:
+            c.generate_AA_ext_Metal(AA, extention, key)          
+        elif n:
+            c.generate_AA_kMetal(AA, n, key, key_out) 
+        elif phipsi:
+            c.generate_AA_phipsi_Metal(AA, key)
+        c.write_vdM(outdir, key = key)
+    return
 
 ### set up parameters
 
@@ -29,9 +28,9 @@ align_sel_backbone = 'name C CA N O NI MN ZN CO CU MG FE or ion'
 cores = ldb.load_cores(workdir + '_Seq_core_date2017_reps/')
 
 
-AA = 'CYS'
+AA = 'HIS'
 
-len_sel = 5
+len_sel = 9
 
 #Change len_sel according to aa sidechain number. His:6, Glu: 5, Asp: 4, Cys: 2
 if AA == 'HIS':
@@ -45,9 +44,9 @@ elif AA == 'CYS':
 
         
 ### Align aa core w/o sc------------------------------------------------------------------------------------
-
+'''
 # AAMetal_HIS
-extract_vdm(cores, workdir + 'M1_AAMetal_' + AA + '_reps/', AA = AA, key = 'AAMetal_HIS', extention = None, n = None, key_out=None)
+extract_single_vdm(cores, workdir + 'M1_AAMetal_' + AA + '_reps/', AA = AA, key = 'AAMetal_HIS', basic = True)
 
 _pdbs = ldb.get_all_pbd_prody(workdir + 'M1_AAMetal_' + AA + '_reps/')
 
@@ -56,10 +55,11 @@ ldb.run_cluster(_pdbs, workdir, 'M1_AAMetal_' + AA + '_cluster02/', rmsd = 0.2, 
 ldb.run_cluster(_pdbs, workdir, 'M1-1_AAMetalSc_' + AA + '_cluster02/', rmsd = 0.2, metal_sel = metal_sel, len_sel = len_sel_sc, align_sel = 'heavy', min_cluster_size = 2, tag = 'm1-1_') 
 
 #ldb.run_cluster(_pdbs, workdir, 'M1_AAMetalTest_HIS_cluster05/', rmsd = 0.5, metal_sel = metal_sel, len_sel = 5, align_sel = 'name C CA N CB ZN', min_cluster_size = 2, tag = 'm1-1_') 
+'''
 
 '''
 # AA5Metal_HIS
-extract_vdm(cores, workdir + "M1_AA5Metal_HIS_reps/", AA = AA, key = 'AAMetal_HIS', n = 5, key_out='AA5Metal_HIS')
+extract_single_vdm(cores, workdir + "M1_AA5Metal_HIS_reps/", AA = AA, key = 'AAMetal_HIS', basic = False, n = 5, key_out='AA5Metal_HIS')
 
 _pdbs2 = ldb.get_all_pbd_prody(workdir + "M1_AA5Metal_HIS_reps/")
 
@@ -69,19 +69,31 @@ ldb.run_cluster(_pdbs2, workdir, 'M1_AA5MetalSc_HIS_cluster02/', rmsd = 0.2, met
 '''
 
 ### Align his core +- 1 AA------------------------------------------------------------------------------------ 
-
+'''
 # AAExtMetal_HIS_ext1
-extract_vdm(cores, workdir + 'M3-1_AAextMetal_' + AA + '_reps/', AA = AA, key = 'AAextMetal_' + AA + '_ext3', extention=1, n = None, key_out=None)
+extract_single_vdm(cores, workdir + 'M3-1_AAextMetal_' + AA + '_reps/', AA = AA, key = 'AAextMetal_' + AA + '_ext3', basic = False, extention=1, n = None, key_out=None)
 
 _pdbs = ldb.get_all_pbd_prody(workdir + 'M3-1_AAextMetal_' + AA + '_reps/')
 
 ldb.run_cluster(_pdbs, workdir, 'M3-1_AAextMetal_' + AA + '_cluster02/', rmsd = 0.2, metal_sel = metal_sel, len_sel = 13, align_sel = align_sel_backbone, min_cluster_size = 2, tag = 'm3-1_')
+'''
+
 
 '''
 # AAExt5Metal_HIS_ext1
-extract_vdm(cores, workdir + "M3-1_AAext5Metal_' + AA + '_reps/", AA = AA, key = 'AAextMetal_' + AA + '_ext3', extention=1, n = 5, key_out='AAext5Metal_' + AA + '_ext3')
+extract_single_vdm(cores, workdir + "M3-1_AAext5Metal_' + AA + '_reps/", AA = AA, key = 'AAextMetal_' + AA + '_ext3', extention=1, n = 5, key_out='AAext5Metal_' + AA + '_ext3')
 
 _pdbs = ldb.get_all_pbd_prody(workdir + 'M3-1_AAext5Metal_' + AA + '_reps/')
 
 ldb.run_cluster(_pdbs, workdir, 'M3-1_AAext5Metal_' + AA + '_cluster02/', rmsd = 0.2, metal_sel = metal_sel, len_sel = 17, align_sel = align_sel_backbone, min_cluster_size = 2, tag = 'm3-1_')
 '''
+
+### Align his core with phipsi------------------------------------------------------------------------------------ 
+
+# AAMetal_HIS
+extract_single_vdm(cores, workdir + 'AAMetalPhiPsi_' + AA + '_reps/', AA = AA, key = 'AAMetalPhiPsi_' + AA, basic = False, phipsi=True)
+
+_pdbs = ldb.get_all_pbd_prody(workdir + 'AAMetalPhiPsi_' + AA + '_reps/')
+
+ldb.run_cluster(_pdbs, workdir, 'AAMetalPhiPsi_' + AA + '_cluster05/', rmsd = 0.5, metal_sel = metal_sel, len_sel = len_sel_sc, align_sel = 'heavy', min_cluster_size = 1, tag = 'AAMetalPhiPsi_')
+

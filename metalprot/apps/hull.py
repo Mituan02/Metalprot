@@ -26,11 +26,11 @@ def calc_pairwise_hull(points1, points2):
         overlap = True
     return overlap, x, y, ol_points
 
-def transfer2pdb(points):
+def transfer2pdb(points, name = 'NI', title = 'MetalMol'):
     names = ['NI' for i in range(len(points))]
     resnums = [i for i in range(len(points))]
     chains = ['A' for i in range(len(points))]
-    mm = pr.AtomGroup('MetalMol')
+    mm = pr.AtomGroup(title)
     mm.setCoords(points)
     mm.setResnums(resnums)
     mm.setNames(names)

@@ -1,10 +1,28 @@
 import prody as pr
 import itertools
 import numpy as np
+from numpy.core.fromnumeric import argmin
 from prody.atomic import pointer
 from .hull import transfer2pdb, write2pymol
 
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
+
+
+def get_contact_atom(pdb):
+    '''
+    Get contact atom of a prody pdb.
+    '''
+    metal = pdb.select(metal_sel)[0]
+    _contact_aas = pdb.select('protein and not carbon and not hydrogen and within 2.83 of resindex ' + str(metal.getResindex()))
+    if len(_contact_aas) > 1:
+        dists = [None]*len(_contact_aas)
+        for i in range(len(_contact_aas)):
+            dist = pr.calcDistance(metal, _contact_aas[i])
+            dists[i] = dist
+        contact_aa = _contact_aas[argmin(dists)]
+    else:
+        contact_aa = _contact_aas[0]
+    return contact_aa
 
 
 class Query:
@@ -33,13 +51,18 @@ class Query:
         self.hull_ag = hull_ag
         self.cluster = cluster  #The cluster is used as a reference. Many Query will share the same cluster to save memory. Be careful about the change of alignment.
         self.candidates = None
-        self.candidates_points = None
+        self.candidates_metal_points = None
+        self.contact_ag = None
 
         #Extra properties for phipsi.
         self.phi = None
         self.psi = None
 
     def get_phi_psi(self):
+        '''
+        Get phi psi angle of the contact metal.
+        TO DO: The current methods are not working!
+        '''
         indices = self.query.select('name N C CA O').getIndices() 
         atoms = [self.query.select('index ' + str(i)) for i in indices]
         self.phi = pr.calcDihedral(atoms[0], atoms[1], atoms[2], atoms[3])
@@ -69,11 +92,31 @@ class Query:
 
             transform = pr.calcTransformation(q.query.select(align_sel + ' and resindex ' + str(ind)), self.query.select(align_sel + ' and resindex ' + str(self.contact_resind)))
             transform.apply(q.query)
+            candidates.append(q)
         self.candidates = candidates
         return
 
+
+    def extract_contact_atom(self):
+        '''
+        For all the aligned candidates aquired hull based search method. How to get the geometry?
+        This method will extract all the contact atoms and get the mid coords.
+        '''
+        if not self.candidates:
+            print('Candidates are not existed.')
+            return 
+        coords = []       
+        for c in self.candidates:
+            atm = get_contact_atom(c.query)           
+            coords.append(atm.getCoords())
+        
+        self.contact_ag = transfer2pdb(coords, name = atm.getName(), title = 'contact_ag')
+        
+        return 
+
     def extract_mem_metal_point(self):
         '''
+        One time use function.
         Only use when load the data to generate hull_ag. As cluster is used as a reference and shared by other Query at different position of the protein bb.
         '''
         points = []

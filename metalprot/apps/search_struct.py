@@ -737,8 +737,35 @@ class Search_struct:
                 clu = key[1][i] 
                 query = self.hull_query_dict[win][clu]
                 cand_bool = val[(win, clu)]
-                query.candidates_points = query.get_hull_points()[cand_bool]         
-                query.realign_by_CCAN_candidates([i for i in range(len(cand_bool)) if cand_bool[i]])
+                query.candidates_metal_points = query.get_hull_points()[cand_bool]         
+                query.realign_by_CCAN_candidates([i for i in range(len(cand_bool)) if cand_bool[i]])             
+        return 
+
+
+    def hull_calc_geometry(self):
+        '''
+        The hull overlap has several members for each query. The geometry is a centroid contact atom of each query's candidates.
+        '''
+        
+        for key in self.hull_comb_dict.keys():
+            outpath = 'win_' + '-'.join([str(k) for k in key[0]]) + '/'
+            outdir = self.workdir + outpath
+            if not os.path.exists(outdir):
+                os.mkdir(outdir)
+
+            metal_coords = []
+            coords = []
+            tag = 'win_' + '-'.join([str(k) for k in key[0]]) + '_clu_' + '-'.join(str(k) for k in key[1])    
+            for i in range(len(key[0])):
+                win = key[0][i]
+                clu = key[1][i] 
+                query = self.hull_query_dict[win][clu]
+                query.extract_contact_atom()
+                coords.append(pr.calcCenter(query.contact_ag))
+                metal_coords.extend(query.candidates_metal_points)
+            coords.append(pr.calcCenter(hull.transfer2pdb(metal_coords)))
+            hull.write2pymol(coords, outdir, tag + '_win_' +'_geometry.pdb')          
+        return
 
 
     def hull_write(self):  
@@ -754,7 +781,7 @@ class Search_struct:
                 clu = key[1][i] 
                 query = self.hull_query_dict[win][clu]
 
-                hull.write2pymol(query.candidates_points, outdir, tag + '_win_' + str(win) +'_points.pdb')
+                hull.write2pymol(query.candidates_metal_points, outdir, tag + '_win_' + str(win) +'_points.pdb')
                 hull.write2pymol(query.get_hull_points(), outdir, tag + '_win_' + str(win) +'_all_points.pdb')
 
                 pdb_path = outdir + tag + '_' + query.query.getTitle()

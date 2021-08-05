@@ -6,8 +6,8 @@ functionalities.rst
 *.egg-info/
 */__pycache__/
 */*/__pycache__/
-temp/
-gpu_run/
+
+
 
 
 # Docs
@@ -19,9 +19,11 @@ gpu_run/
 *.tgz
 
 # Others
+temp/
 data/
 *.pyc
 */*/output*/
 *output*/
 .pytest_cache
+zn_data/
 

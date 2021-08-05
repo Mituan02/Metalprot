@@ -57,7 +57,7 @@ def extract_centroid_pdb_in_clu(workdir, file_path = '_summary.txt', score_cut =
     return pdb_paths
 
 
-def extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['cluster'], score_cut = 0, clu_num_cut = 2):
+def extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['cluster'], file_name_not_includes = ['@'], score_cut = 0, clu_num_cut = 2):
     
     subfolders_with_paths = [f.path for f in os.scandir(query_dir) if f.is_dir()]
 
@@ -67,6 +67,9 @@ def extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_inc
         exist = True
         for n in file_name_includes:
             if n not in subfolder:
+               exist = False
+        for n in file_name_not_includes:
+            if n in subfolder:
                exist = False
         if exist: 
             qs = extract_query(subfolder + '/', file_path = '_summary.txt', score_cut = score_cut, clu_num_cut = clu_num_cut)

@@ -10,7 +10,7 @@ from scipy.spatial.distance import cdist, dice
 import datetime
 from .ligand_database import clu_info
 from .extract_vdm import get_vdm_mem
-from .quco import Query, Comb
+from .quco import Query, Comb, pair_wist_geometry
 from . import core
 from . import hull
 
@@ -237,6 +237,31 @@ def check_pair_distance_satisfy(wx, wy, dists):
         if dists[_x, _y] > 15:
             return False, wins
     return True, wins
+
+def check_hull_satisfy(target, wx, wy, query_x, query_y):
+    '''
+    For all vdms of the HIS GLU APS CYS, get the hull_ag which contains the metal points. 
+    Then check the overlap of each pair on position wx, wy.
+    query_x: The query contains hull_ag 
+    query_y: The query contains hull_ag
+    '''
+    query_align_sel = 'name N CA C'
+
+
+    inds = np.unique(query_x.query.getResindices())
+    ind = inds[int(inds.shape[0]/2)-1]
+    transform_x = pr.calcTransformation(query_x.query.select(query_align_sel + ' resindex ' + str(ind)), target.select(query_align_sel+ ' resindex ' + str(wx)))
+    transform_x.apply(query_x.query)
+    transform_x.apply(query_x.hull_ag)
+
+    transform_y = pr.calcTransformation(query_y.query.select(query_align_sel+ ' resindex ' + str(ind)), target.select(query_align_sel+ ' resindex ' + str(wy)))
+    transform_y.apply(query_y.query)
+    transform_y.apply(query_y.hull_ag)
+    
+    hull_info = hull.calc_pairwise_hull(query_x.hull_ag.getCoords(), query_y.hull_ag.getCoords())
+    if hull_info[0]:
+        return True
+    return False
 
 def supperimpose_target_bb_bivalence(query, target, dist_array, id_array, win_filter = None, tolerance = 0.5, rmsd_cut = 0.5):
     '''
@@ -475,7 +500,8 @@ class Search_struct:
     '''
     def __init__(self, target_pdb, workdir, queryss, rmsd_cuts, dist_cuts, num_iter, qt_clash_dist, 
     qq_clash_dist, use_sep_aas, tolerance, fine_dist_cut = 0.3, win_filter = None, 
-    contact_querys = None, secondshell_querys = None, validateOriginStruct = False):
+    contact_querys = None, secondshell_querys = None, validateOriginStruct = False,
+    query_all_metal = None):
         if workdir:
             _workdir = os.path.realpath(workdir)
             if not os.path.exists(_workdir):
@@ -530,9 +556,17 @@ class Search_struct:
         self.win_comb_dict = dict() # (33, 37, 56): [[0, 24, 0], [0, 24, 19], [4, 24, 0], [4, 24, 19]]
 
         #hull based searching strategy---------
+        self.query_all_metal_x = None # Please check check_hull_satisfy()
+        self.query_all_metal_y = None # Please check check_hull_satisfy()
+        if query_all_metal:
+            self.query_all_metal_x = query_all_metal
+            self.query_all_metal_y = query_all_metal.copy()
+
         self.hull_query_dict = dict() # 93: [<metalprot.apps.search_struct.Query at 0x7f7f58daeb20>, None, None, None, <metalprot.apps.search_struct.Query at 0x7f7f59275c10>]
         self.hull_extract_dict = dict() # (33, 37): {(0, 24):(overlap, xs, ys), (4, 24):(overlap, xs,ys)}
         self.hull_comb_dict = dict() # Please check hull_overlap()
+        self.hull_score_dict = dict()
+        self.hull_geometry_dict = dict()
 
         #end---------------------------- 
 
@@ -564,16 +598,20 @@ class Search_struct:
 
     #region hull based search
     def run_hull_based_search(self):
-
+        '''
+        All functions need to run the hull based search.
+        '''
         self.hull_generate_query_dict()
+        self.hull_generate_pairwise_win_dict()
 
-        self.hull_based_iter_all_wins() 
+        self.hull_iter_win()
 
-        #self.combs.extend(self.build_win_combs())
-
-        #self.write_combs(self.combs)
-
-        #self.write_comb_info(self.combs)
+        self.hull_construct()       
+        self.hull_calc_comb_score()
+        self.hull_calc_geometry()
+        self.hull_write()
+        self.hull_write_summary()
+        return
 
     
     def hull_generate_query_dict(self):
@@ -603,8 +641,16 @@ class Search_struct:
 
 
     def hull_generate_pairwise_win_dict(self):
+        '''
+        To generate pair win dict, we will first filter out the impossible win positions. 
+        1. Filter by distance 
+            check_pair_distance_satisfy()
+        2. Filter by hull_ag overlap
+
+        '''
         print('hull_generate_pairwise_win_dict')
         wins = list(self.hull_query_dict.keys())
+
         for inx in range(len(wins)):
             for iny in range(inx + 1, len(wins)):
                 wx = wins[inx]
@@ -612,8 +658,11 @@ class Search_struct:
                 dist_ok, ws = check_pair_distance_satisfy(wx, wy, self.dists)
                 if not dist_ok:
                     continue
+                # if self.query_all_metal and not check_hull_satisfy(self.target, wx, wy, self.query_all_metal_x, self.query_all_metal_y):
+                #     continue
                 extracts = self.hull_cal(wx, wy)
-                self.hull_extract_dict[(wx, wy)] = extracts
+                if any(extracts):                 
+                    self.hull_extract_dict[(wx, wy)] = extracts
         return
 
 
@@ -714,7 +763,12 @@ class Search_struct:
 
         
     def hull_iter_win(self):
+        '''
+        The combinations of positions are extracted from all possible positions with pairs.
+        '''
         wins = list(self.hull_query_dict.keys())
+        #wins = np.unique([k for key in self.hull_extract_dict.keys()for k in key]).sort()
+        print('All wins with overlap {}'.format(wins))
         win_combs = itertools.combinations(wins, self.num_iter)
         for win_comb in win_combs:
             print(win_comb)
@@ -727,7 +781,7 @@ class Search_struct:
         After the point overlap calculation to get self.hull_comb_dict. 
         Extract the member comb. 
         '''
-        print('hull_construct')
+        print('hull_construct comb')
         for key in self.hull_comb_dict.keys():       
 
             val = self.hull_comb_dict[key]
@@ -742,20 +796,36 @@ class Search_struct:
         return 
 
 
+    def hull_calc_comb_score(self):
+        '''
+        The summed vdM score could not reflect the designability.
+        Here is a new score method with weight added.
+        '''
+        print('hull_calc_comb_score')
+        for key in self.hull_comb_dict.keys():
+            score = 0
+            total = 0
+            total_all = 0
+            for i in range(len(key[0])):
+                win = key[0][i]
+                clu = key[1][i] 
+                query = self.hull_query_dict[win][clu]
+                score += len(query.candidates_metal_points)/len(query.get_hull_points())
+                total += query.clu_num
+                total_all += query.clu_total_num
+            score = np.log(score*(total/total_all))
+            self.hull_score_dict[key] = score
+        return
+
+
     def hull_calc_geometry(self):
         '''
         The hull overlap has several members for each query. The geometry is a centroid contact atom of each query's candidates.
         '''
-        
+        print('hull_calc_comb_score')
         for key in self.hull_comb_dict.keys():
-            outpath = 'win_' + '-'.join([str(k) for k in key[0]]) + '/'
-            outdir = self.workdir + outpath
-            if not os.path.exists(outdir):
-                os.mkdir(outdir)
-
             metal_coords = []
-            coords = []
-            tag = 'win_' + '-'.join([str(k) for k in key[0]]) + '_clu_' + '-'.join(str(k) for k in key[1])    
+            coords = []   
             for i in range(len(key[0])):
                 win = key[0][i]
                 clu = key[1][i] 
@@ -764,7 +834,8 @@ class Search_struct:
                 coords.append(pr.calcCenter(query.contact_ag))
                 metal_coords.extend(query.candidates_metal_points)
             coords.append(pr.calcCenter(hull.transfer2pdb(metal_coords)))
-            hull.write2pymol(coords, outdir, tag + '_win_' +'_geometry.pdb')          
+            self.hull_geometry_dict[key] = hull.transfer2pdb(coords, ['NI' if i == len(coords)-1 else 'N' for i in range(len(coords))])
+               
         return
 
 
@@ -792,12 +863,46 @@ class Search_struct:
                     pdb_path = outdir + tag + '_w_' + str(win) + '_' + c.query.getTitle()
                     pr.writePDB(pdb_path, c.query)
 
+            # Write geometry       
+            pr.writePDB(outdir + tag +'_geometry.pdb', self.hull_geometry_dict[key])     
         return
 
 
-    def hull_write_summary():
-        
+    def hull_write_summary(self):
+        print('hull_write_summary')
 
+        with open(self.workdir + '_summary.tsv', 'w') as f:
+            f.write('Wins\tClusterIDs\tTotalScore\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tvdm_scores\ttotal_clu#\tclu_nums\tCentroids\n')
+            for key in self.hull_comb_dict.keys(): 
+                
+                centroids = []
+                vdm_scores = []
+                overlaps = []
+                clu_nums = []
+                for i in range(len(key[0])):
+                    win = key[0][i]
+                    clu = key[1][i] 
+                    query = self.hull_query_dict[win][clu]
+                    centroids.append(query.query.getTitle())
+                    vdm_scores.append(np.log(query.clu_num/query.clu_total_num))
+                    overlaps.append(len(query.candidates))
+                    clu_nums.append(query.clu_num)
+                
+                f.write('_'.join([str(x) for x in key[0]]) + '\t')
+                f.write('_'.join([str(x) for x in key[1]]) + '\t')
+                f.write(str(round(self.hull_score_dict[key], 2)) + '\t')
+                aa_aa_pair, metal_aa_pair, angle_pair  = pair_wist_geometry(self.hull_geometry_dict[key])
+                f.write('||'.join([str(round(d, 2)) for d in aa_aa_pair])  + '\t')
+                f.write('||'.join([str(round(d, 2)) for d in metal_aa_pair])  + '\t')
+                f.write('||'.join([str(round(a, 2)) for a in angle_pair])  + '\t')
+
+                f.write(str(sum(overlaps)) + '\t')
+                f.write('||'.join([str(s) for s in overlaps]) + '\t')
+
+                f.write('||'.join([str(round(s, 2)) for s in vdm_scores]) + '\t')
+                f.write(str(sum(clu_nums)) + '\t')
+                f.write('||'.join([str(c) for c in clu_nums]) + '\t')
+                f.write('||'.join(centroids) + '\n')
         return 
 
 
@@ -1500,4 +1605,3 @@ class Search_struct:
         return 
 
     #endregion 2nd shell search
-

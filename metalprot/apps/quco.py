@@ -25,6 +25,28 @@ def get_contact_atom(pdb):
     return contact_aa
 
 
+def pair_wist_geometry(geometry_ag):
+    '''
+    cts: contact atoms
+    '''
+    metal = geometry_ag.select('name NI')[0]
+    cts = geometry_ag.select('name N')
+    ct_len = len(cts)
+    #print(cts.getNames())
+    aa_aa_pair = []
+    metal_aa_pair =[]
+    angle_pair = []
+    for i, j in itertools.combinations(range(ct_len), 2):   
+        dist = pr.calcDistance(cts[i], cts[j])
+        aa_aa_pair.append(dist)
+        angle = pr.calcAngle(cts[i], metal, cts[j])
+        angle_pair.append(angle)
+    for i in range(ct_len):
+        metal_aa_pair.append(pr.calcDistance(cts[i], metal))
+        
+    return aa_aa_pair, metal_aa_pair, angle_pair  
+
+
 class Query:
     def __init__(self, query, score = 0, clu_num = 0, clu_total_num = 0, is_bivalent = False, win = None, path = None, ag = None, hull_ag = None, cluster = None):
         self.query = query
@@ -110,7 +132,7 @@ class Query:
             atm = get_contact_atom(c.query)           
             coords.append(atm.getCoords())
         
-        self.contact_ag = transfer2pdb(coords, name = atm.getName(), title = 'contact_ag')
+        self.contact_ag = transfer2pdb(coords, names = [atm.getName() for i in range(len(self.candidates))], title = 'contact_ag')
         
         return 
 

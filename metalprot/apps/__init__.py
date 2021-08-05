@@ -1,4 +1,7 @@
-__all__ = ['cluster', 'quco', 'hull', 'core', 'ligand_database', 'database_evaluate', 'search_struct', 'transformation', 'extract_vdm', 'generate_sse', 'constant']
+__all__ = ['utils', 'cluster', 'quco', 'hull', 'core', 'ligand_database', 'database_evaluate', 'search_struct', 'transformation', 'extract_vdm', 'generate_sse', 'constant']
+
+from . import utils
+from .utils import *
 
 from . import cluster
 from .cluster import *

@@ -4,6 +4,7 @@ import numpy as np
 from numpy.core.fromnumeric import argmin
 from prody.atomic import pointer
 from .hull import transfer2pdb, write2pymol
+from .utils import get_ABPLE
 
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
 
@@ -79,6 +80,9 @@ class Query:
         #Extra properties for phipsi.
         self.phi = None
         self.psi = None
+        self.get_phi_psi()
+        self.abple = get_ABPLE(self.query.select('name CA and resindex ' + str(self.contact_resind)).getResnames()[0], self.psi, self.phi)
+        
 
     def get_metal_coord(self):
         return self.query.select(metal_sel)[0].getCoords()
@@ -99,23 +103,11 @@ class Query:
     def get_phi_psi(self):
         '''
         Get phi psi angle of the contact metal.
-        TO DO: The current methods are not working!
         '''
-        indices = self.query.select('name N C CA O').getIndices() 
+        indices = self.query.select('name N C CA').getIndices() 
         atoms = [self.query.select('index ' + str(i)) for i in indices]
-        self.phi = pr.calcDihedral(atoms[0], atoms[1], atoms[2], atoms[3])
-        self.psi = pr.calcDihedral(atoms[4], atoms[5], atoms[6], atoms[7])
-
-        # for p in self.query.iterResidues():
-        #     try:
-        #         self.phi = pr.calcPhi(p)
-        #     except:
-        #         pass
-
-        #     try:
-        #         self.psi= pr.calcPsi(p)
-        #     except:
-        #         pass
+        self.phi = pr.calcDihedral(atoms[0], atoms[1], atoms[2], atoms[3])[0]
+        self.psi = pr.calcDihedral(atoms[1], atoms[2], atoms[3], atoms[4])[0]
         return 
 
     def realign_by_CCAN_candidates(self, cand_ids, align_sel = 'name N CA C'):

@@ -126,7 +126,7 @@ class Search_vdM:
     The function to search comb
     '''
     def __init__(self, target_pdb, workdir, querys, id_cluster_dict, cluster_centroid_dict, all_metal_query, num_iter, rmsd = 0.25, win_filtered = None, 
-    contact_querys = None, secondshell_querys = None, validateOriginStruct = False):
+    contact_querys = None, secondshell_querys = None, validateOriginStruct = False, filter_abple = False):
 
         if workdir:
             _workdir = os.path.realpath(workdir)
@@ -143,17 +143,23 @@ class Search_vdM:
 
         self.dist_array, self.id_array, self.dists = utils.get_contact_map(self.target, win_filtered)
 
+        self.target_abple = utils.seq_get_ABPLE(self.target)
+
         self.rmsd = rmsd
 
         self.win_filtered = win_filtered
 
         self.validateOriginStruct = validateOriginStruct
 
+        self.filter_abple = filter_abple
+
         #neighbor searching strategy---------- 
         self.querys = querys             
         self.all_metal_query = all_metal_query #The query with all_metal_coord_ag
         self.id_cluster_dict = id_cluster_dict # {metal_id 1234: (HIS, 0)} 
         self.cluster_centroid_dict = cluster_centroid_dict #{(HIS, 0): centroid}
+
+
         self.neighbor_query_dict = dict() # {93: [the only centroid query with all metal coords]}
         self.neighbor_pair_dict = dict() # {(33, 37): [xs-33 near 37 coords]}
         self.neighbor_comb_dict = dict() 
@@ -186,6 +192,8 @@ class Search_vdM:
 
         self.neighbor_search_wins()
 
+        self.neighbor_extract_query()
+
         self.neighbor_calc_comb_score()
 
         self.neighbor_calc_geometry()
@@ -210,7 +218,12 @@ class Search_vdM:
             t = self.target.select('name CA').getResindices()
             wins.extend(([w for w in t]))
 
-        for w in wins:     
+        for w in wins: 
+            if self.validateOriginStruct:
+                #here only filter aa, note the overlap that HIS still supperimpose to GLU.
+                if self.target.select('resindex ' + str(w) + ' name CA').getResnames()[0] not in ['HIS', 'GLU', 'ASP', 'CYS']:
+                    continue
+
             _query = self.all_metal_query.copy()
             x = self.supperimpose_target_bb(_query, w, align_sel='name N CA C')
             if x:
@@ -264,6 +277,10 @@ class Search_vdM:
 
                 x_in_y, x_has_y = self.calc_pairwise_neighbor(n_x, n_y, self.rmsd)
                 y_in_x, y_has_x = self.calc_pairwise_neighbor(n_y, n_x, self.rmsd)
+
+                x_in_y, x_has_y = self.neighbor_filter(wx, wy, x_in_y)
+                y_in_x, y_has_x = self.neighbor_filter(wy, wx, y_in_x)
+
                 if x_has_y and y_has_x:
                     self.neighbor_pair_dict[(wx, wy)] = x_in_y
                     self.neighbor_pair_dict[(wy, wx)] = y_in_x
@@ -282,6 +299,69 @@ class Search_vdM:
         x_has_y = any([True if len(a) >0 else False for a in x_in_y[1]])
 
         return x_in_y[1], x_has_y
+
+    
+    def neighbor_filter(self, wx, wy, x_in_y):
+        '''
+        filter impossible pairwise connect.
+        1. validateOriginStruct
+        2. ABPLE filter. 
+        3. phipsi angle filter. (future)
+        '''
+
+        x_in_y_filter = [[j for j in x_in_y[i]] for i in range(len(x_in_y))]
+        if self.validateOriginStruct:
+            resx = self.target.select('name CA and resindex ' + str(wx)).getResnames()[0]
+            resy = self.target.select('name CA and resindex ' + str(wy)).getResnames()[0]
+            
+            for i in range(len(x_in_y)):
+                if len(x_in_y[i]) <= 0:
+                    continue
+                if not self.id_cluster_dict[i][0] == resx:
+                    x_in_y_filter[i].clear()
+                    continue
+                
+                for j in range(len(x_in_y[i])):
+                    j_ind = x_in_y[i][j]
+                    if not self.id_cluster_dict[j_ind][0] == resy:
+                        x_in_y_filter[i].remove(j_ind)
+
+
+        if self.filter_abple:
+            apx = self.target_abple[wx - 1]
+            apy = self.target_abple[wy - 1]
+
+            for i in range(len(x_in_y)):
+                if len(x_in_y[i]) <= 0:
+                    continue
+
+                if not self.querys[i].abple == apx:
+                    x_in_y_filter[i].clear()
+                    continue
+
+                for j in range(len(x_in_y[i])):
+                    j_ind = x_in_y[i][j]
+                    if j_ind not in x_in_y_filter[i]:
+                        continue
+                    if not self.querys[j_ind].abple == apy:
+                        x_in_y_filter[i].remove(j_ind)
+
+        ### Debug print.
+        # for i in range(len(x_in_y)):
+        #     if len(x_in_y[i]) <= 0:
+        #         continue
+        #     if self.id_cluster_dict[i][0] == 'HIS' and 'CYS' in [self.id_cluster_dict[j_ind][0] for j_ind in x_in_y[i]] and 'HIS' in [self.id_cluster_dict[j_ind][0] for j_ind in x_in_y[i]]:
+        #         #print(x_in_y[i])          
+        #         print([self.id_cluster_dict[j_ind][0] for j_ind in x_in_y[i]])
+        #         #print(resx)
+        #         #print(resy)
+        #         print('x: ' + self.id_cluster_dict[i][0])
+        #         #print(x_in_y_filter[i])
+        #         print([self.id_cluster_dict[j_ind][0] for j_ind in x_in_y_filter[i]])
+        #         print('---------')
+                  
+        x_has_y = any([True if len(a) >0 else False for a in x_in_y_filter])
+        return x_in_y_filter, x_has_y
 
     
     def neighbor_search_wins(self):
@@ -334,8 +414,16 @@ class Search_vdM:
 
         # path represent the id of each metal vdM.
         for path in graph.all_paths:
-
+            
             clu_key = tuple([self.id_cluster_dict[p] for p in path])
+
+            ### Debug purpose
+            # if not (path[0] == 7208 and path[1] == 7864 and path[2] == 8539):
+            #     continue
+
+            # if clu_key == (('HIS', 7), ('HIS', 17), ('HIS', 49)):
+            #     print(path)
+
             
             if clu_key in clu_dict:
                 for i in range(len(win_comb)):
@@ -431,6 +519,7 @@ class Search_vdM:
             for w in key[0]:
                 candidates = self.neighbor_comb_dict[key][1].query_dict[w]
                 metal_coords = []
+
                 for c in candidates:
                     pdb_path = outdir + tag + '_' + c.query.getTitle()
                     pr.writePDB(pdb_path, c.query)

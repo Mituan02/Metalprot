@@ -1,6 +1,34 @@
 import numpy as np
 from scipy.spatial.distance import cdist
 import itertools
+import prody as pr
+from . import constant
+
+def get_ABPLE(resn, phi, psi):
+    try:
+        psi = int(np.ceil(psi / 10.0)) * 10
+        phi = int(np.ceil(phi / 10.0)) * 10
+        if psi == -180:
+            psi = -170
+        if phi == -180:
+            phi = -170
+        return constant.abple_dict[resn][psi][phi]
+    except ValueError:
+        return 'n'
+
+def seq_get_ABPLE(target):
+    abples = []
+    for resn in target.iterResidues():
+        try:
+            phi = pr.calcPhi(resn)
+            psi = pr.calcPsi(resn)
+            ap = get_ABPLE(resn.getResname(), phi, psi)
+            abples.append(ap)
+        except:
+            abples.append('n')
+    #print(abples)
+    return abples
+    
 
 def get_contact_map(target, win_filter = None):
     '''

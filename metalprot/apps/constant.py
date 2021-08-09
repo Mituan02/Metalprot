@@ -2,6 +2,7 @@ import qbits
 import numpy as np
 import os
 from pathlib import Path
+import pickle
 
 # hydrophobicity from https://www.cgl.ucsf.edu/chimera/docs/UsersGuide/midas/hydrophob.html
 
@@ -86,4 +87,5 @@ def read_apble(filepath):
 
 APBEL_DICT = read_apble(Path(__file__).parent.parent / 'database/APBLE.txt')
             
-                
+with open(Path(__file__).parent.parent / 'database/abple_dict.pkl', 'rb') as infile:
+    abple_dict = pickle.load(infile)                

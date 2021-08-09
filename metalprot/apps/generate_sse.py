@@ -192,6 +192,9 @@ def cal_phipsi(pr_pdb):
 
 
 def cal_dssp(phi, psi, seq):
+    '''
+    TO DO: may have a bug. Please check utils.get_ABPLE()
+    '''
     character = []
     for i in range(len(seq)):
         s = seq[i]

@@ -25,7 +25,7 @@ def get_contact_atom(pdb):
     return contact_aa
 
 
-def pair_wist_geometry(geometry_ag):
+def pair_wise_geometry(geometry_ag):
     '''
     cts: contact atoms
     '''
@@ -79,6 +79,22 @@ class Query:
         #Extra properties for phipsi.
         self.phi = None
         self.psi = None
+
+    def get_metal_coord(self):
+        return self.query.select(metal_sel)[0].getCoords()
+
+    def get_contact_coord(self):
+        atm = get_contact_atom(self.query)           
+        return atm.getCoords()
+
+    def get_cluster_key(self):
+        sps = self.query.getTitle().split('_')
+        aa = self.query.select('resindex ' + str(self.contact_resind) + ' and name CA').getResnames()[0]
+
+        for i in range(len(sps)):
+            if sps[i] == 'cluster':
+                id = int(sps[i+1])
+        return (aa, id)
 
     def get_phi_psi(self):
         '''

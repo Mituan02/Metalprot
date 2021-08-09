@@ -53,7 +53,10 @@ def calc_neighbor(pointss, metal_sel = 'ion or name NI MN ZN CO CU MG FE' ):
     return neighbor_pair_dict
 
 def calc_comb_neighbor(neighbor_pair_dict, wins):
-
+    '''
+    This method try to keep points in one win showed in all other wins.
+    It only guarantee pair-wise exist.
+    '''
     comb_dict = {}
 
     for x, y in itertools.permutations(wins, 2):

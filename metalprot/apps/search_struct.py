@@ -10,7 +10,7 @@ from scipy.spatial.distance import cdist, dice
 import datetime
 from .ligand_database import clu_info
 from .extract_vdm import get_vdm_mem
-from .quco import Query, Comb, pair_wist_geometry
+from .quco import Query, Comb, pair_wise_geometry
 from . import core
 from . import hull
 
@@ -891,7 +891,7 @@ class Search_struct:
                 f.write('_'.join([str(x) for x in key[0]]) + '\t')
                 f.write('_'.join([str(x) for x in key[1]]) + '\t')
                 f.write(str(round(self.hull_score_dict[key], 2)) + '\t')
-                aa_aa_pair, metal_aa_pair, angle_pair  = pair_wist_geometry(self.hull_geometry_dict[key])
+                aa_aa_pair, metal_aa_pair, angle_pair  = pair_wise_geometry(self.hull_geometry_dict[key])
                 f.write('||'.join([str(round(d, 2)) for d in aa_aa_pair])  + '\t')
                 f.write('||'.join([str(round(d, 2)) for d in metal_aa_pair])  + '\t')
                 f.write('||'.join([str(round(a, 2)) for a in angle_pair])  + '\t')

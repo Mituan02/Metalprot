@@ -19,29 +19,16 @@ from . import utils
 from sklearn.neighbors import NearestNeighbors
 
 
-class Node:
-    def __init__(self, wid, rid, win_inds, all_pos_len):
-        self.wid = wid
-        self.rid = rid
-        self.all_pos_len = all_pos_len
-
-        self.win_dict = []
-        for w in win_inds:
-            cnn = [False for i in range(all_pos_len)]
-            self.win_dict.append(cnn)
-
 class Graph:
     def __init__(self, wins, all_pos_len):
         self.wins = wins
         self.win_inds = list(range(len(wins)))
         self.all_pos_len = all_pos_len
 
-        self.nodes = []
-        for i in range(len(wins)):
-            nodes = []
-            for j in range(self.all_pos_len):
-                nodes.append(Node(i, j, self.win_inds, self.all_pos_len))
-            self.nodes.append(nodes)
+        self.pair_dict = {}
+        for c, c2 in itertools.permutations(self.win_inds, 2):
+            self.pair_dict[(c, c2)] = set()
+
         self.all_paths = []
 
 
@@ -56,9 +43,9 @@ class Graph:
                 if len(connect) <= 0:
                     continue     
                 for y in connect:
-                    self.nodes[c][r].win_dict[c2][y] = True
-
+                    self.pair_dict[(c, c2)].add((r, y))
         return
+
     
     def get_paths(self):
 
@@ -72,26 +59,31 @@ class Graph:
         '''
         Dynamic programming. 
         '''
-        #if c == self.num_iter -1:
         if len(temp) == len(self.wins):
             self.all_paths.append([t for t in temp])
             return
         #print('c ' + str(c) + ' r ' + str(r))
-        rs = [i for i, x in enumerate(self.nodes[c][r].win_dict[c+1]) if x]
+        rs = []
+        for i in range(self.all_pos_len):
+            if (r, i) in self.pair_dict[(c, c+1)]:
+                rs.append(i)
+
         if len(rs) == 0:
             return      
         for _r in rs:
             #print('col ' + str(c) + ' temp ' + '_'.join([str(t) for t in temp]))
+            satisfy = True
             for ci in range(len(temp)-1):
                 tv = temp[ci]
-                if not self.nodes[c+1][_r].win_dict[ci][tv]:
-                    return
-            _temp = temp.copy()
-            _temp.append(_r)
-            self.get_path_helper(c+1, _r, [t for t in _temp])
+                if not (tv, _r) in self.pair_dict[(ci, c+1)]:
+                    satisfy = False
+                    #break
+            if satisfy:
+                _temp = temp.copy()
+                _temp.append(_r)
+                self.get_path_helper(c+1, _r, [t for t in _temp])
 
         return
-
 
 
 class CombInfo:
@@ -125,7 +117,7 @@ class Search_vdM:
     '''
     The function to search comb
     '''
-    def __init__(self, target_pdb, workdir, querys, id_cluster_dict, cluster_centroid_dict, all_metal_query, num_iter, rmsd = 0.25, win_filtered = None, 
+    def __init__(self, target_pdb, workdir, querys, id_cluster_dict, cluster_centroid_dict, all_metal_query, num_iters = [3], rmsd = 0.25, win_filtered = None, 
     contact_querys = None, secondshell_querys = None, validateOriginStruct = False, filter_abple = False):
 
         if workdir:
@@ -139,7 +131,7 @@ class Search_vdM:
 
         self.target = pr.parsePDB(target_pdb)
 
-        self.num_iter = num_iter
+        self.num_iters = num_iters
 
         self.dist_array, self.id_array, self.dists = utils.get_contact_map(self.target, win_filtered)
 
@@ -384,7 +376,7 @@ class Search_vdM:
             pair_set.add((i, j))
 
         paths = []
-        for n in self.num_iter: 
+        for n in self.num_iters: 
             paths.extend(utils.combination_calc(list(range(len(wins))), pair_set, n))
 
         for path in paths:

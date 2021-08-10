@@ -35,13 +35,13 @@ print(len(all_querys))
 
 workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
 
-outdir = workdir + 'output_neighbor_val_test5/'
+outdir = workdir + 'output_neighbor_val_test6/'
 
 target_path = workdir + '5od1_zn.pdb'
 
 rmsd_cuts = 0.25
 
-num_iter = 3
+num_iters = [3]
 
 win_filter = None
 
@@ -63,7 +63,7 @@ print(win_filter)
 #win_filter = [30, 31, 32, 33, 34, 35, 36, 37, 38, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68]
 win_filter = [34,  60,  64]
 
-ss =  search.Search_vdM(target_path, outdir, all_querys, id_cluster_dict, cluster_centroid_dict, query_all_metal, num_iter, rmsd_cuts, win_filter, validateOriginStruct = True, filter_abple = True)
+ss =  search.Search_vdM(target_path, outdir, all_querys, id_cluster_dict, cluster_centroid_dict, query_all_metal, num_iters, rmsd_cuts, win_filter, validateOriginStruct = True, filter_abple = True)
 
 ss.run_neighbor_search()
 

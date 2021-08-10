@@ -35,7 +35,7 @@ print(len(all_querys))
 
 workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
 
-outdir = workdir + 'output_neighbor_val_test4/'
+outdir = workdir + 'output_neighbor_val_test5/'
 
 target_path = workdir + '5od1_zn.pdb'
 

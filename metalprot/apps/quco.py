@@ -110,6 +110,9 @@ class Query:
         self.psi = pr.calcDihedral(atoms[1], atoms[2], atoms[3], atoms[4])[0]
         return 
 
+    def get_vdM_score(self):
+        return 
+
     def realign_by_CCAN_candidates(self, cand_ids, align_sel = 'name N CA C'):
         '''
         realign certain members of the clusters to the target. 

@@ -6,7 +6,6 @@ import numpy as np
 #sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
 from metalprot import extract_vdm
 from metalprot import hull
-from metalprot import search
 import pickle
 
 

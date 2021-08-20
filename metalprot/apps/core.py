@@ -113,6 +113,19 @@ class Core:
             self.add2atomGroupDict(key, sel_pdb_prody)
         return
 
+
+    def _generate_AA_phipsi_Metal(self, resind):
+        ext_inds = ligand_database.extend_res_indices([resind], self.full_pdb, extend =1)
+        if len(ext_inds) != 3:
+            return
+        #print(self.full_pdb.getTitle() + '+' + '-'.join([str(x) for x in ext_inds]))
+        atom_inds = []
+        atom_inds.extend(self.full_pdb.select('resindex ' + str(resind-1)).select('name C O').getIndices())
+        atom_inds.extend(self.full_pdb.select('resindex ' + str(resind)).getIndices())
+        atom_inds.extend(self.full_pdb.select('resindex ' + str(resind+1)).select('name N CA').getIndices())
+        sel_pdb_prody = self.full_pdb.select('index ' + ' '.join([str(x) for x in atom_inds]) + ' '+ str(self.metal.getIndex()))
+        return sel_pdb_prody
+
     
     def generate_AA_phipsi_Metal(self, AA = 'HIS', key = 'AAMetalPhiPsi_HIS'):
         aa_sel = 'resname ' + AA
@@ -121,16 +134,9 @@ class Core:
             if not self.full_pdb.select(aa_sel + ' and resindex ' + str(resind)):
                 continue
             
-            ext_inds = ligand_database.extend_res_indices([resind], self.full_pdb, extend =1)
-            if len(ext_inds) != 3:
+            sel_pdb_prody = self._generate_AA_phipsi_Metal(resind)
+            if not sel_pdb_prody:
                 continue
-            #print(self.full_pdb.getTitle() + '+' + '-'.join([str(x) for x in ext_inds]))
-            atom_inds = []
-            atom_inds.extend(self.full_pdb.select('resindex ' + str(resind-1)).select('name C O').getIndices())
-            atom_inds.extend(self.full_pdb.select('resindex ' + str(resind)).getIndices())
-            atom_inds.extend(self.full_pdb.select('resindex ' + str(resind+1)).select('name N CA').getIndices())
-            sel_pdb_prody = self.full_pdb.select('index ' + ' '.join([str(x) for x in atom_inds]) + ' '+ str(self.metal.getIndex()))
-            
             self.add2atomGroupDict(key, sel_pdb_prody)
         return
 
@@ -189,7 +195,7 @@ class Core:
                     if filtered: continue
 
                 pairs_ind.append((self.contact_aa_resinds[i], self.contact_aa_resinds[j]))
-                pairs_ind.append((self.contact_aa_resinds[j], self.contact_aa_resinds[i]))  # In the database, we don't know the order of the two aa.
+                #pairs_ind.append((self.contact_aa_resinds[j], self.contact_aa_resinds[i]))  # In the database, we don't know the order of the two aa.
         
         for p in pairs_ind:
             sel_pdb_prody = self.full_pdb.select('resindex ' + str(p[0]) + ' ' +  str(p[1]) + ' '+ str(self.metal_resind))

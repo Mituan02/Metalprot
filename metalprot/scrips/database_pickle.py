@@ -26,7 +26,8 @@ id_cluster_dict = {}
 cluster_centroid_dict = {}
 
 query_id = 0
-for query in centroid_querys:
+for _query in centroid_querys:
+    query = _query.copy()
     inds = np.unique(query.query.getResindices())
     ind = inds[int(inds.shape[0]/2)-1]
     transform = pr.calcTransformation(query.query.select(align_sel + ' and resindex ' + str(ind)), query_all_metal.query.select(align_sel + ' and resindex ' + str(query_all_metal.contact_resind)))
@@ -49,6 +50,7 @@ for query in centroid_querys:
 
 query_all_metal.hull_ag = hull.transfer2pdb(all_coords)
 
+
 with open(query_dir + 'pickle/AllMetalQuery.pkl', 'wb') as f:
     pickle.dump(query_all_metal, f)
 
@@ -60,3 +62,19 @@ with open(query_dir + 'pickle/cluster_centroid_dict.pkl', 'wb') as f:
 
 with open(query_dir + 'pickle/id_cluster_dict.pkl', 'wb') as f:
     pickle.dump(id_cluster_dict, f)
+
+
+cluster_centroid_origin_dict = {}
+for _query in centroid_querys:
+    query = _query.copy()
+    cluster_key = query.get_cluster_key()
+    cluster_centroid_origin_dict[cluster_key] = query
+    cluster_coords = []
+
+    clu = extract_vdm.get_vdm_cluster(query)
+    for q in clu.querys:
+        cluster_coords.append(q.query.select(metal_sel)[0].getCoords())
+    cluster_centroid_origin_dict[cluster_key].hull_ag = hull.transfer2pdb(cluster_coords)
+
+with open(query_dir + 'pickle/cluster_centroid_origin_dict.pkl', 'wb') as f:
+    pickle.dump(cluster_centroid_origin_dict, f)

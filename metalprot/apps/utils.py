@@ -18,16 +18,20 @@ def get_ABPLE(resn, phi, psi):
 
 def seq_get_ABPLE(target):
     abples = []
+    phipsi = []
     for resn in target.iterResidues():
         try:
             phi = pr.calcPhi(resn)
             psi = pr.calcPsi(resn)
+            phipsi.append((phi, psi))
+
             ap = get_ABPLE(resn.getResname(), phi, psi)
             abples.append(ap)
         except:
+            phipsi.append((1000, 1000))
             abples.append('n')
     #print(abples)
-    return abples
+    return abples, phipsi
     
 
 def get_contact_map(target, win_filter = None):

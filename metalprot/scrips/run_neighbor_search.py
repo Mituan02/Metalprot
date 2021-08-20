@@ -4,8 +4,6 @@ import prody as pr
 import numpy as np
 #You can either add the python package path.
 #sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
-from metalprot import extract_vdm
-from metalprot import hull
 from metalprot import search
 import pickle
 
@@ -28,6 +26,9 @@ with open(query_dir + 'cluster_centroid_dict.pkl', 'rb') as f:
 with open(query_dir + 'id_cluster_dict.pkl', 'rb') as f:
     id_cluster_dict = pickle.load(f)
 
+with open(query_dir + 'cluster_centroid_origin_dict.pkl', 'rb') as f:
+    cluster_centroid_origin_dict = pickle.load(f)
+
 print(len(all_querys))
 
 
@@ -35,7 +36,7 @@ print(len(all_querys))
 
 workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
 
-outdir = workdir + 'output_neighbor_val_test6/'
+outdir = workdir + 'output_neighbor_val_test7/'
 
 target_path = workdir + '5od1_zn.pdb'
 
@@ -61,11 +62,11 @@ print(win_filter)
 '''
 
 #win_filter = [30, 31, 32, 33, 34, 35, 36, 37, 38, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68]
-win_filter = [34,  60,  64]
+#win_filter = [34,  60,  64]
 
 ss =  search.Search_vdM(target_path, outdir, all_querys, id_cluster_dict, cluster_centroid_dict, query_all_metal, num_iters, rmsd_cuts, win_filter, validateOriginStruct = True, filter_abple = True)
 
-ss.run_neighbor_search()
+#ss.run_neighbor_search()
 
 '''
 ss.neighbor_generate_query_dict()
@@ -78,7 +79,7 @@ ss.neighbor_extract_query()
 
 ss.neighbor_calc_comb_score()
 
-ss.neighbor_calc_geometry()ssssss
+ss.neighbor_calc_geometry()
 
 ss.neighbor_write()
 
@@ -98,3 +99,6 @@ graph.calc_pair_connectivity(ss.neighbor_pair_dict)
 graph.get_paths()
 
 '''
+
+ss.eval_search()
+#wins, combs = ss.eval_get_comb()

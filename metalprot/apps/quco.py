@@ -81,7 +81,7 @@ class Query:
         self.phi = None
         self.psi = None
         self.get_phi_psi()
-        self.abple = get_ABPLE(self.query.select('name CA and resindex ' + str(self.contact_resind)).getResnames()[0], self.psi, self.phi)
+        self.abple = get_ABPLE(self.query.select('name CA and resindex ' + str(self.contact_resind)).getResnames()[0], self.phi, self.psi)
         
 
     def get_metal_coord(self):

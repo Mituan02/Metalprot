@@ -1,5 +1,5 @@
 import contextlib
-from math import log
+from math import comb, log
 import os
 from typing import Dict
 from metalprot.apps import transformation
@@ -105,6 +105,11 @@ class CombInfo:
         self.fracScore = -10.00
         #Calc multiScore (By Bill: -ln(Na/SumNa * Nb/SumNb * Nc/SumNc))
         self.multiScore = -10.00
+
+        #evaluation property for evaluation search
+        self.eval_mins = None
+        self.eval_min_vdMs = None
+        self.eval_is_origin = False
 
     def calc_geometry(self):
         all_coords = []
@@ -367,14 +372,16 @@ class Search_vdM:
                     if not self.querys[j_ind].abple == apy:
                         x_in_y_filter[i].remove(j_ind)
 
+
         if self.filter_phipsi:
             phix, psix = self.phipsi[wx]
             phiy, psiy = self.phipsi[wy]
 
             for i in range(len(x_in_y)):
                 if len(x_in_y[i]) <= 0:
-                    continue
-                if self.querys[i].phi - self.filter_phipsi_val > phix or self.querys[i].phi + self.filter_phipsi_val < phix or self.querys[i].psi - self.filter_phipsi_val > psix or self.querys[i].psi + self.filter_phipsi_val < psix:
+                    continue                
+
+                if (not utils.filter_phipsi(phix, self.querys[i].phi, self.filter_phipsi_val)) or not (utils.filter_phipsi(psix, self.querys[i].psi, self.filter_phipsi_val)):
                     x_in_y_filter[i].clear()
                     continue
 
@@ -383,10 +390,9 @@ class Search_vdM:
                     if j_ind not in x_in_y_filter[i]:
                         continue
 
-                    if self.querys[j_ind].phi - self.filter_phipsi_val > phiy or self.querys[j_ind].phi + self.filter_phipsi_val < phiy or self.querys[j_ind].psi - self.filter_phipsi_val > psiy or self.querys[j_ind].psi + self.filter_phipsi_val < psiy:
+                    if (not utils.filter_phipsi(phiy, self.querys[j_ind].phi, self.filter_phipsi_val)) or (not utils.filter_phipsi(psiy, self.querys[j_ind].psi, self.filter_phipsi_val)) :
                         x_in_y_filter[i].remove(j_ind)
                         continue
-
 
         ### Debug print.
         # for i in range(len(x_in_y)):
@@ -642,15 +648,17 @@ class Search_vdM:
                     all_overlap_metal_coords.extend(metal_coords)
 
                 hull.write2pymol(metal_coords, outdir, tag + '_w_' + str(w) +'_overlap_points.pdb')
-            if len(all_overlap_metal_coords) > 3:
-                vol = scipy.spatial.ConvexHull(all_overlap_metal_coords)
-                volume = vol.volume
-            else:
-                volume = 0
-            self.neighbor_comb_dict[key][1].volume = volume
-            self.neighbor_comb_dict[key][1].volPerMetal = volume/len(all_overlap_metal_coords)
-            hdist = cdist(all_overlap_metal_coords, all_overlap_metal_coords, metric='euclidean')
-            self.neighbor_comb_dict[key][1].diameter = hdist.argmax()
+
+            # if len(all_overlap_metal_coords) > 3:
+            #     vol = scipy.spatial.ConvexHull(all_overlap_metal_coords)
+            #     volume = vol.volume
+            # else:
+            #     volume = 0
+            # self.neighbor_comb_dict[key][1].volume = volume
+            # self.neighbor_comb_dict[key][1].volPerMetal = volume/len(all_overlap_metal_coords)
+            # hdist = cdist(all_overlap_metal_coords, all_overlap_metal_coords, metric='euclidean')
+            # self.neighbor_comb_dict[key][1].diameter = hdist.argmax()
+            
             #Write Centroid and all metal coords in the cluster
             for w in key[0]:
                 centroid = self.neighbor_comb_dict[key][1].centroid_dict[w]
@@ -661,13 +669,16 @@ class Search_vdM:
         return    
 
 
-    def neighbor_write_summary(self):
+    def neighbor_write_summary(self, eval = False):
         '''
         Write a tab dilimited file.
         '''
         print('neighbor_write_summary')
         with open(self.workdir + '_summary.tsv', 'w') as f:
-            f.write('Wins\tClusterIDs\tproteinABPLEs\tCentroidABPLEs\tproteinPhiPsi\tCentroidPhiPsi\tvolume\tvol2metal\tdiameter\tTotalVdMScore\tFracScore\tMultiScore\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tvdm_scores\ttotal_clu#\tclu_nums\n')
+            f.write('Wins\tClusterIDs\tproteinABPLEs\tCentroidABPLEs\tproteinPhiPsi\tCentroidPhiPsi\tvolume\tvol2metal\tdiameter\tTotalVdMScore\tFracScore\tMultiScore\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tvdm_scores\ttotal_clu#\tclu_nums')
+            if eval:
+                f.write('\teval_min_rmsd\teval_min_vdMs\teval_phi\teval_psi\teval_abple\teval_is_origin')
+            f.write('\n')
             for key in self.neighbor_comb_dict.keys(): 
                 info = self.neighbor_comb_dict[key][1]
                 centroids = [c.query.getTitle() for c in info.centroid_dict.values()]
@@ -703,6 +714,15 @@ class Search_vdM:
                 f.write(str(sum(clu_nums)) + '\t')
                 f.write('||'.join([str(c) for c in clu_nums]) + '\t')
                 #f.write('||'.join(centroids))
+
+                if eval:
+                    f.write('||'.join([str(round(m, 2)) for m in info.eval_mins]) + '\t')
+                    f.write('||'.join([v.query.getTitle() for v in info.eval_min_vdMs]) + '\t')
+                    f.write('||'.join([str(round(v.phi,2)) for v in info.eval_min_vdMs]) + '\t')
+                    f.write('||'.join([str(round(v.psi,2)) for v in info.eval_min_vdMs]) + '\t')
+                    f.write('||'.join([v.abple for v in info.eval_min_vdMs]) + '\t')
+                    f.write(str(info.eval_is_origin) + '\t')
+
                 f.write('\n')
         return 
 
@@ -713,7 +733,6 @@ class Search_vdM:
         For all the 'target' vdMs, use nearest neighbor search to check overlap and combinfo.
         '''
         wins, combs = self.eval_get_comb()
-
 
         uni_wins = set()
         [uni_wins.add(w) for win in wins for w in win]
@@ -730,7 +749,8 @@ class Search_vdM:
         for win_comb in wins:
             print(win_comb)      
             comb_dict = self.neighbor_construct_comb(win_comb)
-            self.neighbor_comb_dict.update(comb_dict)
+            if not comb_dict: continue
+            self.neighbor_comb_dict.update(comb_dict)     
 
         self.neighbor_extract_query()
 
@@ -740,9 +760,10 @@ class Search_vdM:
 
         self.neighbor_write()
 
-        self.neighbor_write_summary()
-
+        #Evaluate search result.
         self.eval_search_results(wins, combs)
+
+        self.neighbor_write_summary(eval=True)
 
         return 
                 
@@ -804,7 +825,7 @@ class Search_vdM:
         origin_centroid = self.cluster_centroid_origin_dict[clu_key].copy()
         self.supperimpose_target_bb(origin_centroid, w)
 
-        pr.writePDB(evaldir + tag + 'origin_' + origin_centroid.query.getTitle(), origin_centroid.query)
+        #pr.writePDB(evaldir + tag + 'origin_' + origin_centroid.query.getTitle(), origin_centroid.query)
         clu_origin_allmetal_coords = origin_centroid.get_hull_points()
         hull.write2pymol(clu_origin_allmetal_coords, evaldir, tag + '_origin_w_' + str(w) +'_points.pdb') 
 
@@ -816,6 +837,12 @@ class Search_vdM:
         clu_allmetal_coords = centroid.get_hull_points()
         hull.write2pymol(clu_allmetal_coords, evaldir, tag + '_w_' + str(w) +'_points.pdb') 
 
+        origin_best_v = best_v.copy()
+        transform = pr.calcTransformation(origin_best_v.query.select('heavy'), centroid.query.select('heavy'))
+        transform.apply(origin_best_v.query)
+        pr.writePDB(evaldir + tag + 'origin_' + origin_best_v.query.getTitle(), origin_best_v.query)
+
+        return
 
     def eval_extract_closest_vdMs(self, wins, combs):
         '''
@@ -885,11 +912,15 @@ class Search_vdM:
                 clu_id = key[1]
                 combinfo = self.neighbor_comb_dict[key][1]
 
+                min_rmsds = []
+                best_vs = []
                 for j in range(len(wins[i])):
                     w = wins[i][j]
                     v = combs[i][j]                    
 
                     best_v, min_rmsd = self.eval_extract_comb_closest_vdMs(w, v, combinfo)
+                    best_vs.append(best_v)
+                    min_rmsds.append(min_rmsd)
 
                     if not v:
                         continue
@@ -897,8 +928,13 @@ class Search_vdM:
                     if best_v:
                         tag = '/clu_' + '_'.join([str(ci) for cid in clu_id for ci in cid]) + '_rmsd_' + str(round(min_rmsd, 3)) + '_win_' + str(w) + '_clu_' + '_'.join([str(ci) for ci in clu_id[j]]) + '_'                   
                         pr.writePDB(evaldir + tag + best_v.query.getTitle(), best_v.query)   
-
+                self.neighbor_comb_dict[key][1].eval_mins = min_rmsds
+                self.neighbor_comb_dict[key][1].eval_min_vdMs = best_vs
+                if all([m < 0.05 for m in min_rmsds]):
+                    self.neighbor_comb_dict[key][1].eval_is_origin = True
         return
+
+
 
 
 

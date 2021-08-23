@@ -28,7 +28,7 @@ def seq_get_ABPLE(target):
             ap = get_ABPLE(resn.getResname(), phi, psi)
             abples.append(ap)
         except:
-            phipsi.append((1000, 1000))
+            phipsi.append((0, 0))
             abples.append('n')
     #print(abples)
     return abples, phipsi
@@ -80,7 +80,34 @@ def check_pair_distance_satisfy(wx, wy, dists):
             return False, wins
     return True, wins
 
+def filter_phipsi(angle, query_angle, filter_angle_val = 30):
+    '''
+    phi psi ranges is between [-180, 180]
+    calc the range of phi or psi angle with a filter range.
+    Ex. phi = 170, filter range = +-30, [140, 200] as 200 > 180. The true range is [(140, 180), (0, 20)]
+    The filter_angle_val must be < 180
+    '''
+    filter_ranges = []
 
+    low = angle - filter_angle_val
+
+    high = angle + filter_angle_val
+
+    if low < -180:
+        filter_ranges.append((-180, high))
+        filter_ranges.append((low + 360, 180))
+
+    elif high > 180:
+        filter_ranges.append((low, 180))
+        filter_ranges.append((-180, high - 360))
+    
+    else:
+        filter_ranges.append((low, high))
+
+    for r in filter_ranges:
+        if query_angle >= r[0] and query_angle <= r[1]:
+            return True
+    return False
 
 class CombGraph:
     def __init__(self, inds, pair_set, num_iter = 3):

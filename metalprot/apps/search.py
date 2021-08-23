@@ -640,12 +640,16 @@ class Search_vdM:
                 candidates = self.neighbor_comb_dict[key][1].query_dict[w]
                 metal_coords = []
 
+                max_out = 100 #To reduce number of output.
                 for c in candidates:
-                    pdb_path = outdir + tag + '_w_' + str(w) + '_apble_' + c.abple + '_' + c.query.getTitle() + '.pdb'
-                    pr.writePDB(pdb_path, c.query)
-
-                    metal_coords.append(c.get_metal_coord())
-                    all_overlap_metal_coords.extend(metal_coords)
+                    if max_out >0:
+                        pdb_path = outdir + tag + '_w_' + str(w) + '_apble_' + c.abple + '_' + c.query.getTitle() + '.pdb'
+                        pr.writePDB(pdb_path, c.query)                  
+                        max_out-=1
+                        metal_coords.append(c.get_metal_coord())
+                        all_overlap_metal_coords.extend(metal_coords)
+                    else:
+                        break
 
                 hull.write2pymol(metal_coords, outdir, tag + '_w_' + str(w) +'_overlap_points.pdb')
 

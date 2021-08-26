@@ -357,7 +357,7 @@ def extract_rep_and_writepdb(pdbs, clusters, metal_sel, outdir):
 
 ### clustring
 
-def superimpose_aa_core(pdbs, rmsd = 0.5, len_sel = 5, align_sel = 'name C CA N O NI', min_cluster_size = 2):
+def superimpose_aa_core(pdbs, rmsd = 0.5, len_sel = 5, align_sel = 'name C CA N O NI', min_cluster_size = 0):
     '''
     There are so many ways to superimpose aa and metal.
     This method try to algin the C-CA-N_NI
@@ -381,7 +381,7 @@ def superimpose_aa_core(pdbs, rmsd = 0.5, len_sel = 5, align_sel = 'name C CA N 
         clu.make_square()
     if not clu._adj_mat:
         clu.make_adj_mat()
-    clu.cluster(min_cluster_size = 2)
+    clu.cluster(min_cluster_size = min_cluster_size)
 
     return clu
 
@@ -468,7 +468,7 @@ def write_metal_diff(workdir, metal_diffs, metals = ['CA', 'CO', 'CU', 'FE', 'MG
 
 # run cluster
 
-def run_cluster(_pdbs, workdir, outdir, rmsd, metal_sel, len_sel, align_sel, min_cluster_size = 2, tag = ''):
+def run_cluster(_pdbs, workdir, outdir, rmsd, metal_sel, len_sel, align_sel, min_cluster_size = 0, tag = ''):
     
     clu = superimpose_aa_core(_pdbs, rmsd = rmsd, len_sel = len_sel, align_sel = align_sel, min_cluster_size = min_cluster_size)
     

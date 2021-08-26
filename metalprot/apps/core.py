@@ -81,7 +81,7 @@ class Core:
 
         count = 0
         for ag in self.atomGroupDict[key]:
-            pr.writePDB(outdir + self.full_pdb.getTitle() + '_' + key + '_mem' + str(count) + '.pdb', ag)
+            pr.writePDB(outdir + self.full_pdb.getTitle() + '_mem' + str(count) + '.pdb', ag)
             count+=1
             
         

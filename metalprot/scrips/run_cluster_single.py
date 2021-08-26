@@ -1,3 +1,4 @@
+from genericpath import exists
 import os
 import sys
 import prody as pr
@@ -28,7 +29,7 @@ align_sel_backbone = 'name C CA N O NI MN ZN CO CU MG FE or ion'
 cores = ldb.load_cores(workdir + '_Seq_core_date2017_reps/')
 
 
-AA = 'HIS'
+AA = 'CYS'
 
 len_sel = 9
 
@@ -91,9 +92,12 @@ ldb.run_cluster(_pdbs, workdir, 'M3-1_AAext5Metal_' + AA + '_cluster02/', rmsd =
 ### Align his core with phipsi------------------------------------------------------------------------------------ 
 
 # AAMetal_HIS
-extract_single_vdm(cores, workdir + 'AAMetalPhiPsi_' + AA + '_reps/', AA = AA, key = 'AAMetalPhiPsi_' + AA, basic = False, phipsi=True)
+outdir = workdir + '20210826/'
+os.makedirs(outdir, exist_ok = True)
 
-_pdbs = ldb.get_all_pbd_prody(workdir + 'AAMetalPhiPsi_' + AA + '_reps/')
+extract_single_vdm(cores, outdir + 'AAMetalPhiPsi_' + AA + '_reps/', AA = AA, key = 'AAMetalPhiPsi_' + AA, basic = False, phipsi=True)
 
-ldb.run_cluster(_pdbs, workdir, 'AAMetalPhiPsi_' + AA + '_cluster05/', rmsd = 0.5, metal_sel = metal_sel, len_sel = len_sel_sc, align_sel = 'heavy', min_cluster_size = 1, tag = 'AAMetalPhiPsi_')
+_pdbs = ldb.get_all_pbd_prody(outdir + 'AAMetalPhiPsi_' + AA + '_reps/')
+
+ldb.run_cluster(_pdbs, outdir, 'AAMetalPhiPsi_' + AA + '_cluster05_2/', rmsd = 0.5, metal_sel = metal_sel, len_sel = len_sel_sc, align_sel = 'heavy', min_cluster_size = 0, tag = 'AAMetalPhiPsi_' + AA + '_')
 

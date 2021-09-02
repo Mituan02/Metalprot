@@ -23,13 +23,14 @@ def seq_get_ABPLE(target):
         try:
             phi = pr.calcPhi(resn)
             psi = pr.calcPsi(resn)
-            phipsi.append((phi, psi))
-
             ap = get_ABPLE(resn.getResname(), phi, psi)
-            abples.append(ap)
         except:
-            phipsi.append((0, 0))
-            abples.append('n')
+            phi = 0
+            psi = 0
+            ap = 'n'
+
+        phipsi.append((phi, psi))
+        abples.append(ap)
     #print(abples)
     return abples, phipsi
     

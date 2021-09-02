@@ -270,6 +270,14 @@ class Cluster:
             transform.apply(q.query)
         return
 
+    def realign_by_HEAVY_candidates(self, target, align_sel = 'heavy'):
+        '''
+        realign certain members of the clusters to the target. 
+        '''
+        for q in self.querys:
+            transform = pr.calcTransformation(q.query.select(align_sel), target.query.select(align_sel))
+            transform.apply(q.query)
+        return
 
     def write(self, outpath):
         for q in self.querys:

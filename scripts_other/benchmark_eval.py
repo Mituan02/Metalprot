@@ -1,7 +1,7 @@
 import os
 import pandas
 
-workdir = '/mnt/e/DesignData/ligands/LigandBB/zn_eval_bench_mark/2020_dist45_phipsi15/'
+workdir = '/mnt/e/DesignData/ligands/LigandBB/zn_eval_bench_mark/2013_heavy_dist45_phipsi15/'
 
 
 
@@ -11,7 +11,7 @@ workdir = '/mnt/e/DesignData/ligands/LigandBB/zn_eval_bench_mark/2020_dist45_phi
 
 #df = pandas.read_csv(file, sep='\t', lineterminator='\n', index_col=False)
 
-
+NotExist = []
 
 Failed = []
 
@@ -22,8 +22,8 @@ for _dir in os.listdir(workdir):
         continue
     file = workdir + _dir + '/_summary.tsv'
     if not os.path.isfile(file):
-        print('Fail: ' + _dir)
-        Failed.append(_dir)
+        print('Not exist: ' + _dir)
+        NotExist.append(_dir)
         continue
 
     df = pandas.read_csv(file, sep='\t', lineterminator='\n', index_col=False)
@@ -60,6 +60,10 @@ for _dir in os.listdir(workdir):
 with open(workdir + '_extract.tsv', 'w') as f:
     for info in infos:
         f.write('\t'.join([str(o) for o in info]) + '\n')
+
+with open(workdir + '_notexist.tsv', 'w') as f:
+    for a in NotExist:
+        f.write(a + '\n')
 
 with open(workdir + '_failed.tsv', 'w') as f:
     for a in Failed:

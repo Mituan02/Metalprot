@@ -201,6 +201,9 @@ class Search_vdM:
         self.secondshell_querys = secondshell_querys
         #end---------------------------- 
 
+        #
+        self.log = ''
+
     #region Neighbor Search
     '''
     A new searching method based on sklearn NerestNeighbor radius_neighbors.
@@ -280,6 +283,20 @@ class Search_vdM:
 
         return True
 
+    def supperimpose_centroid(self, _query, centroid, align_sel='heavy'):
+        '''
+        supperimpose_centroid
+        '''
+
+        if len(_query.query.select(align_sel)) != len(centroid.query.select(align_sel)):
+            print('supperimpose_target_bb not happening')
+            return False
+        
+        transform = pr.calcTransformation(_query.query.select(align_sel), centroid.query.select(align_sel))
+        transform.apply(_query.query)
+
+        return True
+
 
     def neighbor_generate_pair_dict(self):
         '''
@@ -311,8 +328,8 @@ class Search_vdM:
                 # print(x_has_y)
                 # print(y_has_x)
 
-                x_in_y, x_has_y = self.neighbor_filter(wx, wy, x_in_y)
-                y_in_x, y_has_x = self.neighbor_filter(wy, wx, y_in_x)
+                x_in_y, x_has_y = self.neighbor_filter_new(wx, wy, x_in_y)
+                y_in_x, y_has_x = self.neighbor_filter_new(wy, wx, y_in_x)
 
                 # print(x_has_y)
                 # print(y_has_x)
@@ -337,6 +354,74 @@ class Search_vdM:
         return x_in_y[1], x_has_y
 
     
+    def neighbor_filter_new(self, wx, wy, x_in_y):
+        '''
+        filter impossible pairwise connect.
+        1. validateOriginStruct
+        2. ABPLE filter. 
+        3. phipsi angle filter. (future)
+        '''
+
+        x_in_y_mask = [[True for j in range(len(x_in_y[i]))] for i in range(len(x_in_y))]
+
+        for i in range(len(x_in_y)):
+            if len(x_in_y[i]) <= 0:
+                continue
+
+            if self.validateOriginStruct:
+                resx = self.target.select('name CA and resindex ' + str(wx)).getResnames()[0]
+                resy = self.target.select('name CA and resindex ' + str(wy)).getResnames()[0]
+
+                if not self.id_cluster_dict[i][0] == resx:
+                    x_in_y_mask[i] = [False for j in range(len(x_in_y[i]))] 
+                    continue
+
+            if self.filter_abple:
+                apx = self.target_abple[wx]
+                apy = self.target_abple[wy]
+       
+                if not self.querys[i].abple == apx:
+                    x_in_y_mask[i] = [False for j in range(len(x_in_y[i]))] 
+                    continue
+
+            
+            if self.filter_phipsi:
+                phix, psix = self.phipsi[wx]
+                phiy, psiy = self.phipsi[wy]
+
+                if (not utils.filter_phipsi(phix, self.querys[i].phi, self.filter_phipsi_val)) or not (utils.filter_phipsi(psix, self.querys[i].psi, self.filter_phipsi_val)):
+                    x_in_y_mask[i] = [False for j in range(len(x_in_y[i]))]
+                    continue
+
+                
+            for j in range(len(x_in_y[i])):
+                j_ind = x_in_y[i][j]
+
+                if self.validateOriginStruct:
+                    resy = self.target.select('name CA and resindex ' + str(wy)).getResnames()[0]
+                    if not self.id_cluster_dict[j_ind][0] == resy:
+                        x_in_y_mask[i][j] = False
+                        continue
+
+                if self.filter_abple:
+                    apy = self.target_abple[wy]
+                    if not self.querys[j_ind].abple == apy:
+                        x_in_y_mask[i][j] = False
+                        continue
+
+                if self.filter_phipsi:
+                    phiy, psiy = self.phipsi[wy]
+                    if (not utils.filter_phipsi(phiy, self.querys[j_ind].phi, self.filter_phipsi_val)) or (not utils.filter_phipsi(psiy, self.querys[j_ind].psi, self.filter_phipsi_val)) :
+                        x_in_y_mask[i][j] = False
+                        continue
+        
+        x_in_y_filter = [[x_in_y[i][j] for j in range(len(x_in_y[i])) if x_in_y_mask[i][j]] for i in range(len(x_in_y))]
+
+        x_has_y = any([True if len(a) >0 else False for a in x_in_y_filter])
+
+        return x_in_y_filter, x_has_y
+
+
     def neighbor_filter(self, wx, wy, x_in_y):
         '''
         filter impossible pairwise connect.
@@ -572,7 +657,9 @@ class Search_vdM:
 
                 for id in comb_dict[(wins, clu_key)][0][win]:
                     _query = self.querys[id].copy()
+                    
                     self.supperimpose_target_bb(_query, win)
+                    #self.supperimpose_centroid(_query, centroid, align_sel='heavy') # Test different supperimposition effect of search.
                     comb_dict[(wins, clu_key)][1].query_dict[win].append(_query)
 
         return
@@ -632,7 +719,8 @@ class Search_vdM:
         for wins, clu_key in comb_dict.keys():
             comb_dict[(wins, clu_key)][1].calc_geometry()         
         return
-            
+
+
     def neighbor_write_represents(self):
         print('neighbor_write_represents')
         for key in self.neighbor_comb_dict.keys():  
@@ -771,6 +859,12 @@ class Search_vdM:
                     f.write(str(info.eval_is_origin) + '\t')
 
                 f.write('\n')
+
+
+        if len(self.log) > 0:
+            with open(self.workdir + '_log.txt', 'w') as f:
+                f.write(self.log)
+            
         return 
 
 
@@ -813,14 +907,26 @@ class Search_vdM:
         '''
         Extract vdMs from the target protein.
         '''
-        #aas = ['HIS', 'GLU', 'ASP', 'CYS']
+        aas = ['HIS', 'GLU', 'ASP', 'CYS']
+
         wins = []
         combs = []
         _cores = ligand_database.get_metal_core_seq(self.target, quco.metal_sel, extend = 4)
         cores = [core.Core(c[1]) for c in _cores]
+
+        if len(_cores) <= 0:
+            self.log += 'No core exist (old vdM).\n'
+
         for c in cores:
-            wins.append(c.contact_aa_resinds)
+            for aa in c.contact_aas.getResnames():
+                if aa not in aas:
+                    self.log += 'core contain other aa.\n'
+                    continue
             comb = [c._generate_AA_phipsi_Metal(w) for w in c.contact_aa_resinds]
+            if None in comb:
+                self.log += 'core extract None.\n'
+                continue
+            wins.append(c.contact_aa_resinds)
             combs.append(comb)
         return wins, combs
 
@@ -860,6 +966,7 @@ class Search_vdM:
 
         return best_v, best_id, min_rmsd
 
+
     def write_closest_vdM_clu_points(self, best_v, w, evaldir, tag):
         clu_key = best_v.get_cluster_key()
 
@@ -885,6 +992,7 @@ class Search_vdM:
 
         return
 
+
     def eval_extract_closest_vdMs(self, wins, combs):
         '''
         First supperimpose the all_metal_query. 
@@ -907,6 +1015,7 @@ class Search_vdM:
                 if best_v:
                     clu_id = self.id_cluster_dict[best_id]
                     tag = '/win_' + str(w) + '_clu_' + '_'.join([str(ci) for ci in clu_id]) + '_rmsd_' + str(round(min_rmsd, 3)) + '_'                   
+                    print(tag + ' : best_id ' + str(best_id))
                     pr.writePDB(evaldir + tag + best_v.query.getTitle(), best_v.query)
                     self.write_closest_vdM_clu_points(best_v, w, evaldir, tag)
 

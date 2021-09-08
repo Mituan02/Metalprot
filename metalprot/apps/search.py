@@ -943,7 +943,7 @@ class Search_vdM:
             print(win_comb)      
             comb_dict = self.neighbor_construct_comb(win_comb)
             if not comb_dict: continue
-            self.neighbor_write_win()
+            self.neighbor_write_win(comb_dict)
             self.neighbor_comb_dict.update(comb_dict)     
 
         #self.neighbor_write()

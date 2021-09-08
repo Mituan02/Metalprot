@@ -1,7 +1,7 @@
 import os
 import pandas
 
-workdir = '/mnt/e/DesignData/ligands/LigandBB/zn_eval_bench_mark/2013_heavy_dist45_phipsi15/'
+workdir = '/mnt/e/DesignData/ligands/LigandBB/zn_eval_bench_mark/2013_new_dist45_phipsi15/'
 
 
 
@@ -58,6 +58,7 @@ for _dir in os.listdir(workdir):
     infos.append(info)
 
 with open(workdir + '_extract.tsv', 'w') as f:
+    f.write('TotalSolutions\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tMaxTotalVdMScore\tMaxFracScore\tMinMultiScore\n')
     for info in infos:
         f.write('\t'.join([str(o) for o in info]) + '\n')
 

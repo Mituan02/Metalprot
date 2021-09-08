@@ -115,6 +115,12 @@ class CombInfo:
         self.eval_min_vdMs = None
         self.eval_is_origin = False
 
+        #After search filter property
+        self.pair_aa_aa_dist_ok = 0 #0: unchecked. -1: condition unsatisfied; 1: condition satisfied.
+        self.pair_angle_ok = 0
+        self.pair_metal_aa_dist_ok = 0
+
+
     def calc_geometry(self):
         all_coords = []
         metal_coords = []  
@@ -131,22 +137,45 @@ class CombInfo:
         self.aa_aa_pair, self.metal_aa_pair, self.angle_pair  = quco.pair_wise_geometry(self.geometry)
         return
 
-    def geometry_sift(self, range):
+    def after_search_condition_satisfied(self, pair_angle_range = None, pair_aa_aa_dist_range = None, pair_metal_aa_dist_range = None):
         '''
         range = (75, 125) for Zn.
         if all pairwise angle is between the range. The geometry is satisfied.
         '''
-        for an in self.angle_pair:
-            if an < range[0] or an > range[1]:
-                self.geometry_sifted = True
-        return
+        if pair_angle_range:
+            for an in self.angle_pair:
+                if an < pair_angle_range[0] or an > pair_angle_range[1]:
+                    self.pair_angle_ok = -1
+                    return False
+                else:
+                    self.pair_angle_ok = 1
+        if pair_aa_aa_dist_range:           
+            for ad in self.aa_aa_pair:
+                if ad < pair_aa_aa_dist_range[0] or ad > pair_aa_aa_dist_range[1]:
+                    self.pair_aa_aa_dist_ok = -1
+                    return False
+                else:
+                    self.pair_aa_aa_dist_ok = 1
+
+        if pair_metal_aa_dist_range:
+            for amd in self.metal_aa_pair:
+                if amd < pair_metal_aa_dist_range[0] or amd > pair_metal_aa_dist_range[1]:
+                    self.pair_aa_metal_dist_ok = -1
+                    return False
+                else:
+                    self.pair_aa_metal_dist_ok = 1
+
+        return True
 
 class Search_vdM:
     '''
     The function to search comb is based on nearest neighbor function of sklearn.
     '''
-    def __init__(self, target_pdb, workdir, querys, id_cluster_dict, cluster_centroid_dict, all_metal_query, cluster_centroid_origin_dict = None, num_iters = [3], rmsd = 0.25, win_filtered = None, 
-    contact_querys = None, secondshell_querys = None, validateOriginStruct = False, filter_abple = False, filter_phipsi = False, filter_phipsi_val = 20, geometry_filter = None, parallel = False):
+    def __init__(self, target_pdb, workdir, querys, id_cluster_dict, cluster_centroid_dict, all_metal_query, cluster_centroid_origin_dict = None, num_iters = [3], 
+    rmsd = 0.25, win_filtered = None, contact_querys = None, secondshell_querys = None, 
+    validateOriginStruct = False, filter_abple = False, filter_phipsi = False, filter_phipsi_val = 20, 
+    after_search_filter = False, pair_angle_range = None, pair_aa_aa_dist_range = None, pair_metal_aa_dist_range = None,
+    parallel = False):
 
         if workdir:
             _workdir = os.path.realpath(workdir)
@@ -169,6 +198,8 @@ class Search_vdM:
 
         self.win_filtered = win_filtered
 
+
+        #neighbor in search filter--------------
         self.validateOriginStruct = validateOriginStruct
 
         self.filter_abple = filter_abple
@@ -177,11 +208,16 @@ class Search_vdM:
 
         self.filter_phipsi_val = filter_phipsi_val
 
-        self.geometry_filter = geometry_filter
+        #neighbor after search filter-----------
+        self.after_search_filter = after_search_filter
+        self.pair_angle_range = pair_angle_range
+        self.pair_aa_aa_dist_range =  pair_aa_aa_dist_range
+        self.pair_metal_aa_dist_range = pair_metal_aa_dist_range
 
+        #neighbor parallel mechanism------------- 
         self.parallel = parallel
 
-        #neighbor searching strategy---------- 
+        #neighbor searching strategy------------- 
         self.querys = querys #[query]
         self.all_metal_query = all_metal_query #The query with all_metal_coord_ag
         self.id_cluster_dict = id_cluster_dict # {metal_id 1234: (HIS, 0)} 
@@ -194,15 +230,17 @@ class Search_vdM:
         self.neighbor_comb_dict = dict() 
         # { (wins, ids), (comb, combinfo)}
         # {((0, 1, 2, 3)(0, 0, 0, 0)): {(0:[1, 3, 4], 1:[2, 3, 4], 2: [2, 6, 7], 3:[1, 2, 3]), combinfo}} Please check neighbor_win2comb()
-        #contact-----------------------
+
+        #contact atoms for geometry vdM score----
         self.contact_querys = contact_querys
 
-        #secondshell-----------------------
+        #secondshell-----------------------------
         self.secondshell_querys = secondshell_querys
-        #end---------------------------- 
-
-        #
+        
+        #For developing output purpose-----------
         self.log = ''
+        #end-------------------------------------
+
 
     #region Neighbor Search
     '''
@@ -228,8 +266,6 @@ class Search_vdM:
             self.neighbor_search_wins()
 
         self.neighbor_write_represents()
-
-        self.neighbor_write()
 
         self.neighbor_write_summary()
 
@@ -547,6 +583,7 @@ class Search_vdM:
         for win_comb in win_combs:
             print(win_comb)      
             comb_dict = self.neighbor_construct_comb(win_comb)
+            self.neighbor_write_win(comb_dict)
             self.neighbor_comb_dict.update(comb_dict)
         return
 
@@ -569,6 +606,7 @@ class Search_vdM:
         pool.close()
         pool.join()
         for r in results:
+            self.neighbor_write_win(r)
             self.neighbor_comb_dict.update(r)
         return
 
@@ -603,6 +641,11 @@ class Search_vdM:
         graph.get_paths()
 
         print('graph.paths len {}'.format(len(graph.all_paths)))
+
+        #TO DO: Here is a temp method to solve extream solutions. Mostly happened in 4 CYS binding cores.
+        if len(graph.all_paths) > 100000:
+            print('Too many paths to be considered so far.')
+            graph.all_paths = graph.all_paths[0:100001]
 
         clu_dict = {}
 
@@ -725,8 +768,8 @@ class Search_vdM:
         print('neighbor_write_represents')
         for key in self.neighbor_comb_dict.keys():  
             info = self.neighbor_comb_dict[key][1]
-            if self.geometry_filter:
-                if info.geometry_sift(self.geometry_filter):
+            if self.after_search_filter:
+                if not info.after_search_condition_satisfied(self.pair_angle_range, self.pair_aa_aa_dist_range, self.pair_metal_aa_dist_range):
                     continue
 
             outdir = self.workdir + 'represents/'
@@ -741,17 +784,16 @@ class Search_vdM:
 
         return
 
-
-    def neighbor_write(self):
+    def neighbor_write_win(self, comb_dict):
         '''
         Write output.
         Too many output, May need optimization. 
         '''
         print('neighbor_write')
-        for key in self.neighbor_comb_dict.keys():  
-            info = self.neighbor_comb_dict[key][1]
-            if self.geometry_filter:
-                if info.geometry_sift(self.geometry_filter):
+        for key in comb_dict.keys():  
+            info = comb_dict[key][1]
+            if self.after_search_filter:
+                if not info.after_search_condition_satisfied(self.pair_angle_range, self.pair_aa_aa_dist_range, self.pair_metal_aa_dist_range):
                     continue
             outpath = 'win_' + '-'.join([str(k) for k in key[0]]) + '/'
             outdir = self.workdir + outpath
@@ -760,12 +802,12 @@ class Search_vdM:
             tag = 'win_' + '-'.join([str(k) for k in key[0]]) + '_clu_' + '-'.join(k[0] + '-' + str(k[1]) for k in key[1]) 
 
             # Write geometry       
-            pr.writePDB(outdir + tag +'_geometry.pdb', self.neighbor_comb_dict[key][1].geometry) 
+            pr.writePDB(outdir + tag +'_geometry.pdb', comb_dict[key][1].geometry) 
             
             #Write 
             all_overlap_metal_coords = []
             for w in key[0]:
-                candidates = self.neighbor_comb_dict[key][1].query_dict[w]
+                candidates = comb_dict[key][1].query_dict[w]
                 metal_coords = []
 
                 max_out = 100 #To reduce number of output.
@@ -793,11 +835,21 @@ class Search_vdM:
             
             #Write Centroid and all metal coords in the cluster
             for w in key[0]:
-                centroid = self.neighbor_comb_dict[key][1].centroid_dict[w]
+                centroid = comb_dict[key][1].centroid_dict[w]
                 pdb_path = outdir + tag + '_centroid_' + centroid.query.getTitle() + '.pdb'
                 pr.writePDB(pdb_path, centroid.query)
                 clu_allmetal_coords = centroid.get_hull_points()
                 hull.write2pymol(clu_allmetal_coords, outdir, tag + '_w_' + str(w) +'_points.pdb')  
+        return   
+
+    def neighbor_write(self):
+        '''
+        Write output all comb_dict results together.
+        '''
+        print('neighbor_write')
+        for key in self.neighbor_comb_dict.keys():  
+            comb_dict = self.neighbor_comb_dict[key]
+            self.neighbor_write_win(comb_dict)
         return    
 
 
@@ -813,8 +865,8 @@ class Search_vdM:
             f.write('\n')
             for key in self.neighbor_comb_dict.keys(): 
                 info = self.neighbor_comb_dict[key][1]
-                if self.geometry_filter:
-                    if info.geometry_sift(self.geometry_filter):
+                if self.after_search_filter:
+                    if not info.after_search_condition_satisfied(self.pair_angle_range, self.pair_aa_aa_dist_range, self.pair_metal_aa_dist_range):
                         continue
 
                 #centroids = [c.query.getTitle() for c in info.centroid_dict.values()]
@@ -891,9 +943,10 @@ class Search_vdM:
             print(win_comb)      
             comb_dict = self.neighbor_construct_comb(win_comb)
             if not comb_dict: continue
+            self.neighbor_write_win()
             self.neighbor_comb_dict.update(comb_dict)     
 
-        self.neighbor_write()
+        #self.neighbor_write()
 
         #Evaluate search result.
         self.eval_search_results(wins, combs)
@@ -1083,24 +1136,3 @@ class Search_vdM:
                 if all([m < 0.05 for m in min_rmsds]):
                     self.neighbor_comb_dict[key][1].eval_is_origin = True
         return
-
-
-
-
-
-
-
-
-
-
-
-
-
-                
-                
-
-                
-
-
-                
-        

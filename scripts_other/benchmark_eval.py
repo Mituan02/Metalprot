@@ -35,14 +35,18 @@ for _dir in os.listdir(workdir):
     info = []
     info.append(_dir)
     x = df.index[df['eval_is_origin']== True]
+
+
     info.append(len(df))
     
     if len(x) > 0:
+        info.append(len(df['Wins'][x[0]].split('_')))
         info.append(True)
         info.append(df['TotalVdMScore'][x[0]])
         info.append(df['FracScore'][x[0]])
         info.append(df['MultiScore'][x[0]])
     else:
+        info.append(0)
         info.append(False)
         info.append(0)
         info.append(0)
@@ -58,7 +62,7 @@ for _dir in os.listdir(workdir):
     infos.append(info)
 
 with open(workdir + '_extract.tsv', 'w') as f:
-    f.write('TotalSolutions\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tMaxTotalVdMScore\tMaxFracScore\tMinMultiScore\n')
+    f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tMaxTotalVdMScore\tMaxFracScore\tMinMultiScore\n')
     for info in infos:
         f.write('\t'.join([str(o) for o in info]) + '\n')
 

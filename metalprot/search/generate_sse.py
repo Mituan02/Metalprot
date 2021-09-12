@@ -6,7 +6,7 @@ from scipy.spatial.distance import cdist
 import math as m
 import string
 import itertools
-from . import constant
+from ..basic import constant
 
 def Rx(theta):
     return np.matrix([[ 1, 0           , 0           ],

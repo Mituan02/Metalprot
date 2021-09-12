@@ -3,9 +3,10 @@ import numpy as np
 import itertools
 import prody as pr
 from scipy.spatial.distance import cdist
-from .ligand_database import clu_info, get_all_pbd_prody
-from .quco import Query, Comb, Cluster
-from .hull import transfer2pdb
+from ..database.database_extract import get_all_pbd_prody
+from ..database.database_cluster import clu_info
+from ..basic.quco import Query, Comb, Cluster
+from ..basic.hull import transfer2pdb
 
 def read_cluster_info(file_path):
     clu_infos = []

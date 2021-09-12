@@ -2,7 +2,6 @@ import contextlib
 from math import comb, log
 import os
 from typing import Dict
-from metalprot.apps import transformation
 from numba.cuda import target
 import numpy as np
 import itertools
@@ -13,13 +12,12 @@ from prody.proteins.pdbfile import writePDB
 import scipy.spatial
 from scipy.spatial.distance import cdist, dice
 import datetime
-from .ligand_database import clu_info
-from .extract_vdm import get_vdm_mem
-from . import quco
-from . import core
-from . import hull
-from . import utils
-from . import ligand_database
+
+from ..basic import quco
+from ..basic import hull
+from ..basic import utils
+from ..database import core
+from ..database import database_extract
 
 from sklearn.neighbors import NearestNeighbors
 import multiprocessing as mp
@@ -964,7 +962,7 @@ class Search_vdM:
 
         wins = []
         combs = []
-        _cores = ligand_database.get_metal_core_seq(self.target, quco.metal_sel, extend = 4)
+        _cores = database_extract.get_metal_core_seq(self.target, quco.metal_sel, extend = 4)
         cores = [core.Core(c[1]) for c in _cores]
 
         if len(_cores) <= 0:

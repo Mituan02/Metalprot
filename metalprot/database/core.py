@@ -9,15 +9,75 @@ import shutil
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-from . import cluster
-from . import transformation
-from . import ligand_database
 
 # According to the prody atom flag (http://prody.csb.pitt.edu/manual/reference/atomic/flags.html#flags), NI MN ZN CO CU MG FE CA are not all flag as ion. 
 # Note that calcium is read as CA, which is same as alpha carbon in prody selection. 
 # So to select calcium, we need to add ion before it.
 
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
+
+
+def connectivity_filter(pdb_prody, ind, ext_ind):
+    res1 = pdb_prody.select('protein and resindex ' + str(ind))
+    res2 = pdb_prody.select('protein and resindex ' + str(ext_ind))
+    if not res2:
+        return False
+    if res1[0].getResnum() - res2[0].getResnum() == ind - ext_ind and res1[0].getChid() == res2[0].getChid() and res1[0].getSegname() == res2[0].getSegname():
+        return True
+    return False
+
+def extend_res_indices(inds_near_res, pdb_prody, extend = 4):
+    extend_inds = []
+    inds = set()
+    for ind in inds_near_res:
+        for i in range(-extend, extend + 1):
+            the_ind = ind + i
+            if the_ind not in inds and the_ind>= 0 and connectivity_filter(pdb_prody, ind, the_ind):
+                extend_inds.append(the_ind)
+                inds.add(the_ind)
+    return extend_inds
+
+
+def get_2ndshell_indices(inds, pdb_prody, ni_index):
+    _2nd_resindices = []
+    for ind in inds:
+        if pdb_prody.select('resindex ' + str(ind)).getResnames()[0] == 'HIS':
+            dist1 = pr.calcDistance(pdb_prody.select('index ' + str(ni_index))[0], pdb_prody.select('resindex ' + str(ind) + ' name ND1')[0])
+            dist2 = pr.calcDistance(pdb_prody.select('index ' + str(ni_index))[0], pdb_prody.select('resindex ' + str(ind) + ' name NE2')[0])
+            if dist1 < dist2:
+                index = pdb_prody.select('resindex ' + str(ind) + ' name NE2')[0].getIndex()
+                resindex = pdb_prody.select('resindex ' + str(ind) + ' name NE2')[0].getResindex()
+            else:
+                index = pdb_prody.select('resindex ' + str(ind) + ' name ND1')[0].getIndex()
+                resindex = pdb_prody.select('resindex ' + str(ind) + ' name ND1')[0].getResindex()                         
+        elif pdb_prody.select('resindex ' + str(ind)).getResnames()[0] == 'ASP':
+            dist1 = pr.calcDistance(pdb_prody.select('index ' + str(ni_index))[0], pdb_prody.select('resindex ' + str(ind) + ' name OD1')[0])
+            dist2 = pr.calcDistance(pdb_prody.select('index ' + str(ni_index))[0], pdb_prody.select('resindex ' + str(ind) + ' name OD2')[0])
+            if dist1 < dist2:
+                index = pdb_prody.select('resindex ' + str(ind) + ' name OD2')[0].getIndex()
+                resindex = pdb_prody.select('resindex ' + str(ind) + ' name OD2')[0].getResindex()
+            else:
+                index = pdb_prody.select('resindex ' + str(ind) + ' name OD1')[0].getIndex()
+                resindex = pdb_prody.select('resindex ' + str(ind) + ' name OD1')[0].getResindex()               
+        elif pdb_prody.select('resindex ' + str(ind)).getResnames()[0] == 'GLU':
+            dist1 = pr.calcDistance(pdb_prody.select('index ' + str(ni_index))[0], pdb_prody.select('resindex ' + str(ind) + ' name OE1')[0])
+            dist2 = pr.calcDistance(pdb_prody.select('index ' + str(ni_index))[0], pdb_prody.select('resindex ' + str(ind) + ' name OE2')[0])
+            if dist1 < dist2:
+                index = pdb_prody.select('resindex ' + str(ind) + ' name OE2')[0].getIndex()
+                resindex = pdb_prody.select('resindex ' + str(ind) + ' name OE2')[0].getResindex()
+            else:
+                index = pdb_prody.select('resindex ' + str(ind) + ' name OE1')[0].getIndex()
+                resindex = pdb_prody.select('resindex ' + str(ind) + ' name OE1')[0].getResindex()
+        else:
+            continue     
+        all_near = pdb_prody.select('protein and heavy and within 3.4 of index ' + str(index) + ' and not resindex ' + str(resindex))
+        if not all_near or not all_near.select('nitrogen or oxygen or sulfur'):
+            continue
+        inds_2nshell = all_near.select('nitrogen or oxygen or sulfur').getResindices()
+        _2nd_resindices.extend(inds_2nshell) 
+
+    return _2nd_resindices
+
 
 def get_contact(pdbs):
     metal_coords = []
@@ -104,7 +164,7 @@ class Core:
             if not self.full_pdb.select(aa_sel + ' and resindex ' + str(resind)):
                 continue
 
-            ext_inds = ligand_database.extend_res_indices([resind], self.full_pdb, extend =extention)
+            ext_inds = extend_res_indices([resind], self.full_pdb, extend =extention)
             if len(ext_inds) != 2*extention + 1:
                 continue
             #print(self.full_pdb.getTitle() + '+' + '-'.join([str(x) for x in ext_inds]))
@@ -115,7 +175,7 @@ class Core:
 
 
     def _generate_AA_phipsi_Metal(self, resind):
-        ext_inds = ligand_database.extend_res_indices([resind], self.full_pdb, extend =1)
+        ext_inds = extend_res_indices([resind], self.full_pdb, extend =1)
         if len(ext_inds) != 3:
             return
         #print(self.full_pdb.getTitle() + '+' + '-'.join([str(x) for x in ext_inds]))
@@ -144,7 +204,7 @@ class Core:
     def generate_AAcAA_Metal(self, filter_aas = False, aas = ['HIS', 'HIS'], extention = 3, extention_out = 0, key = 'AAcAA_Metal_ext0'):
         exts = []
         for resind in self.contact_aa_resinds:
-            ext_inds = ligand_database.extend_res_indices([resind], self.full_pdb, extend =extention)
+            ext_inds = extend_res_indices([resind], self.full_pdb, extend =extention)
             exts.append(ext_inds)
         
         pairs = []
@@ -221,7 +281,7 @@ class Core:
             if filter_AA and not self.full_pdb.select('resname ' + AA + ' and resindex ' + str(resind)):
                 continue      
             #inds = get_inds_from_resind(pdb_prody, resind, aa)
-            _2nshell_resinds = ligand_database.get_2ndshell_indices([resind], self.full_pdb, self.metal.getIndex())
+            _2nshell_resinds = get_2ndshell_indices([resind], self.full_pdb, self.metal.getIndex())
             if len(_2nshell_resinds) > 0:
                 for _2resind in _2nshell_resinds:      
                     #print(self.full_pdb.getTitle() + '+' + '-'.join([str(x) for x in _2nshell_resinds]))

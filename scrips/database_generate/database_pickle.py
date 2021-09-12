@@ -4,8 +4,8 @@ import prody as pr
 import numpy as np
 #You can either add the python package path.
 #sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
-from metalprot import extract_vdm
-from metalprot import hull
+from metalprot.search import extract_vdm
+from metalprot.basic import hull
 import pickle
 
 

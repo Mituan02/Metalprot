@@ -8,11 +8,10 @@ from prody.measure.transform import superpose
 from prody.proteins.pdbfile import writePDB
 from scipy.spatial.distance import cdist, dice
 import datetime
-from .ligand_database import clu_info
 from .extract_vdm import get_vdm_mem
-from .quco import Query, Comb, pair_wise_geometry
-from . import core
-from . import hull
+from ..basic.quco import Query, Comb, pair_wise_geometry
+from ..database import core
+from ..basic import hull
 
 
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 

@@ -4,7 +4,7 @@ import prody as pr
 import numpy as np
 #You can either add the python package path.
 #sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
-from metalprot import search
+from metalprot.search import search
 import pickle
 
 '''
@@ -36,7 +36,7 @@ print(len(all_querys))
 
 workdir = '/mnt/e/DesignData/ligands/LigandBB/zn_eval_bench_mark/2013_2014/'
 
-outdir = workdir + 'output_2013_4ir0_ZN_2/'
+outdir = workdir + 'output_2013_4ir0_ZN_2_t/'
 
 os.makedirs(outdir, exist_ok=True)
 

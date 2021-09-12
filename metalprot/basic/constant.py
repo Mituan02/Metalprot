@@ -90,7 +90,7 @@ def read_apble(filepath):
 
 
 
-APBEL_DICT = read_apble(Path(__file__).parent.parent / 'database/APBLE.txt')
+APBEL_DICT = read_apble(Path(__file__).parent.parent / 'constants/APBLE.txt')
             
-with open(Path(__file__).parent.parent / 'database/abple_dict.pkl', 'rb') as infile:
+with open(Path(__file__).parent.parent / 'constants/abple_dict.pkl', 'rb') as infile:
     abple_dict = pickle.load(infile)                

@@ -27,82 +27,12 @@ from multiprocessing.dummy import Pool as ThreadPool
 
 from .search import Graph, CombInfo, Search_vdM
 
-class IrGraph:
-    def __init__(self, wins, all_pos_lens):
-        print('irregular graph.')
-        self.wins = wins
-        self.win_inds = list(range(len(wins)))
-        self.all_pos_lens = all_pos_lens
-
-        self.pair_dict = {}
-        for c, c2 in itertools.permutations(self.win_inds, 2):
-            self.pair_dict[(c, c2)] = set()
-
-        self.all_paths = []
-
-
-    def calc_pair_connectivity(self, neighbor_pair_dict):
-
-        for c, c2 in itertools.permutations(self.win_inds, 2):
-            wx = self.wins[c]
-            wy = self.wins[c2]    
-            for r in range(self.all_pos_lens[c]):
-                connect = neighbor_pair_dict[(wx, wy)][r]
-                #print('The len of connect in {} is {}'.format(r, len(connect)))
-                if len(connect) <= 0:
-                    continue     
-                for y in connect:
-                    self.pair_dict[(c, c2)].add((r, y))
-        return
-
-    
-    def get_paths(self):
-
-        c = 0
-        for r in range(self.all_pos_lens[c]):
-            self.get_path_helper(c, r, [r])
-        return
-
-
-    def get_path_helper(self, c, r, temp):
-        '''
-        Dynamic programming. 
-        '''
-        if len(temp) == len(self.wins):
-            self.all_paths.append([t for t in temp])
-            return
-        #print('c ' + str(c) + ' r ' + str(r))
-        rs = []
-        for i in range(self.all_pos_lens[c+1]):
-            if (r, i) in self.pair_dict[(c, c+1)]:
-                rs.append(i)
-
-        if len(rs) == 0:
-            return      
-        for _r in rs:
-            #print('col ' + str(c) + ' temp ' + '_'.join([str(t) for t in temp]))
-            satisfy = True
-            for ci in range(len(temp)-1):
-                tv = temp[ci]
-                if not (tv, _r) in self.pair_dict[(ci, c+1)]:
-                    satisfy = False
-                    #break
-            if satisfy:
-                _temp = temp.copy()
-                _temp.append(_r)
-                self.get_path_helper(c+1, _r, [t for t in _temp])
-
-        return
-
 
 class Search_selfcenter(Search_vdM):
     '''
     Inheritated from Search_vdM. 
     Except here is searching the selfcenter vdM database. 
     '''
-    def __init__(self) -> None:
-        super().__init__()
-        self.best_aa_comb_dict = {}
 
     def run_neighbor_search(self):
         '''
@@ -130,7 +60,7 @@ class Search_selfcenter(Search_vdM):
         self.neighbor_extract_query(comb_dict)
         self.neighbor_calc_geometry(comb_dict)
         self.comb_overlap(comb_dict)
-        self.neighbor_calc_comb_score(comb_dict, comb_dict.overlap_dict)
+        self.neighbor_calc_comb_score(comb_dict)
 
         self.neighbor_write_win(comb_dict)
 
@@ -139,7 +69,7 @@ class Search_selfcenter(Search_vdM):
         outpath = 'win_' + '-'.join([str(w) for w in win_comb]) + '/'
         outdir = self.workdir + outpath
         self.neighbor_write_summary(outdir, comb_dict)
-        return
+        return comb_dict
 
     def neighbor_construct_comb(self, win_comb):
         '''
@@ -173,9 +103,9 @@ class Search_selfcenter(Search_vdM):
         print('graph.paths len {}'.format(len(graph.all_paths)))
 
         #TO DO: Here is a temp method to solve extream solutions. Mostly happened in 4 CYS binding cores.
-        if len(graph.all_paths) > 1000:
+        if len(graph.all_paths) > 10000:
             print('Too many paths to be considered so far.')
-            graph.all_paths = graph.all_paths[0:1001]
+            graph.all_paths = graph.all_paths[0:10001]
 
         # path represent the id of each metal vdM.
         for path in graph.all_paths:
@@ -216,22 +146,22 @@ class Search_selfcenter(Search_vdM):
                 # print('-------------------')
                 # print(wx)
                 # print(wy)
-                x_in_y, x_has_y = self.calc_pairwise_neighbor(n_x, n_y, self.rmsd)
-                y_in_x, y_has_x = self.calc_pairwise_neighbor(n_y, n_x, self.rmsd)
+                x_in_y, x_has_y = self.calc_pairwise_neighbor(n_x, n_y, self.selfcenter_rmsd)
+                y_in_x, y_has_x = self.calc_pairwise_neighbor(n_y, n_x, self.selfcenter_rmsd)
 
                 if x_has_y and y_has_x:
                     pair_dict[(wx, wy)] = x_in_y
                     pair_dict[(wy, wx)] = y_in_x
 
-            irgraph = IrGraph(win_comb, len_s)
+            graph = Graph(win_comb, len_s)
 
-            irgraph.calc_pair_connectivity(pair_dict)
+            graph.calc_pair_connectivity(pair_dict)
 
-            irgraph.get_paths()
+            graph.get_paths()
 
             overlap_dict = {} # {win:[overlap ids]} need to get {win:[query ids]} 
 
-            for path in irgraph.all_paths:
+            for path in graph.all_paths:
                 for i in range(len(win_comb)):
                     w = win_comb[i]
                     value = list(comb_dict[key].centroid_dict[w].selfcenter_cluster_queryid)[path[i]]

@@ -49,7 +49,7 @@ def pair_wise_geometry(geometry_ag):
 
 
 class Query:
-    def __init__(self, query, score = 0, clu_num = 0, clu_total_num = 0, is_bivalent = False, win = None, path = None, ag = None, hull_ag = None, cluster = None):
+    def __init__(self, query, score = 0, clu_num = 0, clu_total_num = 0, is_bivalent = False, win = None, path = None, ag = None, hull_ag = None, cluster = None, selfcenter_cluster_queryid = None):
         self.query = query
         self.score = score
         self.clu_num = clu_num
@@ -72,6 +72,7 @@ class Query:
 
         #Extra properties for hull usage. 
         self.hull_ag = hull_ag
+        self.selfcenter_cluster_queryid = selfcenter_cluster_queryid
         self.cluster = cluster  #The cluster is used as a reference. Many Query will share the same cluster to save memory. Be careful about the change of alignment.
         self.candidates = None
         self.candidates_metal_points = None
@@ -185,7 +186,7 @@ class Query:
         if self.hull_ag:
             hull_ag = self.hull_ag.copy()
         
-        return Query(self.query.copy(), self.score, self.clu_num, self.clu_total_num, self.is_bivalent, self.win, self.path, self.ag, hull_ag, self.cluster)
+        return Query(self.query.copy(), self.score, self.clu_num, self.clu_total_num, self.is_bivalent, self.win, self.path, self.ag, hull_ag, self.cluster, self.selfcenter_cluster_queryid)
     
     def win_str(self):
         return '-'.join([str(w) for w in self.win])

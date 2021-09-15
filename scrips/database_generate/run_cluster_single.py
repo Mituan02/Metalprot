@@ -1,4 +1,3 @@
-from genericpath import exists
 import os
 import sys
 import prody as pr

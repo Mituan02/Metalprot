@@ -92,21 +92,29 @@ class Graph:
 
 class CombInfo:
     def __init__(self):
+        #TO DO: Plan to remove
+        self.comb = None
+        self.query_dict = {}
+
+        #scores
         self.totals = None
         self.scores = None
+        self.fracScore = -10.00
+        self.multiScore = -10.00  #Calc multiScore (By Bill: -ln(Na/SumNa * Nb/SumNb * Nc/SumNc))
 
+        #Geometry
         self.geometry = None
         self.aa_aa_pair = None
         self.metal_aa_pair = None
         self.angle_pair = None
 
-        self.query_dict = {}
+        
         self.volume = 0
         self.volPerMetal = 0
         self.diameter = 0
+
+        #Querys
         self.centroid_dict = {}
-        self.fracScore = -10.00
-        self.multiScore = -10.00  #Calc multiScore (By Bill: -ln(Na/SumNa * Nb/SumNb * Nc/SumNc))
 
         #evaluation property for evaluation search
         self.eval_mins = None
@@ -117,6 +125,9 @@ class CombInfo:
         self.pair_aa_aa_dist_ok = 0 #0: unchecked. -1: condition unsatisfied; 1: condition satisfied.
         self.pair_angle_ok = 0
         self.pair_metal_aa_dist_ok = 0
+
+        #For Search_selfcenter
+        self.overlap_dict = None
 
 
     def calc_geometry(self):
@@ -164,6 +175,7 @@ class CombInfo:
                     self.pair_aa_metal_dist_ok = 1
 
         return True
+
 
 class Search_vdM:
     '''
@@ -234,11 +246,31 @@ class Search_vdM:
 
         #secondshell-----------------------------
         self.secondshell_querys = secondshell_querys
+
+        #For_scoring-----------------------------
+        self.aa_num_dict = None
         
         #For developing output purpose-----------
         self.log = ''
+
+        #----------------------------------------
+        self.setup()
         #end-------------------------------------
 
+    def setup(self):
+
+        #For multiScore.
+        aa_num_dict = {}
+        for key in self.id_cluster_dict.keys():
+            aa = self.id_cluster_dict[key][0]
+            if aa not in aa_num_dict.keys():
+                aa_num_dict[aa] = 0
+            else:
+                aa_num_dict[aa] += 1
+        print(aa_num_dict)
+
+        self.aa_num_dict = aa_num_dict
+        return
 
     #region Neighbor Search
     '''
@@ -265,7 +297,7 @@ class Search_vdM:
 
         self.neighbor_write_represents()
 
-        self.neighbor_write_summary()
+        self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict)
 
         return
 
@@ -580,8 +612,7 @@ class Search_vdM:
 
         for win_comb in win_combs:
             print(win_comb)      
-            comb_dict = self.neighbor_construct_comb(win_comb)
-            self.neighbor_write_win(comb_dict)
+            comb_dict = self.neighbor_run_comb(win_comb)
             self.neighbor_comb_dict.update(comb_dict)
         return
 
@@ -600,14 +631,21 @@ class Search_vdM:
         # results = [pool.apply_async(self.neighbor_construct_comb, args=win_comb) for win_comb in win_combs]
         # results = [p.get() for p in results]
         pool = ThreadPool(num_cores)
-        results = pool.map(self.neighbor_construct_comb, win_combs)
+        results = pool.map(self.neighbor_run_comb, win_combs)
         pool.close()
         pool.join()
-        for r in results:
-            self.neighbor_write_win(r)
+        for r in results: 
             self.neighbor_comb_dict.update(r)
         return
 
+
+    def neighbor_run_comb(self, win_comb):
+        comb_dict = self.neighbor_construct_comb(win_comb)
+        self.neighbor_extract_query(comb_dict)
+        self.neighbor_calc_comb_score(comb_dict)
+        self.neighbor_calc_geometry(comb_dict)
+        self.neighbor_write_win(comb_dict)
+        return
 
     def neighbor_construct_comb(self, win_comb):
         '''
@@ -641,9 +679,9 @@ class Search_vdM:
         print('graph.paths len {}'.format(len(graph.all_paths)))
 
         #TO DO: Here is a temp method to solve extream solutions. Mostly happened in 4 CYS binding cores.
-        if len(graph.all_paths) > 100000:
+        if len(graph.all_paths) > 10000:
             print('Too many paths to be considered so far.')
-            graph.all_paths = graph.all_paths[0:100001]
+            graph.all_paths = graph.all_paths[0:10001]
 
         clu_dict = {}
 
@@ -671,12 +709,9 @@ class Search_vdM:
 
         if len(clu_dict) > 0:
             for clu_key in clu_dict.keys():
-                comb = clu_dict[clu_key]
-                comb_dict[(tuple(win_comb), clu_key)] = (comb, CombInfo())
-
-        self.neighbor_extract_query(comb_dict)
-        self.neighbor_calc_comb_score(comb_dict)
-        self.neighbor_calc_geometry(comb_dict)
+                combinfo = CombInfo() 
+                combinfo.comb = clu_dict[clu_key]
+                comb_dict[(tuple(win_comb), clu_key)] = combinfo
 
         return comb_dict
 
@@ -689,24 +724,24 @@ class Search_vdM:
         for wins, clu_key in comb_dict.keys():
             for i in range(len(wins)):
                 win = wins[i]
-                comb_dict[(wins, clu_key)][1].query_dict[win] = []
+                comb_dict[(wins, clu_key)].query_dict[win] = []
 
                 clu = clu_key[i]
                 centroid = self.cluster_centroid_dict[clu].copy()
                 self.supperimpose_target_bb(centroid, win)
-                comb_dict[(wins, clu_key)][1].centroid_dict[win] = centroid
+                comb_dict[(wins, clu_key)].centroid_dict[win] = centroid
 
-                for id in comb_dict[(wins, clu_key)][0][win]:
+                for id in comb_dict[(wins, clu_key)].comb[win]:
                     _query = self.querys[id].copy()
                     
                     self.supperimpose_target_bb(_query, win)
                     #self.supperimpose_centroid(_query, centroid, align_sel='heavy') # Test different supperimposition effect of search.
-                    comb_dict[(wins, clu_key)][1].query_dict[win].append(_query)
+                    comb_dict[(wins, clu_key)].query_dict[win].append(_query)
 
         return
 
 
-    def neighbor_calc_comb_score(self, comb_dict):
+    def neighbor_calc_comb_score(self, comb_dict, overlap_dict = None):
         '''
         The summed vdM score could not reflect the designability.
         Here is a new score method with weight added.
@@ -715,25 +750,18 @@ class Search_vdM:
         '''
         print('neighbor_calc_comb_score')
 
-        #For multiScore.
-        aa_num_dict = {}
-        for key in self.id_cluster_dict.keys():
-            aa = self.id_cluster_dict[key][0]
-            if aa not in aa_num_dict.keys():
-                aa_num_dict[aa] = 0
-            else:
-                aa_num_dict[aa] += 1
-        print(aa_num_dict)
-
-        for wins, clu_key in comb_dict.keys():       
-            comb = comb_dict[(wins, clu_key)][0] 
-
+        for key in comb_dict.keys():       
+            wins = key[0]
+            clu_key = key[1]
+            
             # From here we will calculate the score for each comb. 
-            totals = [len(comb[wins[i]]) for i in range(len(wins))]
+            totals = [len(qs) for qs in comb_dict[key].query_dict.values()]
+            if overlap_dict:
+                totals = [len(v) for v in overlap_dict.values()]
             #total_clu = sum([self.cluster_centroid_dict[clu_key[i]].total_clu for i in range(len(wins))])
             scores = [self.cluster_centroid_dict[clu_key[i]].score for i in range(len(wins))]
-            comb_dict[(wins, clu_key)][1].totals = totals
-            comb_dict[(wins, clu_key)][1].scores = scores
+            comb_dict[key].totals = totals
+            comb_dict[key].scores = scores
 
             #Calc fraction score
             fracScore = sum([self.cluster_centroid_dict[clu_key[i]].clu_num for i in range(len(wins))])/sum([self.cluster_centroid_dict[clu_key[i]].clu_total_num for i in range(len(wins))])
@@ -741,11 +769,11 @@ class Search_vdM:
             for i in range(len(wins)):
                 c = self.cluster_centroid_dict[clu_key[i]]
                 weight += sum(totals)/c.clu_total_num
-            comb_dict[(wins, clu_key)][1].fracScore = fracScore*weight*1000
+            comb_dict[key].fracScore = fracScore*weight
 
             #Calc multiScore (By Bill: -ln(Na/SumNa * Nb/SumNb * Nc/SumNc))
-            aa_numbs = [aa_num_dict[c[0]] for c in clu_key]
-            comb_dict[(wins, clu_key)][1].multiScore = -log(np.prod(totals)/np.prod(aa_numbs))
+            aa_numbs = [self.aa_num_dict[c[0]] for c in clu_key]
+            comb_dict[key].multiScore = -log(np.prod(totals)/np.prod(aa_numbs))
 
         return
     
@@ -758,14 +786,14 @@ class Search_vdM:
         '''
         print('neighbor_calc_geometry')
         for wins, clu_key in comb_dict.keys():
-            comb_dict[(wins, clu_key)][1].calc_geometry()         
+            comb_dict[(wins, clu_key)].calc_geometry()         
         return
 
 
     def neighbor_write_represents(self):
         print('neighbor_write_represents')
         for key in self.neighbor_comb_dict.keys():  
-            info = self.neighbor_comb_dict[key][1]
+            info = self.neighbor_comb_dict[key]
             if self.after_search_filter:
                 if not info.after_search_condition_satisfied(self.pair_angle_range, self.pair_aa_aa_dist_range, self.pair_metal_aa_dist_range):
                     continue
@@ -776,7 +804,7 @@ class Search_vdM:
 
             tag = 'win_' + '-'.join([str(k) for k in key[0]]) + '_clu_' + '-'.join(k[0] + '-' + str(k[1]) for k in key[1]) 
             for w in key[0]:
-                c = self.neighbor_comb_dict[key][1].query_dict[w][0]
+                c = self.neighbor_comb_dict[key].query_dict[w][0]
                 pdb_path = outdir + tag + '_w_' + str(w) + '_apble_' + c.abple + '_' + c.query.getTitle() + '.pdb'
                 pr.writePDB(pdb_path, c.query)                  
 
@@ -789,7 +817,7 @@ class Search_vdM:
         '''
         print('neighbor_write')
         for key in comb_dict.keys():  
-            info = comb_dict[key][1]
+            info = comb_dict[key]
             if self.after_search_filter:
                 if not info.after_search_condition_satisfied(self.pair_angle_range, self.pair_aa_aa_dist_range, self.pair_metal_aa_dist_range):
                     continue
@@ -800,12 +828,12 @@ class Search_vdM:
             tag = 'win_' + '-'.join([str(k) for k in key[0]]) + '_clu_' + '-'.join(k[0] + '-' + str(k[1]) for k in key[1]) 
 
             # Write geometry       
-            pr.writePDB(outdir + tag +'_geometry.pdb', comb_dict[key][1].geometry) 
+            pr.writePDB(outdir + tag +'_geometry.pdb', comb_dict[key].geometry) 
             
             #Write 
             all_overlap_metal_coords = []
             for w in key[0]:
-                candidates = comb_dict[key][1].query_dict[w]
+                candidates = comb_dict[key].query_dict[w]
                 metal_coords = []
 
                 max_out = 100 #To reduce number of output.
@@ -826,14 +854,14 @@ class Search_vdM:
             #     volume = vol.volume
             # else:
             #     volume = 0
-            # self.neighbor_comb_dict[key][1].volume = volume
-            # self.neighbor_comb_dict[key][1].volPerMetal = volume/len(all_overlap_metal_coords)
+            # self.neighbor_comb_dict[key].volume = volume
+            # self.neighbor_comb_dict[key].volPerMetal = volume/len(all_overlap_metal_coords)
             # hdist = cdist(all_overlap_metal_coords, all_overlap_metal_coords, metric='euclidean')
-            # self.neighbor_comb_dict[key][1].diameter = hdist.argmax()
+            # self.neighbor_comb_dict[key].diameter = hdist.argmax()
             
             #Write Centroid and all metal coords in the cluster
             for w in key[0]:
-                centroid = comb_dict[key][1].centroid_dict[w]
+                centroid = comb_dict[key].centroid_dict[w]
                 pdb_path = outdir + tag + '_centroid_' + centroid.query.getTitle() + '.pdb'
                 pr.writePDB(pdb_path, centroid.query)
                 clu_allmetal_coords = centroid.get_hull_points()
@@ -851,18 +879,18 @@ class Search_vdM:
         return    
 
 
-    def neighbor_write_summary(self, eval = False):
+    def neighbor_write_summary(self, outdir, comb_dict, eval = False):
         '''
         Write a tab dilimited file.
         '''
-        print('neighbor_write_summary')
-        with open(self.workdir + '_summary.tsv', 'w') as f:
+        print('neighbor-write-summary')
+        with open(outdir + '_summary.tsv', 'w') as f:
             f.write('Wins\tClusterIDs\tproteinABPLEs\tCentroidABPLEs\tproteinPhiPsi\tCentroidPhiPsi\tvolume\tvol2metal\tdiameter\tTotalVdMScore\tFracScore\tMultiScore\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tvdm_scores\ttotal_clu#\tclu_nums')
             if eval:
                 f.write('\teval_min_rmsd\teval_min_vdMs\teval_phi\teval_psi\teval_abple\teval_is_origin')
             f.write('\n')
-            for key in self.neighbor_comb_dict.keys(): 
-                info = self.neighbor_comb_dict[key][1]
+            for key in comb_dict.keys(): 
+                info = comb_dict[key]
                 if self.after_search_filter:
                     if not info.after_search_condition_satisfied(self.pair_angle_range, self.pair_aa_aa_dist_range, self.pair_metal_aa_dist_range):
                         continue
@@ -939,9 +967,8 @@ class Search_vdM:
 
         for win_comb in wins:
             print(win_comb)      
-            comb_dict = self.neighbor_construct_comb(win_comb)
+            comb_dict = self.neighbor_run_comb(win_comb)
             if not comb_dict: continue
-            self.neighbor_write_win(comb_dict)
             self.neighbor_comb_dict.update(comb_dict)     
 
         #self.neighbor_write()
@@ -949,7 +976,7 @@ class Search_vdM:
         #Evaluate search result.
         self.eval_search_results(wins, combs)
 
-        self.neighbor_write_summary(eval=True)
+        self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, eval=True)
 
         return 
                 
@@ -1111,7 +1138,7 @@ class Search_vdM:
                     continue
                 
                 clu_id = key[1]
-                combinfo = self.neighbor_comb_dict[key][1]
+                combinfo = self.neighbor_comb_dict[key]
 
                 min_rmsds = []
                 best_vs = []
@@ -1129,8 +1156,8 @@ class Search_vdM:
                     if best_v:
                         tag = '/clu_' + '_'.join([str(ci) for cid in clu_id for ci in cid]) + '_rmsd_' + str(round(min_rmsd, 3)) + '_win_' + str(w) + '_clu_' + '_'.join([str(ci) for ci in clu_id[j]]) + '_'                   
                         pr.writePDB(evaldir + tag + best_v.query.getTitle(), best_v.query)   
-                self.neighbor_comb_dict[key][1].eval_mins = min_rmsds
-                self.neighbor_comb_dict[key][1].eval_min_vdMs = best_vs
+                self.neighbor_comb_dict[key].eval_mins = min_rmsds
+                self.neighbor_comb_dict[key].eval_min_vdMs = best_vs
                 if all([m < 0.05 for m in min_rmsds]):
-                    self.neighbor_comb_dict[key][1].eval_is_origin = True
+                    self.neighbor_comb_dict[key].eval_is_origin = True
         return

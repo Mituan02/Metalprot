@@ -10,7 +10,7 @@ from metalprot.basic import hull
 import pickle
 
 
-query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/20210911/'
+query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/20210916_2017_2018_selfcenter/'
 
 # Get query pdbs, Add the cluster metal points into the query.hull_points
 
@@ -52,7 +52,10 @@ for query_id in range(len(centroid_querys)):
     clu = extract_vdm.get_vdm_cluster(query)
 
     for q in clu.querys:
+        ## align to heavy of query
         transform.apply(q.query)
+        ## align to 'N CA C' of query
+        #pr.calcTransformation(q.query.select(align_sel + ' and resindex ' + str(ind)), query_all_metal.query.select(align_sel + ' and resindex ' + str(query_all_metal.contact_resind))).apply(q.query)
         cluster_coords.append(q.query.select(metal_sel)[0].getCoords())
 
         splits = q.query.getTitle().split('_')
@@ -73,7 +76,8 @@ points = query_all_metal.hull_ag.getCoords()
 hull.write2pymol(points, query_dir, 'align_' + query_all_metal.query.getTitle())
 '''
 
-outdir = query_dir + 'pickle/'
+#query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/20210916_2017_2018_selfcenter_alignBB/'
+outdir = query_dir + 'pickle_noCYS_alignBB/'
 os.makedirs(outdir, exist_ok= True)
 
 with open(outdir + 'AllMetalQuery.pkl', 'wb') as f:

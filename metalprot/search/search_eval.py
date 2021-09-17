@@ -110,11 +110,13 @@ class Search_eval(Search_vdM):
 
 
         for ind in x_in_y[0]:
-
+        #for ind in range(len(self.querys)):
+            #TO DO: there is a bug of the vdM database. 
+            #If the order of the atom names is not consistent (such as '-ND1 CD2-' in vdM but '-CD2 ND1-' in bb), it could not target the orginal vdM.
             if len(self.querys[ind].query.select('heavy')) != len(v.select('heavy')):
                 #print('supperimpose_target_bb not happening')
                 continue
-
+            #print(self.querys[ind].query.getTitle())
             test_v = self.querys[ind].copy()
     
             transform = pr.calcTransformation(test_v.query.select('heavy'), v.select('heavy'))

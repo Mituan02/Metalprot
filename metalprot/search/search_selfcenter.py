@@ -34,11 +34,19 @@ class Search_selfcenter(Search_vdM):
     Except here is searching the selfcenter vdM database. 
     '''
 
+    def get_query_id_dict(self):
+        #TO DO: Temp useage for query id extraction. the id will be in quco.query in the future.
+        query_id_dict = {}
+        for i in range(len(self.querys)):
+            key = self.querys[i].query.getTitle()
+            query_id_dict[key] = i
+        return query_id_dict
+
     def run_neighbor_search(self):
         '''
         All functions need to run the neighbor search.
         '''
-        print('run_neighbor_search')
+        print('run-selfcenter-neighbor-search')
 
         #TO DO: where should I apply filters: win filter, query_metal filter, phipsi, etc.
         self.neighbor_generate_query_dict()
@@ -61,6 +69,8 @@ class Search_selfcenter(Search_vdM):
         self.neighbor_calc_geometry(comb_dict)
         self.comb_overlap(comb_dict)
         self.neighbor_calc_comb_score(comb_dict)
+
+        comb_dict = self.neighbor_selfcenter_redu(comb_dict)
 
         self.neighbor_write_win(comb_dict)
 
@@ -94,7 +104,7 @@ class Search_selfcenter(Search_vdM):
             if (x, y) not in self.neighbor_pair_dict.keys():
                 return None
         
-        graph = Graph(win_comb, len(self.querys))
+        graph = Graph(win_comb, [len(self.querys) for i in range(len(win_comb))])
 
         graph.calc_pair_connectivity(self.neighbor_pair_dict)
 
@@ -175,6 +185,51 @@ class Search_selfcenter(Search_vdM):
             comb_dict[key].overlap_dict = overlap_dict 
 
         return
+
+    def neighbor_selfcenter_redu(self, comb_dict):
+        '''
+        Here we try to remove any solution have seen in a better solution. The comb is in the overlap of a better comb.
+        '''
+        query_id_dict = self.get_query_id_dict()
+
+        comb_dict_sorted = {k: v for k, v in sorted(comb_dict.items(), key=lambda item: sum(item[1].totals), reverse = True)}
+
+        #sum(list(comb_dict_sorted.values())[0].totals)
+
+        best_keys = [list(comb_dict_sorted.keys())[0]]
+
+        for key in comb_dict_sorted:
+
+            if key in best_keys:
+                continue
+            
+            info = comb_dict_sorted[key]
+
+            seen = []
+            for bkey in best_keys:
+                binfo = comb_dict_sorted[bkey]
+                seen_here = []
+                for w in key[0]:
+                    title = info.centroid_dict[w].query.getTitle()
+                    id = query_id_dict[title]
+                    if id not in binfo.overlap_dict[w]:
+                        seen_here.append(False)
+                    else:
+                        seen_here.append(True)
+                if all(seen_here):
+                    seen.append(True)
+                    break
+                else:
+                    seen.append(False)
+                
+            if not any(seen):
+                best_keys.append(key)
+
+        comb_dict_filter = {}
+        for key in best_keys:
+            comb_dict_filter[key] = comb_dict[key]
+
+        return comb_dict_filter
 
 
     def neighbor_write_win(self, comb_dict):

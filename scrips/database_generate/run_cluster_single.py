@@ -25,10 +25,10 @@ workdir = "/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20210624/"
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
 align_sel_backbone = 'name C CA N O NI MN ZN CO CU MG FE or ion'
 
-cores = ldb.load_cores(workdir + '_Seq_core_date2017_reps/')
+cores = ldb.load_cores(workdir + '_Seq_core_date_reps/')
 
 
-AA = 'GLU'
+AA = 'CYS'
 
 len_sel = 9
 
@@ -91,7 +91,7 @@ ldb.run_cluster(_pdbs, workdir, 'M3-1_AAext5Metal_' + AA + '_cluster02/', rmsd =
 ### Align his core with phipsi------------------------------------------------------------------------------------ 
 
 # AAMetal_HIS
-outdir = workdir + '20210911/'
+outdir = workdir + '20210916_2017_2018/'
 os.makedirs(outdir, exist_ok = True)
 
 extract_single_vdm(cores, outdir + 'AAMetalPhiPsi_' + AA + '_reps/', AA = AA, key = 'AAMetalPhiPsi_' + AA, basic = False, phipsi=True)

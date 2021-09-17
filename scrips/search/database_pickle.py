@@ -9,7 +9,7 @@ from metalprot.basic import hull
 import pickle
 
 
-query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/20210826/'
+query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/20210916_2017_2018/'
 
 # Get query pdbs, Add the cluster metal points into the query.hull_points
 

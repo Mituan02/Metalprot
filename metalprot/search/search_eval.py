@@ -25,8 +25,9 @@ from sklearn.neighbors import NearestNeighbors
 import multiprocessing as mp
 from multiprocessing.dummy import Pool as ThreadPool
 
-from .search import Graph, CombInfo, Search_vdM
-
+from .search import Search_vdM
+from .graph import Graph
+from .comb_info import CombInfo
 
 class Search_eval(Search_vdM):
 

@@ -25,8 +25,9 @@ from sklearn.neighbors import NearestNeighbors
 import multiprocessing as mp
 from multiprocessing.dummy import Pool as ThreadPool
 
-from .search import Graph, CombInfo, Search_vdM
-
+from .search import Search_vdM
+from .graph import Graph
+from .comb_info import CombInfo
 
 class Search_selfcenter(Search_vdM):
     '''
@@ -60,28 +61,52 @@ class Search_selfcenter(Search_vdM):
 
         self.neighbor_write_summary(self.workdir, self.best_aa_comb_dict)
 
+        self.neighbor_write_log()
+
         return
 
 
     def neighbor_run_comb(self, win_comb):
-        comb_dict = self.neighbor_construct_comb(win_comb)
-        self.neighbor_extract_query(comb_dict)
+        # try:
+        print('selfcenter-run at: ' + ','.join([str(w) for w in win_comb]))
+        comb_dict = self.selfcenter_construct_comb(win_comb)
+        if len([comb_dict.keys()]) <= 0:
+            return comb_dict
+            
+        _target = self.target.copy()
+        
+        self.neighbor_extract_query(_target, comb_dict)
+
         self.neighbor_calc_geometry(comb_dict)
         self.comb_overlap(comb_dict)
         self.neighbor_calc_comb_score(comb_dict)
 
-        comb_dict = self.neighbor_selfcenter_redu(comb_dict)
+        self.neighbor_aftersearch_filt(_target, comb_dict)
+        comb_dict = self.selfcenter_redu(comb_dict)
+        
+        if len([comb_dict.keys()]) <= 0:
+            return comb_dict
 
         self.neighbor_write_win(comb_dict)
-
-        self.neighbor_get_write_represents(comb_dict)
+        
+        self.selfcenter_get_write_represents(comb_dict)
 
         outpath = 'win_' + '-'.join([str(w) for w in win_comb]) + '/'
-        outdir = self.workdir + outpath
-        self.neighbor_write_summary(outdir, comb_dict)
-        return comb_dict
+        outdir = self.workdir + outpath  
+        
+        if not self.search_filter.write_filtered_result:
+            if len([key for key in comb_dict.keys() if not comb_dict[key].after_search_filtered]) > 0:
+                self.neighbor_write_summary(outdir, comb_dict)
+        else:
+            self.neighbor_write_summary(outdir, comb_dict)
 
-    def neighbor_construct_comb(self, win_comb):
+        return comb_dict
+        # except:
+
+        #     self.log += 'Error in win_comb: ' + '-'.join([str(w) for w in win_comb]) + '\n'
+        #     return {}
+
+    def selfcenter_construct_comb(self, win_comb):
         '''
         win_comb: [0, 1, 2, 3]
 
@@ -130,7 +155,6 @@ class Search_selfcenter(Search_vdM):
             combinfo.comb = comb 
             comb_dict[(tuple(win_comb), clu_key)] = combinfo
 
-
         return comb_dict
 
 
@@ -159,9 +183,9 @@ class Search_selfcenter(Search_vdM):
                 x_in_y, x_has_y = self.calc_pairwise_neighbor(n_x, n_y, self.selfcenter_rmsd)
                 y_in_x, y_has_x = self.calc_pairwise_neighbor(n_y, n_x, self.selfcenter_rmsd)
 
-                if x_has_y and y_has_x:
-                    pair_dict[(wx, wy)] = x_in_y
-                    pair_dict[(wy, wx)] = y_in_x
+                #if x_has_y and y_has_x: 
+                pair_dict[(wx, wy)] = x_in_y
+                pair_dict[(wy, wx)] = y_in_x
 
             graph = Graph(win_comb, len_s)
 
@@ -186,15 +210,20 @@ class Search_selfcenter(Search_vdM):
 
         return
 
-    def neighbor_selfcenter_redu(self, comb_dict):
+    def selfcenter_redu(self, comb_dict):
         '''
         Here we try to remove any solution have seen in a better solution. The comb is in the overlap of a better comb.
         '''
+        comb_dict_filter = {}
+
         query_id_dict = self.get_query_id_dict()
 
         comb_dict_sorted = {k: v for k, v in sorted(comb_dict.items(), key=lambda item: sum(item[1].totals), reverse = True)}
 
         #sum(list(comb_dict_sorted.values())[0].totals)
+
+        if len(list(comb_dict_sorted.keys())) <= 0:
+            return comb_dict_filter
 
         best_keys = [list(comb_dict_sorted.keys())[0]]
 
@@ -208,6 +237,12 @@ class Search_selfcenter(Search_vdM):
             seen = []
             for bkey in best_keys:
                 binfo = comb_dict_sorted[bkey]
+
+                ### If the filter result is different, there is no need to check the members.
+                if info.after_search_filtered != binfo.after_search_filtered:
+                    seen.append(False)
+                    continue
+
                 seen_here = []
                 for w in key[0]:
                     title = info.centroid_dict[w].query.getTitle()
@@ -225,14 +260,14 @@ class Search_selfcenter(Search_vdM):
             if not any(seen):
                 best_keys.append(key)
 
-        comb_dict_filter = {}
+        
         for key in best_keys:
             comb_dict_filter[key] = comb_dict[key]
 
         return comb_dict_filter
 
 
-    def neighbor_write_win(self, comb_dict):
+    def selfcenter_write_win(self, comb_dict):
         '''
         Write output.
         Too many output, May need optimization. 
@@ -240,9 +275,8 @@ class Search_selfcenter(Search_vdM):
         print('selfcenter search neighbor_write')
         for key in comb_dict.keys():  
             info = comb_dict[key]
-            if self.after_search_filter:
-                if not info.after_search_condition_satisfied(self.pair_angle_range, self.pair_aa_aa_dist_range, self.pair_metal_aa_dist_range):
-                    continue
+            if not self.search_filter.write_filtered_result and info.after_search_filtered:
+                continue
                 
             outpath = 'win_' + '-'.join([str(k) for k in key[0]]) + '/'
             outdir = self.workdir + outpath
@@ -294,7 +328,7 @@ class Search_selfcenter(Search_vdM):
         return   
         
 
-    def neighbor_get_write_represents(self, comb_dict):
+    def selfcenter_get_write_represents(self, comb_dict):
         '''
         Here is different from the parent class.
         Here we only want to write the 'best' comb in each win_comb with same aa_comb.
@@ -305,6 +339,9 @@ class Search_selfcenter(Search_vdM):
             os.mkdir(outdir)      
 
         for key in comb_dict.keys():  
+            info = comb_dict[key]
+            if not self.search_filter.write_filtered_result and info.after_search_filtered:
+                continue
             wins = key[0]
             aas = tuple([c[0] for c in key[1]])
             if (wins, aas) in self.best_aa_comb_dict.keys():
@@ -315,10 +352,6 @@ class Search_selfcenter(Search_vdM):
             
         
         for key in self.best_aa_comb_dict.keys():
-            info = self.best_aa_comb_dict[key]
-            if self.after_search_filter:
-                if not info.after_search_condition_satisfied(self.pair_angle_range, self.pair_aa_aa_dist_range, self.pair_metal_aa_dist_range):
-                    continue
 
             tag = 'win_' + '-'.join([str(k) for k in key[0]]) + '_clu_' + '-'.join(k[0] + '-' + str(k[1]) for k in key[1]) 
             for w in key[0]:

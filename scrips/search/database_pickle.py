@@ -13,7 +13,7 @@ query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/20210916_2017_
 
 # Get query pdbs, Add the cluster metal points into the query.hull_points
 
-centroid_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['AAMetalPhiPsi', 'cluster'], score_cut = 0, clu_num_cut = 0)
+centroid_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['AAMetalPhiPsi', 'cluster'], file_name_not_includes= ['CYS'], score_cut = 0, clu_num_cut = 0)
 
 #Prepare all the data, this should be optimized in the future.
 
@@ -51,7 +51,7 @@ for _query in centroid_querys:
 
 query_all_metal.hull_ag = hull.transfer2pdb(all_coords)
 
-outdir = query_dir + 'pickle/'
+outdir = query_dir + 'pickle_noCYS/'
 os.makedirs(outdir, exist_ok= True)
 
 with open(outdir + 'AllMetalQuery.pkl', 'wb') as f:

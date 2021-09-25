@@ -15,6 +15,9 @@ def get_contact_atom(pdb):
     '''
     metal = pdb.select(metal_sel)[0]
     _contact_aas = pdb.select('protein and not carbon and not hydrogen and within 2.83 of resindex ' + str(metal.getResindex()))
+    if not _contact_aas:
+        print('No contact atom: ' + pdb.getTitle())
+        _contact_aas = pdb.select('protein and not carbon and not hydrogen and within 5 of resindex ' + str(metal.getResindex()))      
     if len(_contact_aas) > 1:
         dists = [None]*len(_contact_aas)
         for i in range(len(_contact_aas)):

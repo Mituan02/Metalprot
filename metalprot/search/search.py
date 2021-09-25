@@ -16,167 +16,61 @@ import datetime
 from ..basic import quco
 from ..basic import hull
 from ..basic import utils
+from ..basic.filter import Search_filter
 from ..database import core
 from ..database import database_extract
+from .graph import Graph
+from .comb_info import CombInfo
 
 from sklearn.neighbors import NearestNeighbors
 import multiprocessing as mp
 from multiprocessing.dummy import Pool as ThreadPool
 
-class Graph:
-    def __init__(self, wins, all_pos_lens):
-        print('irregular graph.')
-        self.wins = wins
-        self.win_inds = list(range(len(wins)))
-        self.all_pos_lens = all_pos_lens
 
-        self.pair_dict = {}
-        for c, c2 in itertools.permutations(self.win_inds, 2):
-            self.pair_dict[(c, c2)] = set()
+def supperimpose_target_bb(_target, _query, win, align_sel='name N CA C'):
+    '''
+    Copy the all_metal_query to a new object.
+    Transform the copied all_metal_query to the target win. 
+    '''
 
-        self.all_paths = []
+    target_sel = 'resindex ' + str(win) + ' and ' + align_sel
+    query_sel = 'resindex ' + str(_query.contact_resind) + ' and '+ align_sel
+    # print('a-----------------------------------')
+    # print(target_sel)
+    # print(query_sel)
+    # print(len(_query.query))
+    # print(len(_target))
+    q = _query.query.select(query_sel)
+    t = _target.select(target_sel)
+    if len(q) != len(t):
+        print('supperimpose-target-bb not happening')
+        return False
+    # print('b-----------------------------------')
+    # print(target_sel)
+    # print(query_sel)
+    # print(len(q))
+    # print(len(t))
+    transform = pr.calcTransformation(q, t)
+    transform.apply(_query.query)
+    if _query.hull_ag:
+        transform.apply(_query.hull_ag)  
+
+    return True
 
 
-    def calc_pair_connectivity(self, neighbor_pair_dict):
+def supperimpose_centroid(_query, centroid, align_sel='heavy'):
+    '''
+    supperimpose_centroid
+    '''
 
-        for c, c2 in itertools.permutations(self.win_inds, 2):
-            wx = self.wins[c]
-            wy = self.wins[c2]    
-            for r in range(self.all_pos_lens[c]):
-                connect = neighbor_pair_dict[(wx, wy)][r]
-                #print('The len of connect in {} is {}'.format(r, len(connect)))
-                if len(connect) <= 0:
-                    continue     
-                for y in connect:
-                    self.pair_dict[(c, c2)].add((r, y))
-        return
-
+    if len(_query.query.select(align_sel)) != len(centroid.query.select(align_sel)):
+        print('supperimpose-centroid not happening')
+        return False
     
-    def get_paths(self):
+    transform = pr.calcTransformation(_query.query.select(align_sel), centroid.query.select(align_sel))
+    transform.apply(_query.query)
 
-        c = 0
-        for r in range(self.all_pos_lens[c]):
-            self.get_path_helper(c, r, [r])
-        return
-
-
-    def get_path_helper(self, c, r, temp):
-        '''
-        Dynamic programming. 
-        '''
-        if len(temp) == len(self.wins):
-            self.all_paths.append([t for t in temp])
-            return
-        #print('c ' + str(c) + ' r ' + str(r))
-        rs = []
-        for i in range(self.all_pos_lens[c+1]):
-            if (r, i) in self.pair_dict[(c, c+1)]:
-                rs.append(i)
-
-        if len(rs) == 0:
-            return      
-        for _r in rs:
-            #print('col ' + str(c) + ' temp ' + '_'.join([str(t) for t in temp]))
-            satisfy = True
-            for ci in range(len(temp)-1):
-                tv = temp[ci]
-                if not (tv, _r) in self.pair_dict[(ci, c+1)]:
-                    satisfy = False
-                    #break
-            if satisfy:
-                _temp = temp.copy()
-                _temp.append(_r)
-                self.get_path_helper(c+1, _r, [t for t in _temp])
-
-        return
-
-
-class CombInfo:
-    def __init__(self):
-        #TO DO: Plan to remove
-        self.comb = None
-        self.query_dict = {}
-
-        #scores
-        self.totals = None
-        self.scores = None
-        self.fracScore = -10.00
-        self.multiScore = -10.00  #Calc multiScore (By Bill: -ln(Na/SumNa * Nb/SumNb * Nc/SumNc))
-
-        #Geometry
-        self.geometry = None
-        self.aa_aa_pair = None
-        self.metal_aa_pair = None
-        self.angle_pair = None
-
-        
-        self.volume = 0
-        self.volPerMetal = 0
-        self.diameter = 0
-
-        #Querys
-        self.centroid_dict = {}
-
-        #evaluation property for evaluation search
-        self.eval_mins = None
-        self.eval_min_vdMs = None
-        self.eval_is_origin = False
-
-        #After search filter property
-        self.pair_aa_aa_dist_ok = 0 #0: unchecked. -1: condition unsatisfied; 1: condition satisfied.
-        self.pair_angle_ok = 0
-        self.pair_metal_aa_dist_ok = 0
-
-        #For Search_selfcenter
-        self.overlap_dict = None
-
-
-    def calc_geometry(self):
-        all_coords = []
-        metal_coords = []  
-
-        for key in self.query_dict.keys():
-            coords = []
-            for _query in self.query_dict[key]:                                  
-                coords.append(_query.get_contact_coord())
-                metal_coords.append(_query.get_metal_coord())
-            all_coords.append(pr.calcCenter(hull.transfer2pdb(coords)))         
-        all_coords.append(pr.calcCenter(hull.transfer2pdb(metal_coords)))
-
-        self.geometry = hull.transfer2pdb(all_coords, ['NI' if i == len(all_coords)-1 else 'N' for i in range(len(all_coords))])
-        self.aa_aa_pair, self.metal_aa_pair, self.angle_pair  = quco.pair_wise_geometry(self.geometry)
-        return
-
-    def after_search_condition_satisfied(self, pair_angle_range = None, pair_aa_aa_dist_range = None, pair_metal_aa_dist_range = None):
-        '''
-        range = (75, 125) for Zn.
-        if all pairwise angle is between the range. The geometry is satisfied.
-        '''
-        if pair_angle_range:
-            for an in self.angle_pair:
-                if an < pair_angle_range[0] or an > pair_angle_range[1]:
-                    self.pair_angle_ok = -1
-                    return False
-                else:
-                    self.pair_angle_ok = 1
-        if pair_aa_aa_dist_range:           
-            for ad in self.aa_aa_pair:
-                if ad < pair_aa_aa_dist_range[0] or ad > pair_aa_aa_dist_range[1]:
-                    self.pair_aa_aa_dist_ok = -1
-                    return False
-                else:
-                    self.pair_aa_aa_dist_ok = 1
-
-        if pair_metal_aa_dist_range:
-            for amd in self.metal_aa_pair:
-                if amd < pair_metal_aa_dist_range[0] or amd > pair_metal_aa_dist_range[1]:
-                    self.pair_aa_metal_dist_ok = -1
-                    return False
-                else:
-                    self.pair_aa_metal_dist_ok = 1
-
-        return True
-
+    return True
 
 class Search_vdM:
     '''
@@ -184,9 +78,7 @@ class Search_vdM:
     '''
     def __init__(self, target_pdb, workdir, querys, id_cluster_dict, cluster_centroid_dict, all_metal_query, cluster_centroid_origin_dict = None, num_iters = [3], 
     rmsd = 0.25, win_filtered = None, contact_querys = None, secondshell_querys = None, 
-    validateOriginStruct = False, filter_abple = False, filter_phipsi = False, filter_phipsi_val = 20, 
-    after_search_filter = False, pair_angle_range = None, pair_aa_aa_dist_range = None, pair_metal_aa_dist_range = None,
-    parallel = False, selfcenter_rmsd = 0.35):
+    validateOriginStruct = False, search_filter = None, parallel = False, selfcenter_rmsd = 0.45):
 
         if workdir:
             _workdir = os.path.realpath(workdir)
@@ -213,17 +105,7 @@ class Search_vdM:
         #neighbor in search filter--------------
         self.validateOriginStruct = validateOriginStruct
 
-        self.filter_abple = filter_abple
-
-        self.filter_phipsi = filter_phipsi
-
-        self.filter_phipsi_val = filter_phipsi_val
-
-        #neighbor after search filter-----------
-        self.after_search_filter = after_search_filter
-        self.pair_angle_range = pair_angle_range
-        self.pair_aa_aa_dist_range =  pair_aa_aa_dist_range
-        self.pair_metal_aa_dist_range = pair_metal_aa_dist_range
+        self.search_filter = search_filter
 
         #neighbor parallel mechanism------------- 
         self.parallel = parallel
@@ -256,10 +138,11 @@ class Search_vdM:
 
         #For Search_selfcenter-------------------
         self.selfcenter_rmsd = selfcenter_rmsd
-        self.best_aa_comb_dict = {}
+        self.best_aa_comb_dict = {} # To store&Write the best comb for each combinations of wins. 
         #----------------------------------------
         self.setup()
         #end-------------------------------------
+
 
     def setup(self):
 
@@ -275,6 +158,18 @@ class Search_vdM:
 
         self.aa_num_dict = aa_num_dict
         return
+
+
+    def para2string(self):
+        parameters = "Search parameters: \n"
+        parameters += 'target: ' + self.target.getTitle() + ' \n'
+        parameters += 'num_iters: ' + str(self.num_iters) + ' \n'
+        parameters += 'rmsd: ' + str(self.rmsd) + ' \n'
+        parameters += 'win_filtered: ' + str(self.win_filtered) + ' \n'
+        parameters += 'validateOriginStruct: ' + str(self.validateOriginStruct) + ' \n'
+        parameters += 'parallel: ' + str(self.parallel) + ' \n'
+        parameters += 'selfcenter_rmsd: ' + str(self.selfcenter_rmsd) + ' \n'
+        return parameters
 
     #region Neighbor Search
     '''
@@ -303,6 +198,8 @@ class Search_vdM:
 
         self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict)
 
+        self.neighbor_write_log()
+
         return
 
 
@@ -326,46 +223,11 @@ class Search_vdM:
                     continue
 
             _query = self.all_metal_query.copy()
-            x = self.supperimpose_target_bb(_query, w, align_sel='name N CA C')
+            x = supperimpose_target_bb(self.target, _query, w, align_sel='name N CA C')
             if x:
                 self.neighbor_query_dict[w] = _query
         return
 
-        
-    def supperimpose_target_bb(self, _query, win, align_sel='name N CA C'):
-        '''
-        Copy the all_metal_query to a new object.
-        Transform the copied all_metal_query to the target win. 
-        '''
-        #_query = self.all_metal_query.copy()
-
-        target_sel = 'resindex ' + str(win) + ' and ' + align_sel
-        query_sel = 'resindex ' + str(_query.contact_resind) + ' and '+ align_sel
-
-        if len(_query.query.select(query_sel)) != len(self.target.select(target_sel)):
-            print('supperimpose_target_bb not happening')
-            return False
-        
-        transform = pr.calcTransformation(_query.query.select(query_sel), self.target.select(target_sel))
-        transform.apply(_query.query)
-        if _query.hull_ag:
-            transform.apply(_query.hull_ag)       
-
-        return True
-
-    def supperimpose_centroid(self, _query, centroid, align_sel='heavy'):
-        '''
-        supperimpose_centroid
-        '''
-
-        if len(_query.query.select(align_sel)) != len(centroid.query.select(align_sel)):
-            print('supperimpose_target_bb not happening')
-            return False
-        
-        transform = pr.calcTransformation(_query.query.select(align_sel), centroid.query.select(align_sel))
-        transform.apply(_query.query)
-
-        return True
 
 
     def neighbor_generate_pair_dict(self):
@@ -429,7 +291,7 @@ class Search_vdM:
         filter impossible pairwise connect.
         1. validateOriginStruct
         2. ABPLE filter. 
-        3. phipsi angle filter. (future)
+        3. phipsi angle filter. 
         '''
 
         x_in_y_mask = [[True for j in range(len(x_in_y[i]))] for i in range(len(x_in_y))]
@@ -446,7 +308,7 @@ class Search_vdM:
                     x_in_y_mask[i] = [False for j in range(len(x_in_y[i]))] 
                     continue
 
-            if self.filter_abple:
+            if self.search_filter.filter_abple:
                 apx = self.target_abple[wx]
                 apy = self.target_abple[wy]
        
@@ -455,15 +317,27 @@ class Search_vdM:
                     continue
 
             
-            if self.filter_phipsi:
+            if self.search_filter.filter_phipsi:
                 phix, psix = self.phipsi[wx]
                 phiy, psiy = self.phipsi[wy]
 
-                if (not utils.filter_phipsi(phix, self.querys[i].phi, self.filter_phipsi_val)) or not (utils.filter_phipsi(psix, self.querys[i].psi, self.filter_phipsi_val)):
+                if (not utils.filter_phipsi(phix, self.querys[i].phi, self.search_filter.max_phipsi_val)) or not (utils.filter_phipsi(psix, self.querys[i].psi, self.search_filter.max_phipsi_val)):
                     x_in_y_mask[i] = [False for j in range(len(x_in_y[i]))]
                     continue
+           
 
-                
+            if self.search_filter.filter_vdm_score:
+                if self.querys[i].score < self.search_filter.min_vdm_score:
+                    x_in_y_mask[i] = [False for j in range(len(x_in_y[i]))]
+                    continue
+            
+
+            if self.search_filter.filter_vdm_count:
+                if self.querys[i].clu_num < self.search_filter.min_vdm_clu_num:
+                    x_in_y_mask[i] = [False for j in range(len(x_in_y[i]))]
+                    continue
+                           
+
             for j in range(len(x_in_y[i])):
                 j_ind = x_in_y[i][j]
 
@@ -473,108 +347,33 @@ class Search_vdM:
                         x_in_y_mask[i][j] = False
                         continue
 
-                if self.filter_abple:
+                if self.search_filter.filter_abple:
                     apy = self.target_abple[wy]
                     if not self.querys[j_ind].abple == apy:
                         x_in_y_mask[i][j] = False
                         continue
 
-                if self.filter_phipsi:
+                if self.search_filter.filter_phipsi:
                     phiy, psiy = self.phipsi[wy]
-                    if (not utils.filter_phipsi(phiy, self.querys[j_ind].phi, self.filter_phipsi_val)) or (not utils.filter_phipsi(psiy, self.querys[j_ind].psi, self.filter_phipsi_val)) :
+                    if (not utils.filter_phipsi(phiy, self.querys[j_ind].phi, self.search_filter.max_phipsi_val)) or (not utils.filter_phipsi(psiy, self.querys[j_ind].psi, self.search_filter.max_phipsi_val)) :
                         x_in_y_mask[i][j] = False
+                        continue
+
+                if self.search_filter.filter_vdm_score:
+                    if self.querys[j_ind].score < self.search_filter.min_vdm_score:
+                        x_in_y_mask[i][j] = False 
+                        continue
+            
+
+                if self.search_filter.filter_vdm_count:
+                    if self.querys[j_ind].clu_num < self.search_filter.min_vdm_clu_num:
+                        x_in_y_mask[i][j] = False 
                         continue
         
         x_in_y_filter = [[x_in_y[i][j] for j in range(len(x_in_y[i])) if x_in_y_mask[i][j]] for i in range(len(x_in_y))]
 
         x_has_y = any([True if len(a) >0 else False for a in x_in_y_filter])
 
-        return x_in_y_filter, x_has_y
-
-
-    def neighbor_filter(self, wx, wy, x_in_y):
-        '''
-        filter impossible pairwise connect.
-        1. validateOriginStruct
-        2. ABPLE filter. 
-        3. phipsi angle filter. (future)
-        '''
-
-        x_in_y_filter = [[j for j in x_in_y[i]] for i in range(len(x_in_y))]
-        if self.validateOriginStruct:
-            resx = self.target.select('name CA and resindex ' + str(wx)).getResnames()[0]
-            resy = self.target.select('name CA and resindex ' + str(wy)).getResnames()[0]
-            
-            for i in range(len(x_in_y)):
-                if len(x_in_y[i]) <= 0:
-                    continue
-                if not self.id_cluster_dict[i][0] == resx:
-                    x_in_y_filter[i].clear()
-                    continue
-                
-                for j in range(len(x_in_y[i])):
-                    j_ind = x_in_y[i][j]
-                    if not self.id_cluster_dict[j_ind][0] == resy:
-                        x_in_y_filter[i].remove(j_ind)
-
-
-        if self.filter_abple:
-            apx = self.target_abple[wx]
-            apy = self.target_abple[wy]
-
-            for i in range(len(x_in_y)):
-                if len(x_in_y[i]) <= 0:
-                    continue
-
-                if not self.querys[i].abple == apx:
-                    x_in_y_filter[i].clear()
-                    continue
-
-                for j in range(len(x_in_y[i])):
-                    j_ind = x_in_y[i][j]
-                    if j_ind not in x_in_y_filter[i]:
-                        continue
-                    if not self.querys[j_ind].abple == apy:
-                        x_in_y_filter[i].remove(j_ind)
-
-
-        if self.filter_phipsi:
-            phix, psix = self.phipsi[wx]
-            phiy, psiy = self.phipsi[wy]
-
-            for i in range(len(x_in_y)):
-                if len(x_in_y[i]) <= 0:
-                    continue                
-
-                if (not utils.filter_phipsi(phix, self.querys[i].phi, self.filter_phipsi_val)) or not (utils.filter_phipsi(psix, self.querys[i].psi, self.filter_phipsi_val)):
-                    x_in_y_filter[i].clear()
-                    continue
-
-                for j in range(len(x_in_y[i])):
-                    j_ind = x_in_y[i][j]
-                    if j_ind not in x_in_y_filter[i]:
-                        continue
-
-                    if (not utils.filter_phipsi(phiy, self.querys[j_ind].phi, self.filter_phipsi_val)) or (not utils.filter_phipsi(psiy, self.querys[j_ind].psi, self.filter_phipsi_val)) :
-                        x_in_y_filter[i].remove(j_ind)
-                        continue
-        
-
-        ### Debug print.
-        # for i in range(len(x_in_y)):
-        #     if len(x_in_y[i]) <= 0:
-        #         continue
-        #     if self.id_cluster_dict[i][0] == 'HIS' and 'CYS' in [self.id_cluster_dict[j_ind][0] for j_ind in x_in_y[i]] and 'HIS' in [self.id_cluster_dict[j_ind][0] for j_ind in x_in_y[i]]:
-        #         #print(x_in_y[i])          
-        #         print([self.id_cluster_dict[j_ind][0] for j_ind in x_in_y[i]])
-        #         #print(resx)
-        #         #print(resy)
-        #         print('x: ' + self.id_cluster_dict[i][0])
-        #         #print(x_in_y_filter[i])
-        #         print([self.id_cluster_dict[j_ind][0] for j_ind in x_in_y_filter[i]])
-        #         print('---------')
-                  
-        x_has_y = any([True if len(a) >0 else False for a in x_in_y_filter])
         return x_in_y_filter, x_has_y
 
 
@@ -617,7 +416,8 @@ class Search_vdM:
         for win_comb in win_combs:
             print(win_comb)      
             comb_dict = self.neighbor_run_comb(win_comb)
-            self.neighbor_comb_dict.update(comb_dict)
+            if not comb_dict:
+                self.neighbor_comb_dict.update(comb_dict)
         return
 
 
@@ -639,17 +439,26 @@ class Search_vdM:
         pool.close()
         pool.join()
         for r in results: 
-            self.neighbor_comb_dict.update(r)
+            if not r:
+                self.neighbor_comb_dict.update(r)
         return
 
 
     def neighbor_run_comb(self, win_comb):
+        #try:
         comb_dict = self.neighbor_construct_comb(win_comb)
-        self.neighbor_extract_query(comb_dict)
+        if len([comb_dict.keys()]) <= 0:
+            return comb_dict
+        _target = self.target.copy()
+        self.neighbor_extract_query(_target, comb_dict)
         self.neighbor_calc_comb_score(comb_dict)
         self.neighbor_calc_geometry(comb_dict)
+        self.neighbor_aftersearch_filt(_target, comb_dict)
         self.neighbor_write_win(comb_dict)
         return comb_dict
+        # except:
+        #     self.log += 'Error in win_comb: ' + '-'.join([str(w) for w in win_comb]) + '\n'
+        #     return {}
 
     def neighbor_construct_comb(self, win_comb):
         '''
@@ -720,11 +529,11 @@ class Search_vdM:
         return comb_dict
 
 
-    def neighbor_extract_query(self, comb_dict):
+    def neighbor_extract_query(self, _target, comb_dict):
         '''
         for each (comb, combinfo), we extract candidate querys and add it in combinfo.
         '''
-        print('neighbor_extract_query')
+        print('neighbor-extract-query')
         for wins, clu_key in comb_dict.keys():
             for i in range(len(wins)):
                 win = wins[i]
@@ -732,14 +541,29 @@ class Search_vdM:
 
                 clu = clu_key[i]
                 centroid = self.cluster_centroid_dict[clu].copy()
-                self.supperimpose_target_bb(centroid, win)
+                
+                try:
+                    supperimpose_target_bb(_target, centroid, win)
+                except:
+                    print('x-------------------------')
+                    print(wins)
+                    print(clu_key)
+                    print(len(centroid.query))
+                    print(len(_target))
+                    print(centroid.query.getTitle())
                 comb_dict[(wins, clu_key)].centroid_dict[win] = centroid
 
                 for id in comb_dict[(wins, clu_key)].comb[win]:
                     _query = self.querys[id].copy()
-                    
-                    self.supperimpose_target_bb(_query, win)
-                    #self.supperimpose_centroid(_query, centroid, align_sel='heavy') # Test different supperimposition effect of search.
+                    try:
+                        supperimpose_target_bb(_target, _query, win)
+                    except:
+                        print('y-------------------------')
+                        print(wins)
+                        print(clu_key)
+                        print(len(centroid.query))
+                        print(len(_target))
+                        print(_query.query.getTitle())
                     comb_dict[(wins, clu_key)].query_dict[win].append(_query)
 
         return
@@ -798,13 +622,32 @@ class Search_vdM:
         return
 
 
+    def neighbor_aftersearch_filt(self, _target, comb_dict):
+        '''
+        After get the comb_dict, filter the pair angle, pair dists; filter the clash.
+        remove the filtered key-value.
+        '''
+        for key in comb_dict.keys():  
+            info = comb_dict[key]
+            if self.search_filter.after_search_filter:
+                if not info.after_search_condition_satisfied(self.search_filter.pair_angle_range, self.search_filter.pair_aa_aa_dist_range, self.search_filter.pair_metal_aa_dist_range):
+                    comb_dict[key].after_search_filtered = True
+                    
+            if self.search_filter.filter_qt_clash:
+                wins = [w for w in info.query_dict.keys()]
+                vdms = [info.query_dict[w][0] for w in wins]
+
+                if Search_filter.vdm_clash(vdms, _target, unsupperimposed=False, wins=wins):
+                    comb_dict[key].vdm_no_clash = -1
+                    comb_dict[key].after_search_filtered = True  
+                else:
+                    comb_dict[key].vdm_no_clash = 1       
+        return
+
+
     def neighbor_write_represents(self):
         print('neighbor_write_represents')
         for key in self.neighbor_comb_dict.keys():  
-            info = self.neighbor_comb_dict[key]
-            if self.after_search_filter:
-                if not info.after_search_condition_satisfied(self.pair_angle_range, self.pair_aa_aa_dist_range, self.pair_metal_aa_dist_range):
-                    continue
 
             outdir = self.workdir + 'represents/'
             if not os.path.exists(outdir):
@@ -826,9 +669,9 @@ class Search_vdM:
         print('neighbor_write')
         for key in comb_dict.keys():  
             info = comb_dict[key]
-            if self.after_search_filter:
-                if not info.after_search_condition_satisfied(self.pair_angle_range, self.pair_aa_aa_dist_range, self.pair_metal_aa_dist_range):
-                    continue
+            if not self.search_filter.write_filtered_result and info.after_search_filtered:
+                continue
+
             outpath = 'win_' + '-'.join([str(k) for k in key[0]]) + '/'
             outdir = self.workdir + outpath
             if not os.path.exists(outdir):
@@ -892,17 +735,19 @@ class Search_vdM:
         Write a tab dilimited file.
         '''
         print('neighbor-write-summary')
+
+        os.makedirs(outdir, exist_ok=True)
+
         with open(outdir + '_summary.tsv', 'w') as f:
             f.write('Wins\tClusterIDs\tproteinABPLEs\tCentroidABPLEs\tproteinPhiPsi\tCentroidPhiPsi\tvolume\tvol2metal\tdiameter\tTotalVdMScore\tFracScore\tMultiScore\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tvdm_scores\ttotal_clu#\tclu_nums')
+            f.write('\tpair_aa_aa_dist_ok\tpair_angle_ok\tpair_metal_aa_dist_ok\tvdm_no_clash')
             if eval:
                 f.write('\teval_min_rmsd\teval_min_vdMs\teval_phi\teval_psi\teval_abple\teval_is_origin')
             f.write('\n')
             for key in comb_dict.keys(): 
                 info = comb_dict[key]
-                if self.after_search_filter:
-                    if not info.after_search_condition_satisfied(self.pair_angle_range, self.pair_aa_aa_dist_range, self.pair_metal_aa_dist_range):
-                        continue
-
+                if not self.search_filter.write_filtered_result and info.after_search_filtered:
+                    continue
                 #centroids = [c.query.getTitle() for c in info.centroid_dict.values()]
                 vdm_scores = [c for c in info.scores]
                 overlaps = [c for c in info.totals]
@@ -936,6 +781,11 @@ class Search_vdM:
                 f.write(str(sum(clu_nums)) + '\t')
                 f.write('||'.join([str(c) for c in clu_nums]) + '\t')
 
+                f.write(str(info.pair_aa_aa_dist_ok) + '\t')
+                f.write(str(info.pair_angle_ok) + '\t')
+                f.write(str(info.pair_metal_aa_dist_ok) + '\t')
+                f.write(str(info.vdm_no_clash) + '\t')
+
                 if eval:
                     f.write('||'.join([str(round(m, 2)) for m in info.eval_mins]) + '\t')
                     f.write('||'.join([v.query.getTitle() for v in info.eval_min_vdMs]) + '\t')
@@ -944,13 +794,18 @@ class Search_vdM:
                     f.write('||'.join([v.abple for v in info.eval_min_vdMs]) + '\t')
                     f.write(str(info.eval_is_origin) + '\t')
 
-                f.write('\n')
+                f.write('\n')          
+        return 
 
 
+    def neighbor_write_log(self):
         if len(self.log) > 0:
             with open(self.workdir + '_log.txt', 'w') as f:
                 f.write(self.log)
-            
-        return 
+
+        with open(self.workdir + '_parameters.txt', 'w') as f:
+            f.write(self.para2string())
+            f.write(self.search_filter.para2string())
+
 
 

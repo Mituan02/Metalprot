@@ -35,21 +35,13 @@ def supperimpose_target_bb(_target, _query, win, align_sel='name N CA C'):
 
     target_sel = 'resindex ' + str(win) + ' and ' + align_sel
     query_sel = 'resindex ' + str(_query.contact_resind) + ' and '+ align_sel
-    # print('a-----------------------------------')
-    # print(target_sel)
-    # print(query_sel)
-    # print(len(_query.query))
-    # print(len(_target))
+
     q = _query.query.select(query_sel)
     t = _target.select(target_sel)
     if len(q) != len(t):
         print('supperimpose-target-bb not happening')
         return False
-    # print('b-----------------------------------')
-    # print(target_sel)
-    # print(query_sel)
-    # print(len(q))
-    # print(len(t))
+
     transform = pr.calcTransformation(q, t)
     transform.apply(_query.query)
     if _query.hull_ag:
@@ -81,13 +73,14 @@ class Search_vdM:
     validateOriginStruct = False, search_filter = None, parallel = False, selfcenter_rmsd = 0.45):
 
         if workdir:
-            _workdir = os.path.realpath(workdir)
-            if not os.path.exists(_workdir):
-                os.mkdir(_workdir)
+            _workdir = os.path.realpath(workdir) + '_' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S')            
         else:
-            _workdir = os.getcwd() + '/output_' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S')          
-            os.mkdir(_workdir)
+            _workdir = os.getcwd() + '/output_' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S')          
+
+        os.makedirs(_workdir, exist_ok=True)
         self.workdir = _workdir + '/'
+        self.outdir_represent = self.workdir + 'represents/'
+        os.makedirs(self.outdir_represent, exist_ok=True)  
 
         self.target = pr.parsePDB(target_pdb)
 
@@ -542,28 +535,13 @@ class Search_vdM:
                 clu = clu_key[i]
                 centroid = self.cluster_centroid_dict[clu].copy()
                 
-                try:
-                    supperimpose_target_bb(_target, centroid, win)
-                except:
-                    print('x-------------------------')
-                    print(wins)
-                    print(clu_key)
-                    print(len(centroid.query))
-                    print(len(_target))
-                    print(centroid.query.getTitle())
+                supperimpose_target_bb(_target, centroid, win)
                 comb_dict[(wins, clu_key)].centroid_dict[win] = centroid
 
                 for id in comb_dict[(wins, clu_key)].comb[win]:
                     _query = self.querys[id].copy()
-                    try:
-                        supperimpose_target_bb(_target, _query, win)
-                    except:
-                        print('y-------------------------')
-                        print(wins)
-                        print(clu_key)
-                        print(len(centroid.query))
-                        print(len(_target))
-                        print(_query.query.getTitle())
+
+                    supperimpose_target_bb(_target, _query, win)
                     comb_dict[(wins, clu_key)].query_dict[win].append(_query)
 
         return
@@ -616,7 +594,7 @@ class Search_vdM:
         The geometry is a centroid contact atom of each query's candidates.
         Check CombInfo.calc_geometry()
         '''
-        print('neighbor_calc_geometry')
+        print('neighbor-calc-geometry')
         for wins, clu_key in comb_dict.keys():
             comb_dict[(wins, clu_key)].calc_geometry()         
         return
@@ -730,7 +708,7 @@ class Search_vdM:
         return    
 
 
-    def neighbor_write_summary(self, outdir, comb_dict, eval = False):
+    def neighbor_write_summary(self, outdir, comb_dict, name = '_summary.tsv', eval = False):
         '''
         Write a tab dilimited file.
         '''
@@ -738,7 +716,7 @@ class Search_vdM:
 
         os.makedirs(outdir, exist_ok=True)
 
-        with open(outdir + '_summary.tsv', 'w') as f:
+        with open(outdir + name, 'w') as f:
             f.write('Wins\tClusterIDs\tproteinABPLEs\tCentroidABPLEs\tproteinPhiPsi\tCentroidPhiPsi\tvolume\tvol2metal\tdiameter\tTotalVdMScore\tFracScore\tMultiScore\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tvdm_scores\ttotal_clu#\tclu_nums')
             f.write('\tpair_aa_aa_dist_ok\tpair_angle_ok\tpair_metal_aa_dist_ok\tvdm_no_clash')
             if eval:

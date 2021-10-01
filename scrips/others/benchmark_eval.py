@@ -1,5 +1,10 @@
+'''
+After eval_search the hundreds of benchmark pdbs, using this script to analyze the summaries.
+'''
+
 import os
 import pandas
+
 
 workdir = '/mnt/e/DesignData/ligands/LigandBB/zn_eval_bench_mark/2013_new_dist45_phipsi15/'
 

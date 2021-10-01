@@ -25,7 +25,7 @@ from sklearn.neighbors import NearestNeighbors
 import multiprocessing as mp
 from multiprocessing.dummy import Pool as ThreadPool
 
-from .search import Search_vdM
+from .search import Search_vdM, supperimpose_target_bb
 from .graph import Graph
 from .comb_info import CombInfo
 
@@ -65,7 +65,6 @@ class Search_selfcenter(Search_vdM):
 
         return
 
-
     def neighbor_run_comb(self, win_comb):
         # try:
         print('selfcenter-run at: ' + ','.join([str(w) for w in win_comb]))
@@ -87,7 +86,7 @@ class Search_selfcenter(Search_vdM):
         if len([comb_dict.keys()]) <= 0:
             return comb_dict
 
-        self.neighbor_write_win(comb_dict)
+        self.selfcenter_write_win(comb_dict)
         
         self.selfcenter_get_write_represents(comb_dict)
 
@@ -293,7 +292,7 @@ class Search_selfcenter(Search_vdM):
                 print(len(candidate_ids))
                 metal_coords = []
 
-                max_out = 2 #To reduce number of output.
+                max_out = 0 #To reduce number of output. 
                 for cid in candidate_ids:   
                     cquery = self.querys[cid].copy()
                     pdb_path = outdir + tag + cquery.query.getTitle() + '_w_' + str(w) + '_apble_' + cquery.abple + '.pdb'
@@ -334,9 +333,7 @@ class Search_selfcenter(Search_vdM):
         Here we only want to write the 'best' comb in each win_comb with same aa_comb.
         '''
         print('selfcenter-write-represents.')
-        outdir = self.workdir + 'represents/'
-        if not os.path.exists(outdir):
-            os.mkdir(outdir)      
+        win_clu_2_win_aas = {}
 
         for key in comb_dict.keys():  
             info = comb_dict[key]
@@ -344,19 +341,178 @@ class Search_selfcenter(Search_vdM):
                 continue
             wins = key[0]
             aas = tuple([c[0] for c in key[1]])
-            if (wins, aas) in self.best_aa_comb_dict.keys():
-                if sum(self.best_aa_comb_dict[(wins, aas)].totals) < sum(comb_dict[key].totals):
-                    self.best_aa_comb_dict[(wins, aas)] = comb_dict[key]
+            if (wins, aas) in win_clu_2_win_aas.keys():
+                win_clu_key = win_clu_2_win_aas[(wins, aas)]
+                if sum(comb_dict[win_clu_key].totals) < sum(comb_dict[key].totals):
+                    win_clu_2_win_aas[(wins, aas)] = key
             else:
-                self.best_aa_comb_dict[(wins, aas)] = comb_dict[key]
-            
+                win_clu_2_win_aas[(wins, aas)] = key
+
+        for key in win_clu_2_win_aas.keys():
+            win_clu_key = win_clu_2_win_aas[key]
+            self.best_aa_comb_dict[win_clu_key] = comb_dict[win_clu_key]            
         
+
         for key in self.best_aa_comb_dict.keys():
 
             tag = 'win_' + '-'.join([str(k) for k in key[0]]) + '_clu_' + '-'.join(k[0] + '-' + str(k[1]) for k in key[1]) 
             for w in key[0]:
                 c = self.best_aa_comb_dict[key].query_dict[w][0]
-                pdb_path = outdir + tag + '_w_' + str(w) + '_apble_' + c.abple + '_' + c.query.getTitle() + '.pdb'
+                pdb_path = self.outdir_represent + tag + '_w_' + str(w) + '_apble_' + c.abple + '_' + c.query.getTitle() + '.pdb'
                 pr.writePDB(pdb_path, c.query)                  
 
         return
+
+
+    #region temp parallel neighbor search. 
+
+    def run_selfcenter_search2(self):
+        '''
+        All functions need to run the neighbor search.
+        '''
+        print('run-selfcenter-neighbor-search')
+
+        #TO DO: where should I apply filters: win filter, query_metal filter, phipsi, etc.
+        self.neighbor_generate_query_dict()
+
+        self.neighbor_generate_pair_dict()
+
+        if self.parallel:
+            self.selfcenter_search_wins_pool2()
+        else:
+            self.neighbor_search_wins()
+
+        self.selfcenter_extract_query2(self.target, self.neighbor_comb_dict)
+
+        if self.parallel:
+            self.selfcenter_search_key_pool2()
+
+        self.neighbor_write_summary(self.workdir, self.best_aa_comb_dict)
+
+        self.neighbor_write_log()
+
+        return
+
+
+    def selfcenter_search_wins_pool2(self):
+        '''
+        multithread.
+        '''
+        win_combs = self.neighbor_get_win_combs()
+        print('multithread search win_combs: {}'.format(len(win_combs)))
+        if len(win_combs) <= 0:
+            return
+        num_cores = int(mp.cpu_count() - 1)
+        print('pool: {}'.format(num_cores))
+        # pool = mp.Pool(num_cores)
+        # results = [pool.apply_async(self.neighbor_construct_comb, args=win_comb) for win_comb in win_combs]
+        # results = [p.get() for p in results]
+        pool = ThreadPool(num_cores)
+        results = pool.map(self.selfcenter_run_comb2, win_combs)
+        pool.close()
+        pool.join()
+        for r in results: 
+            if r:
+                self.neighbor_comb_dict.update(r)
+        return
+
+
+    def selfcenter_run_comb2(self, win_comb):
+        print('selfcenter-run at: ' + ','.join([str(w) for w in win_comb]))
+        comb_dict = self.selfcenter_construct_comb(win_comb)
+        return comb_dict
+
+    def selfcenter_extract_query2(self, _target, comb_dict):
+        '''
+        for each (comb, combinfo), we extract candidate querys and add it in combinfo.
+        '''
+        print('selfcenter_extract_query2')
+        for wins, clu_key in comb_dict.keys():
+            for i in range(len(wins)):
+                win = wins[i]
+                comb_dict[(wins, clu_key)].query_dict[win] = []
+
+                clu = clu_key[i]
+                centroid = self.cluster_centroid_dict[clu].copy()
+                supperimpose_target_bb(_target, centroid, win)
+                comb_dict[(wins, clu_key)].centroid_dict[win] = centroid
+
+                for id in comb_dict[(wins, clu_key)].comb[win]:
+                    _query = self.querys[id].copy()
+
+                    supperimpose_target_bb(_target, _query, win)
+                    comb_dict[(wins, clu_key)].query_dict[win].append(_query)
+        
+        self.neighbor_calc_geometry(comb_dict)
+        self.neighbor_aftersearch_filt(_target, comb_dict)
+
+        return
+
+
+    def selfcenter_search_key_pool2(self):
+        wins_dict = {}
+        for win_comb, clu_key in self.neighbor_comb_dict.keys():
+            if win_comb in wins_dict:
+                wins_dict[win_comb].append((win_comb, clu_key))
+            else:
+                wins_dict[win_comb] = [(win_comb, clu_key)]
+
+        num_cores = int(mp.cpu_count() - 1)
+        print('pool: {}'.format(num_cores))
+        # pool = mp.Pool(num_cores)
+        # results = [pool.apply_async(self.neighbor_construct_comb, args=win_comb) for win_comb in win_combs]
+        # results = [p.get() for p in results]
+        pool = ThreadPool(num_cores)
+        results = pool.map(self.selfcenter_run_combkey2, wins_dict.values())
+        pool.close()
+        pool.join()
+        for r in results: 
+            if not r:
+                self.neighbor_comb_dict.update(r)
+
+
+    def selfcenter_run_combkey2(self, wins_dict_values):
+        comb_dict = {}
+        for win_comb, clu_key in wins_dict_values:
+            comb_dict[(win_comb, clu_key)] = self.neighbor_comb_dict[(win_comb, clu_key)]
+
+        if len([comb_dict.keys()]) <= 0:
+            return comb_dict
+            
+        _target = self.target.copy()
+        
+        #self.neighbor_extract_query(_target, comb_dict)
+
+        #self.selfcenter_calc_centroid_geometry(comb_dict)
+        self.comb_overlap(comb_dict)
+        self.neighbor_calc_comb_score(comb_dict)
+
+        #self.neighbor_aftersearch_filt(_target, comb_dict)
+        #comb_dict = self.selfcenter_redu(comb_dict)
+        
+        if len([comb_dict.keys()]) <= 0:
+            return comb_dict
+
+        self.selfcenter_write_win(comb_dict)
+        
+        self.selfcenter_get_write_represents(comb_dict)
+
+        outpath = 'win_' + '-'.join([str(w) for w in win_comb]) + '/'
+        outdir = self.workdir + outpath  
+        
+        if not self.search_filter.write_filtered_result:
+            if len([key for key in comb_dict.keys() if not comb_dict[key].after_search_filtered]) > 0:
+                self.neighbor_write_summary(outdir, comb_dict, name = '_summary_' + '_'.join([str(w) for w in win_comb]) + '.tsv')
+        else:
+            self.neighbor_write_summary(outdir, comb_dict, name = '_summary_' + '_'.join([str(w) for w in win_comb]) + '.tsv')
+
+        comb_dict = self.selfcenter_redu(comb_dict)
+
+        return comb_dict
+        # except:
+
+        #     self.log += 'Error in win_comb: ' + '-'.join([str(w) for w in win_comb]) + '\n'
+        #     return {}
+
+
+        #endregion 

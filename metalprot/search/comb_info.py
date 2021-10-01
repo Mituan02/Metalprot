@@ -63,6 +63,19 @@ class CombInfo:
         self.geometry = hull.transfer2pdb(all_coords, ['NI' if i == len(all_coords)-1 else 'N' for i in range(len(all_coords))])
         self.aa_aa_pair, self.metal_aa_pair, self.angle_pair  = quco.pair_wise_geometry(self.geometry)
         return
+    
+    def calc_centroid_geometry(self):
+        all_coords = []
+        metal_coords = []  
+
+        for _query in self.centroid_dict.values():                                
+            all_coords.append(_query.contact_ag)
+            metal_coords.append(_query.candidates_metal_points)   
+        all_coords.append(pr.calcCenter(hull.transfer2pdb(metal_coords)))
+
+        self.geometry = hull.transfer2pdb(all_coords, ['NI' if i == len(all_coords)-1 else 'N' for i in range(len(all_coords))])
+        self.aa_aa_pair, self.metal_aa_pair, self.angle_pair  = quco.pair_wise_geometry(self.geometry)
+        return        
 
     def after_search_condition_satisfied(self, pair_angle_range = None, pair_aa_aa_dist_range = None, pair_metal_aa_dist_range = None):
         '''

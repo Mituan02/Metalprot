@@ -1,17 +1,18 @@
 import os
 import sys
-from metalprot.apps.search_struct import Query, Comb
+
+from metalprot.basic.quco import Query, Comb
 import prody as pr
 #sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
-from metalprot import ligand_database
+from metalprot.database import database_extract
 
 '''
-Extract binary metal binding dists and angles. 
+Extract binary metal binding dists and angles from bivalence vdMs. 
 '''
 
 workdir = "/mnt/e/DesignData/ligands/ZN_rcsb/20210608/AAdAAMetal_aa_aa_reps/"
 
-pdbs = ligand_database.get_all_pbd_prody(workdir)
+pdbs = database_extract.get_all_pbd_prody(workdir)
 
 dist_angle = []
 
@@ -27,7 +28,7 @@ for pdb in pdbs:
     except:
         print(pdb.getTitle())
 
-with open(workdir + '_summary.txt', 'w') as f:
+with open(workdir + '_pairwise_angle_dist_info.tsv', 'w') as f:
     f.write('aa\tTitle\tDist\tAngle\n')
     for da in dist_angle:
         x = da[0] + '-' + da[1]

@@ -1,3 +1,7 @@
+'''
+Split the metal vdM database into 2 folder by date. (before ~ 2017) (2018 ~ after)
+'''
+
 import os
 import sys
 import prody as pr

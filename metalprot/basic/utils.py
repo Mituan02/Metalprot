@@ -87,6 +87,8 @@ def filter_phipsi(angle, query_angle, filter_angle_val = 30):
     calc the range of phi or psi angle with a filter range.
     Ex. phi = 170, filter range = +-30, [140, 200] as 200 > 180. The true range is [(140, 180), (0, 20)]
     The filter_angle_val must be < 180
+
+    return True if the condition are satified.
     '''
     filter_ranges = []
 

@@ -8,7 +8,7 @@ class Search_filter:
     def __init__(self, filter_abple = False, filter_phipsi = True, max_phipsi_val = 15, 
     filter_vdm_score = False, min_vdm_score = 0, filter_vdm_count = False, min_vdm_clu_num = 20,
     after_search_filter = False, pair_angle_range = None, pair_aa_aa_dist_range = None, pair_metal_aa_dist_range = None,
-    filter_qt_clash = False, write_filtered_result = False):
+    filter_qt_clash = False, write_filtered_result = False, selfcenter_filter_member_phipsi = False):
 
         self.filter_abple = filter_abple
         self.filter_phipsi = filter_phipsi
@@ -27,6 +27,8 @@ class Search_filter:
         self.filter_qt_clash = filter_qt_clash
         self.write_filtered_result = write_filtered_result
 
+        self.selfcenter_filter_member_phipsi = selfcenter_filter_member_phipsi
+
     def para2string(self):
         parameters = "Filter parameters: \n"
         parameters += 'filter_abple: ' + str(self.filter_abple) + ' \n'
@@ -44,6 +46,8 @@ class Search_filter:
         parameters += 'pair_metal_aa_dist_range: ' + str(self.pair_metal_aa_dist_range) + ' \n'
         parameters += 'filter_qt_clash: ' + str(self.filter_qt_clash) + ' \n'
         parameters += 'write_filtered_result: ' + str(self.write_filtered_result) + ' \n'
+        
+        parameters += 'selfcenter_filter_member_phipsi: ' + str(self.selfcenter_filter_member_phipsi) + ' \n'
         return parameters
 
 

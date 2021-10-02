@@ -192,20 +192,30 @@ class Search_selfcenter(Search_vdM):
 
             graph.get_paths()
 
-            overlap_dict = {} # {win:[overlap ids]} need to get {win:[query ids]} 
+            overlap_id_dict = {} 
+            overlap_query_id_dict = {} # {win:[overlap ids]} need to get {win:[query ids]} 
 
             for path in graph.all_paths:
                 for i in range(len(win_comb)):
                     w = win_comb[i]
                     value = list(comb_dict[key].centroid_dict[w].selfcenter_cluster_queryid)[path[i]]
-                    #value = path[i]
-                    if w in overlap_dict.keys():
-                        overlap_dict[w].add(value)
-                    else:
-                        overlap_dict[w] = set()
-                        overlap_dict[w].add(value)
 
-            comb_dict[key].overlap_dict = overlap_dict 
+                    if self.search_filter.selfcenter_filter_member_phipsi:
+                        phix, psix = self.phipsi[w]
+                        if (not utils.filter_phipsi(phix, self.querys[value].phi, self.search_filter.max_phipsi_val)) or (not utils.filter_phipsi(psix, self.querys[value].psi, self.search_filter.max_phipsi_val)):
+                            continue
+                    #value = path[i]
+                    if w in overlap_query_id_dict.keys():
+                        overlap_id_dict[w].add(path[i])
+                        overlap_query_id_dict[w].add(value)
+                    else:
+                        overlap_id_dict[w] = set()
+                        overlap_id_dict[w].add(path[i])
+                        overlap_query_id_dict[w] = set()
+                        overlap_query_id_dict[w].add(value)
+
+            comb_dict[key].overlap_id_dict = overlap_id_dict
+            comb_dict[key].overlap_query_id_dict = overlap_query_id_dict 
 
         return
 
@@ -246,7 +256,7 @@ class Search_selfcenter(Search_vdM):
                 for w in key[0]:
                     title = info.centroid_dict[w].query.getTitle()
                     id = query_id_dict[title]
-                    if id not in binfo.overlap_dict[w]:
+                    if id not in binfo.overlap_query_id_dict[w]:
                         seen_here.append(False)
                     else:
                         seen_here.append(True)
@@ -288,32 +298,32 @@ class Search_selfcenter(Search_vdM):
             
             #Write overlap
             for w in key[0]:
-                candidate_ids = comb_dict[key].overlap_dict[w]
-                print(len(candidate_ids))
                 metal_coords = []
 
-                max_out = 0 #To reduce number of output. 
-                for cid in candidate_ids:   
-                    cquery = self.querys[cid].copy()
-                    pdb_path = outdir + tag + cquery.query.getTitle() + '_w_' + str(w) + '_apble_' + cquery.abple + '.pdb'
+                #candidate_ids = comb_dict[key].overlap_query_id_dict[w]
+                # max_out = 0 #To reduce number of output. 
+                # for cid in candidate_ids:   
+                #     cquery = self.querys[cid].copy()
+                #     pdb_path = outdir + tag + cquery.query.getTitle() + '_w_' + str(w) + '_apble_' + cquery.abple + '.pdb'
                  
-                    try:
-                        pr.calcTransformation(cquery.query.select('heavy'), comb_dict[key].centroid_dict[w].query.select('heavy')).apply(cquery.query)
-                        if max_out >0:
-                            pr.writePDB(pdb_path, cquery.query)  
-                            max_out-=1 
+                #     try:
+                #         pr.calcTransformation(cquery.query.select('heavy'), comb_dict[key].centroid_dict[w].query.select('heavy')).apply(cquery.query)
+                #         if max_out >0:
+                #             pr.writePDB(pdb_path, cquery.query)  
+                #             max_out-=1 
 
-                    except:
-                        print('Transformation failed:' + pdb_path)
+                #     except:
+                #         print('Transformation failed:' + pdb_path)
                     
-                    metal_coords.append(cquery.get_metal_coord())
+                #     metal_coords.append(cquery.get_metal_coord())
 
-
-                # centroid = comb_dict[key].centroid_dict[w]
-                # clu_allmetal_coords = centroid.get_hull_points()
-                # for cid in candidate_ids:
-                #     #print(len(clu_allmetal_coords[cid]))
-                #     metal_coords.append(clu_allmetal_coords[cid])
+                candidate_ids = comb_dict[key].overlap_id_dict[w]
+                #print(len(candidate_ids))
+                centroid = comb_dict[key].centroid_dict[w]
+                clu_allmetal_coords = centroid.get_hull_points()
+                for cid in candidate_ids:
+                    #print(len(clu_allmetal_coords[cid]))
+                    metal_coords.append(clu_allmetal_coords[cid])
 
                 hull.write2pymol(metal_coords, outdir, tag + '_w_' + str(w) +'_overlap_points.pdb')
             
@@ -335,6 +345,8 @@ class Search_selfcenter(Search_vdM):
         print('selfcenter-write-represents.')
         win_clu_2_win_aas = {}
 
+        best_aa_comb_dict = {}
+
         for key in comb_dict.keys():  
             info = comb_dict[key]
             if not self.search_filter.write_filtered_result and info.after_search_filtered:
@@ -350,14 +362,16 @@ class Search_selfcenter(Search_vdM):
 
         for key in win_clu_2_win_aas.keys():
             win_clu_key = win_clu_2_win_aas[key]
+            best_aa_comb_dict[win_clu_key] = comb_dict[win_clu_key]
+            # Here the 'self.best_aa_comb_dict' is used to write summary.tsv file.
             self.best_aa_comb_dict[win_clu_key] = comb_dict[win_clu_key]            
         
 
-        for key in self.best_aa_comb_dict.keys():
+        for key in best_aa_comb_dict.keys():
 
             tag = 'win_' + '-'.join([str(k) for k in key[0]]) + '_clu_' + '-'.join(k[0] + '-' + str(k[1]) for k in key[1]) 
             for w in key[0]:
-                c = self.best_aa_comb_dict[key].query_dict[w][0]
+                c = best_aa_comb_dict[key].query_dict[w][0]
                 pdb_path = self.outdir_represent + tag + '_w_' + str(w) + '_apble_' + c.abple + '_' + c.query.getTitle() + '.pdb'
                 pr.writePDB(pdb_path, c.query)                  
 

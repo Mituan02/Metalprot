@@ -42,7 +42,8 @@ class CombInfo:
         self.vdm_no_clash = 0
         
         #For Search_selfcenter
-        self.overlap_dict = None
+        self.overlap_query_id_dict = None
+        self.overlap_id_dict = None
 
         #After search filter result. If ture means any filter works.
         self.after_search_filtered = False

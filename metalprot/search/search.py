@@ -267,7 +267,7 @@ class Search_vdM:
 
     def calc_pairwise_neighbor(self, n_x, n_y, rmsd = 0.25):
         '''
-        Use sklean NearestNeighbors
+        Use sklean NearestNeighbors. find every x point has how many neighbors from y.
         '''
 
         neigh_y = NearestNeighbors(radius= rmsd) 
@@ -314,7 +314,7 @@ class Search_vdM:
                 phix, psix = self.phipsi[wx]
                 phiy, psiy = self.phipsi[wy]
 
-                if (not utils.filter_phipsi(phix, self.querys[i].phi, self.search_filter.max_phipsi_val)) or not (utils.filter_phipsi(psix, self.querys[i].psi, self.search_filter.max_phipsi_val)):
+                if (not utils.filter_phipsi(phix, self.querys[i].phi, self.search_filter.max_phipsi_val)) or (not utils.filter_phipsi(psix, self.querys[i].psi, self.search_filter.max_phipsi_val)):
                     x_in_y_mask[i] = [False for j in range(len(x_in_y[i]))]
                     continue
            
@@ -495,14 +495,6 @@ class Search_vdM:
         for path in graph.all_paths:
             
             clu_key = tuple([self.id_cluster_dict[p] for p in path])
-
-            ### Debug
-            # if not (path[0] == 7208 and path[1] == 7864 and path[2] == 8539):
-            #     continue
-
-            # if clu_key == (('HIS', 7), ('HIS', 17), ('HIS', 49)):
-            #     print(path)
-
             
             if clu_key in clu_dict:
                 for i in range(len(win_comb)):
@@ -564,10 +556,10 @@ class Search_vdM:
             totals = [len(qs) for qs in comb_dict[key].query_dict.values()]
             try:
                 #This is for the Search_selfcenter.
-                if comb_dict[key].overlap_dict:
-                    totals = [len(v) for v in comb_dict[key].overlap_dict.values()]
+                if comb_dict[key].overlap_query_id_dict:
+                    totals = [len(v) for v in comb_dict[key].overlap_query_id_dict.values()]
             except:
-                print(totals) 
+                print('totals: ' + str(totals)) 
             #total_clu = sum([self.cluster_centroid_dict[clu_key[i]].total_clu for i in range(len(wins))])
             scores = [self.cluster_centroid_dict[clu_key[i]].score for i in range(len(wins))]
             comb_dict[key].totals = totals

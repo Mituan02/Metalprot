@@ -71,6 +71,18 @@ for pdb in pdbs:
     if all([b <= cut_off for b in bs]):
         filtered_pdbs.append(pdb)
 
+
+### copy the filter pdb into a new folder.
+outdir = root_dir + '_Seq_core_date_3HIScontact_B45/'
+os.makedirs(outdir, exist_ok=True)
+filtered_pdbs_dict = set([pdb.getTitle() for pdb in filtered_pdbs])
+for p in os.listdir(workdir):
+    if '.pdb' not in p:
+        continue
+    if p.split('.')[0] in filtered_pdbs_dict:
+        shutil.copyfile(workdir + p, outdir + p)
+
+
 ### calc pairwise angle dist info.
 
 def calc_pair_geometry(pdb):

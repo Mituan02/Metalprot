@@ -43,7 +43,7 @@ class Search_selfcenter(Search_vdM):
             query_id_dict[key] = i
         return query_id_dict
 
-    def run_neighbor_search(self):
+    def run_selfcenter_search(self):
         '''
         All functions need to run the neighbor search.
         '''
@@ -54,10 +54,7 @@ class Search_selfcenter(Search_vdM):
 
         self.neighbor_generate_pair_dict()
 
-        if self.parallel:
-            self.neighbor_search_wins_pool()
-        else:
-            self.neighbor_search_wins()
+        self.selfcenter_search_wins(self.parallel)
 
         self.neighbor_write_summary(self.workdir, self.best_aa_comb_dict)
 
@@ -65,7 +62,36 @@ class Search_selfcenter(Search_vdM):
 
         return
 
-    def neighbor_run_comb(self, win_comb):
+
+    def selfcenter_search_wins(self, parallel):
+        '''
+        The combinations of positions are extracted from all possible positions with pairs.
+        '''
+        win_combs = self.neighbor_get_win_combs()
+        print('Search win_combs: {}'.format(len(win_combs)))
+        if len(win_combs) <= 0:
+            return
+
+        if parallel:
+            num_cores = int(mp.cpu_count() - 1)
+            print('pool: {}'.format(num_cores))
+            pool = ThreadPool(num_cores)
+            results = pool.map(self.selfcenter_run_comb, win_combs)
+            pool.close()
+            pool.join()
+            for r in results: 
+                if not r:
+                    self.neighbor_comb_dict.update(r)
+        else:
+            for win_comb in win_combs:
+                print(win_comb)      
+                comb_dict = self.selfcenter_run_comb(win_comb)
+                if not comb_dict:
+                    self.neighbor_comb_dict.update(comb_dict)
+        return
+
+
+    def selfcenter_run_comb(self, win_comb):
         # try:
         print('selfcenter-run at: ' + ','.join([str(w) for w in win_comb]))
         comb_dict = self.selfcenter_construct_comb(win_comb)
@@ -394,7 +420,7 @@ class Search_selfcenter(Search_vdM):
         if self.parallel:
             self.selfcenter_search_wins_pool2()
         else:
-            self.neighbor_search_wins()
+            self.selfcenter_search_wins(self.parallel)
 
         self.selfcenter_extract_query2(self.target, self.neighbor_comb_dict)
 

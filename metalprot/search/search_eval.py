@@ -1,19 +1,6 @@
-import contextlib
-from math import comb, log
 import os
-from typing import Dict
-from numba.cuda import target
 import numpy as np
-import itertools
-from numpy.lib.function_base import extract
 import prody as pr
-from prody.measure.transform import superpose
-from prody.proteins.pdbfile import writePDB
-import scipy.spatial
-from scipy.spatial.distance import cdist, dice
-import datetime
-
-from sklearn import neighbors
 
 from ..basic import quco
 from ..basic import hull
@@ -25,13 +12,14 @@ from sklearn.neighbors import NearestNeighbors
 import multiprocessing as mp
 from multiprocessing.dummy import Pool as ThreadPool
 
-from .search import Search_vdM
+from .search import Search_vdM, supperimpose_target_bb
+from .search_selfcenter import Search_selfcenter
 from .graph import Graph
 from .comb_info import CombInfo
 
-class Search_eval(Search_vdM):
+class Search_eval(Search_selfcenter):
 
-    def eval_search(self):
+    def run_eval_search(self):
         '''
         Given a metal binding protein, extract the binding core. For each contact aa, find the original or best vdM as target. 
         For all the 'target' vdMs, use nearest neighbor search to check overlap and combinfo.
@@ -56,13 +44,84 @@ class Search_eval(Search_vdM):
             if not comb_dict: continue
             self.neighbor_comb_dict.update(comb_dict)     
 
-        #self.neighbor_write()
-
         #Evaluate search result.
         self.eval_search_results(wins, combs)
 
         self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, eval=True)
 
+        return 
+
+    def eval_selfcenter_construct(self, win_comb, vdM_comb):
+        '''
+        Use the path to create comb_dict.
+        '''
+        cluster_id_dict = {}
+        for key in self.id_cluster_dict.keys():
+            cluster_id_dict[self.id_cluster_dict[key]] = key
+
+        clu_key = tuple([v.get_cluster_key() for v in vdM_comb])
+        path = [cluster_id_dict[ck] for ck in clu_key]
+
+        comb_dict = {}
+        comb = dict()
+        for i in range(len(win_comb)):
+            comb[win_comb[i]] = [path[i]]
+        combinfo = CombInfo()
+        combinfo.comb = comb 
+        comb_dict[(tuple(win_comb), clu_key)] = combinfo
+        
+        _target = self.target.copy()
+        self.neighbor_extract_query(_target, comb_dict)
+
+        self.neighbor_calc_geometry(comb_dict)
+        self.comb_overlap(comb_dict)
+        self.neighbor_calc_comb_score(comb_dict)
+
+        #self.neighbor_aftersearch_filt(_target, comb_dict)
+        #comb_dict = self.selfcenter_redu(comb_dict)
+        
+        if len([comb_dict.keys()]) <= 0:
+            return comb_dict
+
+        self.selfcenter_write_win(comb_dict)
+        outpath = 'win_' + '-'.join([str(w) for w in win_comb]) + '/'
+        outdir = self.workdir + outpath  
+        self.neighbor_write_summary(outdir, comb_dict)
+
+        return comb_dict
+
+
+    def run_eval_selfcenter_search(self):
+        '''
+        Given a metal binding protein, extract the binding core. For each contact aa, find the original or best vdM as target. 
+        For all the 'target' vdMs, use nearest neighbor search to check overlap and combinfo.
+        '''
+        wins, combs = self.eval_get_comb()
+
+        uni_wins = set()
+        [uni_wins.add(w) for win in wins for w in win]
+        self.win_filtered = sorted(uni_wins)
+
+        self.neighbor_generate_query_dict()
+
+        #Extract closest vdMs and the cluster infomation. 
+        win_combs, vdM_combs = self.eval_extract_closest_vdMs(wins, combs)
+
+        ### The normal search process focus on the current wins.
+        # self.neighbor_generate_pair_dict()
+        # for win_comb in wins:
+        #     print(win_comb)      
+        #     comb_dict = self.selfcenter_run_comb(win_comb)
+        #     if not comb_dict: continue
+        #     self.neighbor_comb_dict.update(comb_dict)     
+
+        ### No search but summary the result
+        comb_dict = self.eval_selfcenter_construct(win_combs[0], vdM_combs[0])
+        self.neighbor_comb_dict.update(comb_dict)
+
+        ### Evaluate search result.
+        self.eval_search_results(wins, combs)
+        self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, eval=True)
         return 
                 
 
@@ -135,16 +194,17 @@ class Search_eval(Search_vdM):
     def write_closest_vdM_clu_points(self, best_v, w, evaldir, tag):
         clu_key = best_v.get_cluster_key()
 
-        origin_centroid = self.cluster_centroid_origin_dict[clu_key].copy()
-        self.supperimpose_target_bb(origin_centroid, w)
+        if self.cluster_centroid_origin_dict:
+            origin_centroid = self.cluster_centroid_origin_dict[clu_key].copy()
+            supperimpose_target_bb(self.target, origin_centroid, w)
 
-        #pr.writePDB(evaldir + tag + 'origin_' + origin_centroid.query.getTitle(), origin_centroid.query)
-        clu_origin_allmetal_coords = origin_centroid.get_hull_points()
-        hull.write2pymol(clu_origin_allmetal_coords, evaldir, tag + '_origin_w_' + str(w) +'_points.pdb') 
+            #pr.writePDB(evaldir + tag + 'origin_' + origin_centroid.query.getTitle(), origin_centroid.query)
+            clu_origin_allmetal_coords = origin_centroid.get_hull_points()
+            hull.write2pymol(clu_origin_allmetal_coords, evaldir, tag + '_origin_w_' + str(w) +'_points.pdb') 
 
 
         centroid = self.cluster_centroid_dict[clu_key].copy()
-        self.supperimpose_target_bb(centroid, w)
+        supperimpose_target_bb(self.target, centroid, w)
 
         pr.writePDB(evaldir + tag + centroid.query.getTitle(), centroid.query)
         clu_allmetal_coords = centroid.get_hull_points()
@@ -164,11 +224,13 @@ class Search_eval(Search_vdM):
         Then use nearest neighbor to get candidates by calculate the metal distance with dist 0.25.
         Then superimpose and obtain the one with min rmsd. 
         '''
-
+        win_combs = []
+        vdM_combs = []
         for i in range(len(wins)):
             evaldir = self.workdir + 'closest_win_' + '_'.join([str(w) for w in wins[i]])
             os.makedirs(evaldir, exist_ok=True)
-
+            best_wins = []
+            best_vdMs = []
             for j in range(len(wins[i])):
                 w = wins[i][j]
                 v = combs[i][j]
@@ -178,13 +240,16 @@ class Search_eval(Search_vdM):
                     continue
                 pr.writePDB(evaldir + '/win_' + str(w) + '_' + v.getTitle(), v)
                 if best_v:
+                    best_wins.append(w)
+                    best_vdMs.append(best_v)
                     clu_id = self.id_cluster_dict[best_id]
                     tag = '/win_' + str(w) + '_clu_' + '_'.join([str(ci) for ci in clu_id]) + '_rmsd_' + str(round(min_rmsd, 3)) + '_'                   
                     print(tag + ' : best_id ' + str(best_id))
                     pr.writePDB(evaldir + tag + best_v.query.getTitle(), best_v.query)
                     self.write_closest_vdM_clu_points(best_v, w, evaldir, tag)
-
-        return
+        win_combs.append(best_wins)
+        vdM_combs.append(best_vdMs)
+        return win_combs, vdM_combs
 
     
     def eval_extract_comb_closest_vdMs(self, w, v, combinfo):

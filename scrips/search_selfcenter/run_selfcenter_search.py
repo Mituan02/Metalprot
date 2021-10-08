@@ -9,7 +9,7 @@ from metalprot.basic import filter
 import pickle
 
 '''
-python /mnt/e/GitHub_Design/Metalprot/scrips/search_selfcenter/run_neighbor_search.py
+python /mnt/e/GitHub_Design/Metalprot/scrips/search_selfcenter/run_selfcenter_search.py
 '''
 
 query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/20210916_2017_2018_selfcenter/pickle_noCys/'
@@ -36,7 +36,7 @@ print(len(all_querys))
 
 workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
 
-outdir = workdir + 'output_selfcenter_test6/'
+outdir = workdir + 'output_selfcenter/'
 
 target_path = workdir + '5od1_zn.pdb'
 
@@ -59,14 +59,14 @@ win_filter = [34,  60,  64]
 #win_filter = [89,  91,  114]
 
 _filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_phipsi_val = 15, 
-    filter_vdm_score = False, min_vdm_score = 0, filter_vdm_count = True, min_vdm_clu_num = 20,
-    after_search_filter = True, pair_angle_range = [97, 121], pair_aa_aa_dist_range = [3.1, 3.7], pair_metal_aa_dist_range = None,
+    filter_vdm_score = False, min_vdm_score = 0, filter_vdm_count = False, min_vdm_clu_num = 20,
+    after_search_filter = True, pair_angle_range = [92, 116], pair_aa_aa_dist_range = [3.0, 3.5], pair_metal_aa_dist_range = None,
     filter_qt_clash = True, write_filtered_result = True)
 
 ss =  search_selfcenter.Search_selfcenter(target_path, outdir, all_querys, id_cluster_dict, cluster_centroid_dict, 
     query_all_metal, cluster_centroid_origin_dict, num_iters, rmsd_cuts, 
-    win_filter, validateOriginStruct = True, search_filter= _filter, parallel = False)
+    win_filter, validateOriginStruct = False, search_filter= _filter, parallel = True)
 
-ss.run_neighbor_search()
-
+ss.run_selfcenter_search()
+#ss.run_selfcenter_search2()
 

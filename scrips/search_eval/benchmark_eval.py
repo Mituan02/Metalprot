@@ -7,7 +7,7 @@ import pandas
 
 
 workdir = '/mnt/e/DesignData/ligands/LigandBB/zn_eval_bench_mark/2013_new_dist45_phipsi15/'
-
+workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/_Seq_core_date_3contact_B45/eval_selfcenter/'
 
 
 #test = 'output_2013_4bm9_ZN_1'
@@ -23,8 +23,8 @@ Failed = []
 infos = []
 
 for _dir in os.listdir(workdir):
-    if '.pdb' in _dir or '.tsv' in _dir:
-        continue
+    # if '.pdb' in _dir or '.tsv' in _dir:
+    #     continue
     file = workdir + _dir + '/_summary.tsv'
     if not os.path.isfile(file):
         print('Not exist: ' + _dir)
@@ -50,24 +50,33 @@ for _dir in os.listdir(workdir):
         info.append(df['TotalVdMScore'][x[0]])
         info.append(df['FracScore'][x[0]])
         info.append(df['MultiScore'][x[0]])
+        info.append(df['overlap#'][x[0]])
+        info.append(df['overlaps#'][x[0]])
+        info.append(df['total_clu#'][x[0]])
+        info.append(df['clu_nums'][x[0]])
     else:
         info.append(0)
         info.append(False)
         info.append(0)
         info.append(0)
         info.append(0)
+        info.append(0)
 
 
-    ind = df['TotalVdMScore'].idxmax(axis = 1)
-    info.append(df['TotalVdMScore'][ind])
-    ind = df['FracScore'].idxmax(axis = 1)
-    info.append(df['FracScore'][ind])
-    ind = df['MultiScore'].idxmin(axis = 1)
-    info.append(df['MultiScore'][ind])
+    # ind = df['TotalVdMScore'].idxmax(axis = 1)
+    # info.append(df['TotalVdMScore'][ind])
+    # ind = df['FracScore'].idxmax(axis = 1)
+    # info.append(df['FracScore'][ind])
+    # ind = df['MultiScore'].idxmin(axis = 1)
+    # info.append(df['MultiScore'][ind])
+    # info.append(df['overlap#'][ind])
+    # info.append(df['clu_nums'][x[0]])
+
     infos.append(info)
 
 with open(workdir + '_extract.tsv', 'w') as f:
-    f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tMaxTotalVdMScore\tMaxFracScore\tMinMultiScore\n')
+    #f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tMaxTotalVdMScore\tMaxFracScore\tMinMultiScore\n')
+    f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tOverlap\tOverlaps\tclu_num\tclu_nums\n')
     for info in infos:
         f.write('\t'.join([str(o) for o in info]) + '\n')
 
@@ -80,6 +89,15 @@ with open(workdir + '_failed.tsv', 'w') as f:
         f.write(a + '\n')
 
 
+with open(workdir + '_extract_split.tsv', 'w') as f:
+    #f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tMaxTotalVdMScore\tMaxFracScore\tMinMultiScore\n')
+    f.write('Title\tOverlap\tOverlap1\tOverlap2\tOverlap3\tclu_num\tclu_num1\tclu_num2\tclu_num3\n')
+    for info in infos:
+        title = info[0] 
+        overlap = str(info[7])
+        overlaps = sorted([int(x) for x in info[8].split('||')])
+        clu_num = str(info[9])
+        clu_nums = sorted([int(x) for x in info[10].split('||')])
+        f.write(title + '\t' + overlap + '\t' + '\t'.join([str(o) for o in overlaps]) + '\t' + clu_num + '\t' + '\t'.join([str(o) for o in clu_nums]) + '\n')
 
 
-    

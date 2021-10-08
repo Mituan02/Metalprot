@@ -52,8 +52,8 @@ def run_search(workdir, target_file, query_all_metal, all_querys, cluster_centro
 
     _filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_phipsi_val = 25, 
         filter_vdm_score = False, min_vdm_score = 0, filter_vdm_count = False, min_vdm_clu_num = 20,
-        after_search_filter = True, pair_angle_range = [92, 116], pair_aa_aa_dist_range = [3.0, 3.5], pair_metal_aa_dist_range = None,
-        filter_qt_clash = True, write_filtered_result = False, selfcenter_filter_member_phipsi = True)
+        after_search_filter = False, pair_angle_range = [92, 116], pair_aa_aa_dist_range = [3.0, 3.5], pair_metal_aa_dist_range = None,
+        filter_qt_clash = False, write_filtered_result = False, selfcenter_filter_member_phipsi = True)
 
     ss =  search_eval.Search_eval(target_path, outdir, all_querys, id_cluster_dict, cluster_centroid_dict, 
         query_all_metal, cluster_centroid_origin_dict, num_iters, rmsd_cuts, 
@@ -72,7 +72,7 @@ def run_search(workdir, target_file, query_all_metal, all_querys, cluster_centro
     return (target_file, win_search)
 
 
-num_cores = int(mp.cpu_count())
+num_cores = int(mp.cpu_count()/2)
 pool = mp.Pool(num_cores)
 
 workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/_Seq_core_date_3contact_B45_sub/'

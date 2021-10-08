@@ -103,11 +103,12 @@ class Search_selfcenter(Search_vdM):
         self.neighbor_extract_query(_target, comb_dict)
 
         self.neighbor_calc_geometry(comb_dict)
+        self.neighbor_aftersearch_filt(_target, comb_dict) 
+
         self.comb_overlap(comb_dict)
         self.neighbor_calc_comb_score(comb_dict)
 
-        self.neighbor_aftersearch_filt(_target, comb_dict)
-        comb_dict = self.selfcenter_redu(comb_dict)
+             
         
         if len([comb_dict.keys()]) <= 0:
             return comb_dict
@@ -121,9 +122,11 @@ class Search_selfcenter(Search_vdM):
         
         if not self.search_filter.write_filtered_result:
             if len([key for key in comb_dict.keys() if not comb_dict[key].after_search_filtered]) > 0:
-                self.neighbor_write_summary(outdir, comb_dict)
+                self.neighbor_write_summary(outdir, comb_dict, name = '_summary_' + '_'.join([str(w) for w in win_comb]) + '.tsv')
         else:
-            self.neighbor_write_summary(outdir, comb_dict)
+            self.neighbor_write_summary(outdir, comb_dict, name = '_summary_' + '_'.join([str(w) for w in win_comb]) + '.tsv')
+
+        comb_dict = self.selfcenter_redu(comb_dict)
 
         return comb_dict
         # except:
@@ -188,6 +191,9 @@ class Search_selfcenter(Search_vdM):
         For each path, calc the overlap.
         '''
         for key in comb_dict.keys():
+            
+            if self.search_filter.after_search_filter and comb_dict[key].after_search_filtered:
+                continue
 
             win_comb = key[0]
 
@@ -230,7 +236,7 @@ class Search_selfcenter(Search_vdM):
                         phix, psix = self.phipsi[w]
                         if (not utils.filter_phipsi(phix, self.querys[value].phi, self.search_filter.max_phipsi_val)) or (not utils.filter_phipsi(psix, self.querys[value].psi, self.search_filter.max_phipsi_val)):
                             continue
-                    #value = path[i]
+
                     if w in overlap_query_id_dict.keys():
                         overlap_id_dict[w].add(path[i])
                         overlap_query_id_dict[w].add(value)
@@ -240,10 +246,15 @@ class Search_selfcenter(Search_vdM):
                         overlap_query_id_dict[w] = set()
                         overlap_query_id_dict[w].add(value)
 
+            #TO DO: there is a bug here. The filter_phipsi filter the centroid vdM?
+            if len(overlap_id_dict.keys()) != len(win_comb):
+                continue
+            
             comb_dict[key].overlap_id_dict = overlap_id_dict
             comb_dict[key].overlap_query_id_dict = overlap_query_id_dict 
 
         return
+
 
     def selfcenter_redu(self, comb_dict):
         '''
@@ -260,28 +271,39 @@ class Search_selfcenter(Search_vdM):
         if len(list(comb_dict_sorted.keys())) <= 0:
             return comb_dict_filter
 
-        best_keys = [list(comb_dict_sorted.keys())[0]]
+        #print('comb_dict len: '.format(len(list(comb_dict_sorted.keys()))))
+
+        best_keys = []
 
         for key in comb_dict_sorted:
+            info = comb_dict_sorted[key]
+
+            if len(best_keys) <= 0:
+                if self.search_filter.after_search_filter and info.after_search_filtered:
+                    continue
+                else:
+                    best_keys.append(key)
+                    continue
+
+            if self.search_filter.after_search_filter and info.after_search_filtered:
+                continue
 
             if key in best_keys:
                 continue
             
-            info = comb_dict_sorted[key]
+            #TO DO: how could the info.overlap_query_id_dict be None?
+            if not info.overlap_query_id_dict:
+                continue
 
             seen = []
             for bkey in best_keys:
                 binfo = comb_dict_sorted[bkey]
 
-                ### If the filter result is different, there is no need to check the members.
-                if info.after_search_filtered != binfo.after_search_filtered:
-                    seen.append(False)
-                    continue
-
                 seen_here = []
                 for w in key[0]:
                     title = info.centroid_dict[w].query.getTitle()
                     id = query_id_dict[title]
+                    
                     if id not in binfo.overlap_query_id_dict[w]:
                         seen_here.append(False)
                     else:
@@ -321,8 +343,18 @@ class Search_selfcenter(Search_vdM):
 
             # Write geometry       
             pr.writePDB(outdir + tag +'_geometry.pdb', comb_dict[key].geometry) 
+
+            #Write Centroid and all metal coords in the cluster
+            for w in key[0]:
+                centroid = comb_dict[key].centroid_dict[w]
+                pdb_path = outdir + tag + '_centroid_' + centroid.query.getTitle() + '.pdb'
+                pr.writePDB(pdb_path, centroid.query)
+                clu_allmetal_coords = centroid.get_hull_points()
+                hull.write2pymol(clu_allmetal_coords, outdir, tag + '_w_' + str(w) +'_points.pdb')  
             
             #Write overlap
+            if not comb_dict[key].overlap_id_dict:
+                continue
             for w in key[0]:
                 metal_coords = []
 
@@ -351,15 +383,7 @@ class Search_selfcenter(Search_vdM):
                     #print(len(clu_allmetal_coords[cid]))
                     metal_coords.append(clu_allmetal_coords[cid])
 
-                hull.write2pymol(metal_coords, outdir, tag + '_w_' + str(w) +'_overlap_points.pdb')
-            
-            #Write Centroid and all metal coords in the cluster
-            for w in key[0]:
-                centroid = comb_dict[key].centroid_dict[w]
-                pdb_path = outdir + tag + '_centroid_' + centroid.query.getTitle() + '.pdb'
-                pr.writePDB(pdb_path, centroid.query)
-                clu_allmetal_coords = centroid.get_hull_points()
-                hull.write2pymol(clu_allmetal_coords, outdir, tag + '_w_' + str(w) +'_points.pdb')  
+                hull.write2pymol(metal_coords, outdir, tag + '_w_' + str(w) +'_overlap_points.pdb')        
         return   
         
 

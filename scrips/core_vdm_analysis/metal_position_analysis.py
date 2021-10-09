@@ -10,9 +10,7 @@ from metalprot import hull
 python /mnt/e/GitHub_Design/Metalprot/scripts_other/metal_position_analysis.py
 '''
 
-
 query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/'
-
 
 
 # Get query pdbs, Add the cluster metal points into the query.hull_points

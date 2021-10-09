@@ -1,13 +1,53 @@
-import os
 import prody as pr
-from scipy.spatial.distance import cdist
-from dataclasses import dataclass
-import shutil
-import sys
 import numpy as np
 import matplotlib.pyplot as plt
+from numpy.core.fromnumeric import argmin
+import itertools
 
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
+
+### calc pairwise angle dist info.
+
+def calc_pair_geometry(pdb):
+    '''
+    Calc paired query angle and distance of binding core. 
+    '''
+    #Get metal, binding atom for each binding atom
+    cts = []
+
+    metal = pdb.select(metal_sel)[0]
+    _contact_aas = pdb.select('protein and not carbon and not hydrogen and within 2.83 of resindex ' + str(metal.getResindex()))
+    #For each aa, only select one contact atom. 
+    resindices = np.unique(_contact_aas.getResindices())
+    for rid in resindices:
+        #TO DO: Not the first one, but the closest one for the  such ASP contains two contact atoms.
+        _ct = _contact_aas.select('resindex ' + str(rid))
+        if len(_ct) > 1:
+            dists = [None]*len(_ct)
+            for i in range(len(_ct)):
+                dist = pr.calcDistance(metal, _ct[i])
+                dists[i] = dist
+            ct = _ct[argmin(dists)]
+        else:
+            ct = _ct[0]
+        cts.append(ct)
+
+    ct_len = len(cts)
+
+    pair_infos = []
+
+    for i, j in itertools.combinations(range(ct_len), 2):  
+        pair_info = [] 
+
+        pair_info.append((cts[i].getResname(), cts[j].getResname()))
+        pair_info.append(str(cts[i].getResindex()) + '-' + str(cts[j].getResindex()))
+        dist = pr.calcDistance(cts[i], cts[j])
+        pair_info.append(dist)
+        angle = pr.calcAngle(cts[i], metal, cts[j])
+        pair_info.append(angle)
+
+        pair_infos.append(pair_info)
+    return pair_infos
 
 def ev_atom_distribution(pdbs, centroid_pdb, atom_sel = metal_sel, align_sel = 'bb'):
 

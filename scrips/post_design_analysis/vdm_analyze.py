@@ -1,3 +1,8 @@
+'''
+After the design, we want to check how the vdMs different from the designed one. 
+Are they still the orginal vdM and in the same vdM cluster?
+'''
+
 import os
 import sys
 from metalprot.apps.core import Core

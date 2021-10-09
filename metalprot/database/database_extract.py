@@ -1,12 +1,8 @@
 import os
 import prody as pr
-from scipy.spatial.distance import cdist
-from dataclasses import dataclass
 import shutil
-import sys
-import numpy as np
-import matplotlib.pyplot as plt
 from . import core
+from ..basic.quco import get_metal_contact_atoms
 
 # Basic function. 
 
@@ -54,9 +50,7 @@ def load_cores(workdir):
     return cores
 
 
-# Prepare rcsb database. // extract seq within +-3 aa for each contact aa. 
-
-
+# Prepare rcsb database. // extract seq within +-4 aa for each contact aa. 
 
 def get_metal_core_seq(pdb_prody, metal_sel, extend = 4):
     metal = metal_sel.split(' ')[-1]
@@ -112,6 +106,7 @@ def get_metal_core_seq_2ndshell(pdb_prody, metal_sel, extend = 4):
         metal_cores.append((pdb_prody.getTitle() + '_' + metal + '_'+ str(count), sel_pdb_prody))        
     return metal_cores
 
+
 def extract_all_core_seq_from_path(workdir, metal_sel, extend = 4, extract_2ndshell = False):
     cores = []
     for pdb_path in os.listdir(workdir):
@@ -154,8 +149,42 @@ def superimpose_core_and_writepdb(cores, first, metal_sel, outdir):
         outfile = c[0]
         pr.writePDB(outdir + outfile + '.pdb', c[1])
 
-# Prepare rcsb database. // Reduce duplication.
 
+### Prepare rcsb database. 
+# Filter pdbs based on B factor, contacting aa number etc.
+def rm_core(workdir, outdir, bfactor_cutoff = 45, min_contact_aa_num = 3):
+    '''
+    For core pdbs, we may want to filter based on the B factor, as bfactor = 45 roughly is equal resolution 2.5. 
+    Also for Zn or most metal, we want to keep contact aa to be at least 3.
+    Read and write pdb could be slow. Here is just copy and paste them.
+    '''
+    filtered_pdb_titles = set()
+
+    pdbs = get_all_pbd_prody(workdir)
+
+    for pdb in pdbs:
+        cts = get_metal_contact_atoms(pdb)
+        if len(cts) < min_contact_aa_num:
+            continue
+        bs = []
+        for c in cts:
+            bs.append(c.getBeta())
+
+        if not all([b <= bfactor_cutoff for b in bs]):
+            continue
+        filtered_pdb_titles.add(pdb.getTitle())
+
+    os.makedirs(outdir, exist_ok=True)
+
+    for file in os.listdir(workdir):
+        if '.pdb' not in file:
+            continue
+        if file.split('.')[0] in filtered_pdb_titles:
+            shutil.copyfile(workdir + file, outdir + file)
+    return 
+
+
+# Reduce duplication.
 def reduce_dup(pdbs, metal_sel):
     '''
     Cluster pdbs based on the structure similarity.

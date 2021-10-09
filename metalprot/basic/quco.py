@@ -8,10 +8,37 @@ from .utils import get_ABPLE
 
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
 
+def get_metal_contact_atoms(pdb):
+    '''
+    Extract list of contact atoms from pdb. 
+    Here the pdb could be the core that contain multiple contact atoms.
+    '''
+    #Get metal, binding atom for each binding atom
+    cts = []
+
+    metal = pdb.select(metal_sel)[0]
+    cts.append(metal)
+    _contact_aas = pdb.select('protein and not carbon and not hydrogen and within 2.83 of resindex ' + str(metal.getResindex()))
+    #For each aa, only select one contact atom. 
+    resindices = np.unique(_contact_aas.getResindices())
+    for rid in resindices:
+        #TO DO: Not the first one, but the closest one for the  such ASP contains two contact atoms.
+        _ct = _contact_aas.select('resindex ' + str(rid))
+        if len(_ct) > 1:
+            dists = [None]*len(_ct)
+            for i in range(len(_ct)):
+                dist = pr.calcDistance(metal, _ct[i])
+                dists[i] = dist
+            ct = _ct[argmin(dists)]
+        else:
+            ct = _ct[0]
+        cts.append(ct)
+
+    return cts
 
 def get_contact_atom(pdb):
     '''
-    Get contact atom of a prody pdb.
+    Get contact atom of a vdM.
     '''
     metal = pdb.select(metal_sel)[0]
     _contact_aas = pdb.select('protein and not carbon and not hydrogen and within 2.83 of resindex ' + str(metal.getResindex()))

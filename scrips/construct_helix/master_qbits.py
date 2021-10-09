@@ -1,3 +1,7 @@
+'''
+use master and qbits to evaluate the constructed helixs compared with the std coiledcoils.
+'''
+
 from smallprot import query
 import subprocess
 import os

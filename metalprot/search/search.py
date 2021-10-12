@@ -13,7 +13,6 @@ import scipy.spatial
 from scipy.spatial.distance import cdist, dice
 import datetime
 
-from ..basic import quco
 from ..basic import hull
 from ..basic import utils
 from ..basic.filter import Search_filter
@@ -27,40 +26,40 @@ import multiprocessing as mp
 from multiprocessing.dummy import Pool as ThreadPool
 
 
-def supperimpose_target_bb(_target, _query, win, align_sel='name N CA C'):
+def supperimpose_target_bb(_target, _vdm, win, align_sel='name N CA C'):
     '''
-    Copy the all_metal_query to a new object.
-    Transform the copied all_metal_query to the target win. 
+    Copy the all_metal_vdm to a new object.
+    Transform the copied all_metal_vdm to the target win. 
     '''
 
     target_sel = 'resindex ' + str(win) + ' and ' + align_sel
-    query_sel = 'resindex ' + str(_query.contact_resind) + ' and '+ align_sel
+    query_sel = 'resindex ' + str(_vdm.contact_resind) + ' and '+ align_sel
 
-    q = _query.query.select(query_sel)
+    q = _vdm.query.select(query_sel)
     t = _target.select(target_sel)
     if len(q) != len(t):
         print('supperimpose-target-bb not happening')
         return False
 
     transform = pr.calcTransformation(q, t)
-    transform.apply(_query.query)
-    if _query.hull_ag:
-        transform.apply(_query.hull_ag)  
+    transform.apply(_vdm.query)
+    if _vdm.metal_atomgroup:
+        transform.apply(_vdm.metal_atomgroup)  
 
     return True
 
 
-def supperimpose_centroid(_query, centroid, align_sel='heavy'):
+def supperimpose_centroid(_vdm, centroid, align_sel='heavy'):
     '''
     supperimpose_centroid
     '''
 
-    if len(_query.query.select(align_sel)) != len(centroid.query.select(align_sel)):
+    if len(_vdm.query.select(align_sel)) != len(centroid.query.select(align_sel)):
         print('supperimpose-centroid not happening')
         return False
     
-    transform = pr.calcTransformation(_query.query.select(align_sel), centroid.query.select(align_sel))
-    transform.apply(_query.query)
+    transform = pr.calcTransformation(_vdm.query.select(align_sel), centroid.query.select(align_sel))
+    transform.apply(_vdm.query)
 
     return True
 
@@ -68,8 +67,8 @@ class Search_vdM:
     '''
     The function to search comb is based on nearest neighbor function of sklearn.
     '''
-    def __init__(self, target_pdb, workdir, querys, id_cluster_dict, cluster_centroid_dict, all_metal_query, cluster_centroid_origin_dict = None, num_iters = [3], 
-    rmsd = 0.25, win_filtered = None, contact_querys = None, secondshell_querys = None, 
+    def __init__(self, target_pdb, workdir, vdms, cluster_centroid_dict, all_metal_vdm, 
+    num_iters = [3], rmsd = 0.45, win_filtered = None, secondshell_querys = None, 
     validateOriginStruct = False, search_filter = None, parallel = False, selfcenter_rmsd = 0.45):
 
         if workdir:
@@ -104,26 +103,20 @@ class Search_vdM:
         self.parallel = parallel
 
         #neighbor searching strategy------------- 
-        self.querys = querys #[query]
-        self.all_metal_query = all_metal_query #The query with all_metal_coord_ag
-        self.id_cluster_dict = id_cluster_dict # {metal_id 1234: (HIS, 0)} 
+        self.vdms = vdms #[query]
+        self.all_metal_vdm = all_metal_vdm #The query with all_metal_coord_ag
+        # (depre, delete when the program worked) self.id_cluster_dict = id_cluster_dict # {metal_id 1234: (HIS, 0)} 
         self.cluster_centroid_dict = cluster_centroid_dict #{(HIS, 0): centroid}
-        self.cluster_centroid_origin_dict = cluster_centroid_origin_dict #{(HIS, 0): centroid} Similar to cluster_centroid_dict, except keep the origin cluster coords.
-
 
         self.neighbor_query_dict = dict() # {93: [the only centroid query with all metal coords]}
         self.neighbor_pair_dict = dict() # {(33, 37): [xs-33 near 37 coords]}
-        self.neighbor_comb_dict = dict() 
-        # { (wins, ids), (comb, combinfo)}
-        # {((0, 1, 2, 3)(0, 0, 0, 0)): {(0:[1, 3, 4], 1:[2, 3, 4], 2: [2, 6, 7], 3:[1, 2, 3]), combinfo}} Please check neighbor_win2comb()
-
-        #contact atoms for geometry vdM score----
-        self.contact_querys = contact_querys
+        self.neighbor_comb_dict = dict() # { (wins, ids), (comb, combinfo)}
+        # exp. {((0, 1, 2, 3)(0, 0, 0, 0)): {(0:[1, 3, 4], 1:[2, 3, 4], 2: [2, 6, 7], 3:[1, 2, 3]), combinfo}} Please check neighbor_win2comb()
 
         #secondshell-----------------------------
         self.secondshell_querys = secondshell_querys
 
-        #For_scoring-----------------------------
+        #For multi scoring-----------------------------
         self.aa_num_dict = None
         
         #For developing output purpose-----------
@@ -141,8 +134,8 @@ class Search_vdM:
 
         #For multiScore.
         aa_num_dict = {}
-        for key in self.id_cluster_dict.keys():
-            aa = self.id_cluster_dict[key][0]
+        for v in self.vdms:
+            aa = v.aa_type
             if aa not in aa_num_dict.keys():
                 aa_num_dict[aa] = 0
             else:
@@ -215,10 +208,10 @@ class Search_vdM:
                 if self.target.select('resindex ' + str(w) + ' name CA').getResnames()[0] not in ['HIS', 'GLU', 'ASP', 'CYS']:
                     continue
 
-            _query = self.all_metal_query.copy()
-            x = supperimpose_target_bb(self.target, _query, w, align_sel='name N CA C')
+            _vdm = self.all_metal_vdm.copy()
+            x = supperimpose_target_bb(self.target, _vdm, w, align_sel='name N CA C')
             if x:
-                self.neighbor_query_dict[w] = _query
+                self.neighbor_query_dict[w] = _vdm
         return
 
 
@@ -242,8 +235,8 @@ class Search_vdM:
                     continue
                 # if self.query_all_metal and not check_hull_satisfy(self.target, wx, wy, self.query_all_metal_x, self.query_all_metal_y):
                 #     continue
-                n_x = self.neighbor_query_dict[wx].get_hull_points()
-                n_y = self.neighbor_query_dict[wy].get_hull_points()
+                n_x = self.neighbor_query_dict[wx].get_metal_mem_coords()
+                n_y = self.neighbor_query_dict[wy].get_metal_mem_coords()
                 # print('-------------------')
                 # print(wx)
                 # print(wy)
@@ -297,7 +290,7 @@ class Search_vdM:
                 resx = self.target.select('name CA and resindex ' + str(wx)).getResnames()[0]
                 resy = self.target.select('name CA and resindex ' + str(wy)).getResnames()[0]
 
-                if not self.id_cluster_dict[i][0] == resx:
+                if not self.vdms[i].aa_type == resx:
                     x_in_y_mask[i] = [False for j in range(len(x_in_y[i]))] 
                     continue
 
@@ -305,7 +298,7 @@ class Search_vdM:
                 apx = self.target_abple[wx]
                 apy = self.target_abple[wy]
        
-                if not self.querys[i].abple == apx:
+                if not self.vdms[i].abple == apx:
                     x_in_y_mask[i] = [False for j in range(len(x_in_y[i]))] 
                     continue
 
@@ -314,19 +307,19 @@ class Search_vdM:
                 phix, psix = self.phipsi[wx]
                 phiy, psiy = self.phipsi[wy]
 
-                if (not utils.filter_phipsi(phix, self.querys[i].phi, self.search_filter.max_phipsi_val)) or (not utils.filter_phipsi(psix, self.querys[i].psi, self.search_filter.max_phipsi_val)):
+                if (not utils.filter_phipsi(phix, self.vdms[i].phi, self.search_filter.max_phipsi_val)) or (not utils.filter_phipsi(psix, self.vdms[i].psi, self.search_filter.max_phipsi_val)):
                     x_in_y_mask[i] = [False for j in range(len(x_in_y[i]))]
                     continue
            
 
             if self.search_filter.filter_vdm_score:
-                if self.querys[i].score < self.search_filter.min_vdm_score:
+                if self.vdms[i].score < self.search_filter.min_vdm_score:
                     x_in_y_mask[i] = [False for j in range(len(x_in_y[i]))]
                     continue
             
 
             if self.search_filter.filter_vdm_count:
-                if self.querys[i].clu_num < self.search_filter.min_vdm_clu_num:
+                if self.vdms[i].clu_num < self.search_filter.min_vdm_clu_num:
                     x_in_y_mask[i] = [False for j in range(len(x_in_y[i]))]
                     continue
                            
@@ -336,7 +329,7 @@ class Search_vdM:
 
                 if self.validateOriginStruct:
                     resy = self.target.select('name CA and resindex ' + str(wy)).getResnames()[0]
-                    if not self.id_cluster_dict[j_ind][0] == resy:
+                    if not self.vdms[j_ind].aa_type == resy:
                         x_in_y_mask[i][j] = False
                         continue
 
@@ -348,18 +341,18 @@ class Search_vdM:
 
                 if self.search_filter.filter_phipsi:
                     phiy, psiy = self.phipsi[wy]
-                    if (not utils.filter_phipsi(phiy, self.querys[j_ind].phi, self.search_filter.max_phipsi_val)) or (not utils.filter_phipsi(psiy, self.querys[j_ind].psi, self.search_filter.max_phipsi_val)) :
+                    if (not utils.filter_phipsi(phiy, self.vdms[j_ind].phi, self.search_filter.max_phipsi_val)) or (not utils.filter_phipsi(psiy, self.vdms[j_ind].psi, self.search_filter.max_phipsi_val)) :
                         x_in_y_mask[i][j] = False
                         continue
 
                 if self.search_filter.filter_vdm_score:
-                    if self.querys[j_ind].score < self.search_filter.min_vdm_score:
+                    if self.vdms[j_ind].score < self.search_filter.min_vdm_score:
                         x_in_y_mask[i][j] = False 
                         continue
             
 
                 if self.search_filter.filter_vdm_count:
-                    if self.querys[j_ind].clu_num < self.search_filter.min_vdm_clu_num:
+                    if self.vdms[j_ind].clu_num < self.search_filter.min_vdm_clu_num:
                         x_in_y_mask[i][j] = False 
                         continue
         
@@ -476,7 +469,7 @@ class Search_vdM:
             if (x, y) not in self.neighbor_pair_dict.keys():
                 return None
         
-        graph = Graph(win_comb, [len(self.querys) for i in range(len(win_comb))])
+        graph = Graph(win_comb, [len(self.vdms) for i in range(len(win_comb))])
 
         graph.calc_pair_connectivity(self.neighbor_pair_dict)
 
@@ -494,7 +487,7 @@ class Search_vdM:
         # path represent the id of each metal vdM.
         for path in graph.all_paths:
             
-            clu_key = tuple([self.id_cluster_dict[p] for p in path])
+            clu_key = tuple([self.vdms[p].get_cluster_key() for p in path])
             
             if clu_key in clu_dict:
                 for i in range(len(win_comb)):
@@ -525,13 +518,14 @@ class Search_vdM:
                 comb_dict[(wins, clu_key)].query_dict[win] = []
 
                 clu = clu_key[i]
-                centroid = self.cluster_centroid_dict[clu].copy()
-                
+                centroid_id = self.cluster_centroid_dict[clu]
+                centroid = self.vdms[centroid_id].copy()
+
                 supperimpose_target_bb(_target, centroid, win)
                 comb_dict[(wins, clu_key)].centroid_dict[win] = centroid
 
                 for id in comb_dict[(wins, clu_key)].comb[win]:
-                    _query = self.querys[id].copy()
+                    _query = self.vdms[id].copy()
 
                     supperimpose_target_bb(_target, _query, win)
                     comb_dict[(wins, clu_key)].query_dict[win].append(_query)
@@ -561,15 +555,15 @@ class Search_vdM:
             except:
                 print('totals: ' + str(totals)) 
             #total_clu = sum([self.cluster_centroid_dict[clu_key[i]].total_clu for i in range(len(wins))])
-            scores = [self.cluster_centroid_dict[clu_key[i]].score for i in range(len(wins))]
+            scores = [self.vdms[self.cluster_centroid_dict[clu_key[i]]].score for i in range(len(wins))]
             comb_dict[key].totals = totals
             comb_dict[key].scores = scores
 
             #Calc fraction score
-            fracScore = sum([self.cluster_centroid_dict[clu_key[i]].clu_num for i in range(len(wins))])/sum([self.cluster_centroid_dict[clu_key[i]].clu_total_num for i in range(len(wins))])
+            fracScore = sum([self.vdms[self.cluster_centroid_dict[clu_key[i]]].clu_num for i in range(len(wins))])/sum([self.vdms[self.cluster_centroid_dict[clu_key[i]]].clu_total_num for i in range(len(wins))])
             weight = 0
             for i in range(len(wins)):
-                c = self.cluster_centroid_dict[clu_key[i]]
+                c = self.vdms[self.cluster_centroid_dict[clu_key[i]]]
                 weight += sum(totals)/c.clu_total_num
             comb_dict[key].fracScore = fracScore*weight
 
@@ -685,7 +679,7 @@ class Search_vdM:
                 centroid = comb_dict[key].centroid_dict[w]
                 pdb_path = outdir + tag + '_centroid_' + centroid.query.getTitle() + '.pdb'
                 pr.writePDB(pdb_path, centroid.query)
-                clu_allmetal_coords = centroid.get_hull_points()
+                clu_allmetal_coords = centroid.get_metal_mem_coords()
                 hull.write2pymol(clu_allmetal_coords, outdir, tag + '_w_' + str(w) +'_points.pdb')  
         return   
 

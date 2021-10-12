@@ -2,7 +2,7 @@ import os
 import numpy as np
 import prody as pr
 
-from ..basic import quco
+from ..basic import vdm
 from ..basic import hull
 from ..basic import utils
 from ..database import core
@@ -55,12 +55,8 @@ class Search_eval(Search_selfcenter):
         '''
         Use the path to create comb_dict.
         '''
-        cluster_id_dict = {}
-        for key in self.id_cluster_dict.keys():
-            cluster_id_dict[self.id_cluster_dict[key]] = key
-
         clu_key = tuple([v.get_cluster_key() for v in vdM_comb])
-        path = [cluster_id_dict[ck] for ck in clu_key]
+        path = [v.id for v in vdM_comb]
 
         comb_dict = {}
         comb = dict()
@@ -133,7 +129,7 @@ class Search_eval(Search_selfcenter):
 
         wins = []
         combs = []
-        _cores = database_extract.get_metal_core_seq(self.target, quco.metal_sel, extend = 4)
+        _cores = database_extract.get_metal_core_seq(self.target, vdm.metal_sel, extend = 4)
         cores = [core.Core(c[1]) for c in _cores]
 
         if len(_cores) <= 0:
@@ -162,22 +158,22 @@ class Search_eval(Search_selfcenter):
             print('The vdM at {} from the protein bb is not successfully extracted.'.format(w))
             return best_v, best_id, min_rmsd
 
-        coord = [v.select(quco.metal_sel)[0].getCoords()]
+        coord = [v.select(vdm.metal_sel)[0].getCoords()]
 
-        ns = self.neighbor_query_dict[w].get_hull_points()
+        ns = self.neighbor_query_dict[w].get_metal_mem_coords()
 
         x_in_y, x_has_y = self.calc_pairwise_neighbor(coord, ns, 1.5)
 
 
         for ind in x_in_y[0]:
-        #for ind in range(len(self.querys)):
+        #for ind in range(len(self.vdms)):
             #TO DO: there is a bug of the vdM database. 
             #If the order of the atom names is not consistent (such as '-ND1 CD2-' in vdM but '-CD2 ND1-' in bb), it could not target the orginal vdM.
-            if len(self.querys[ind].query.select('heavy')) != len(v.select('heavy')):
+            if len(self.vdms[ind].query.select('heavy')) != len(v.select('heavy')):
                 #print('supperimpose_target_bb not happening')
                 continue
-            #print(self.querys[ind].query.getTitle())
-            test_v = self.querys[ind].copy()
+            #print(self.vdms[ind].query.getTitle())
+            test_v = self.vdms[ind].copy()
     
             transform = pr.calcTransformation(test_v.query.select('heavy'), v.select('heavy'))
             transform.apply(test_v.query)
@@ -194,20 +190,21 @@ class Search_eval(Search_selfcenter):
     def write_closest_vdM_clu_points(self, best_v, w, evaldir, tag):
         clu_key = best_v.get_cluster_key()
 
-        if self.cluster_centroid_origin_dict:
-            origin_centroid = self.cluster_centroid_origin_dict[clu_key].copy()
-            supperimpose_target_bb(self.target, origin_centroid, w)
+        ## Plan to depre
+        # if self.cluster_centroid_origin_dict:
+        #     origin_centroid = self.cluster_centroid_origin_dict[clu_key].copy()
+        #     supperimpose_target_bb(self.target, origin_centroid, w)
 
-            #pr.writePDB(evaldir + tag + 'origin_' + origin_centroid.query.getTitle(), origin_centroid.query)
-            clu_origin_allmetal_coords = origin_centroid.get_hull_points()
-            hull.write2pymol(clu_origin_allmetal_coords, evaldir, tag + '_origin_w_' + str(w) +'_points.pdb') 
+        #     #pr.writePDB(evaldir + tag + 'origin_' + origin_centroid.query.getTitle(), origin_centroid.query)
+        #     clu_origin_allmetal_coords = origin_centroid.get_metal_mem_coords()
+        #     hull.write2pymol(clu_origin_allmetal_coords, evaldir, tag + '_origin_w_' + str(w) +'_points.pdb') 
 
-
-        centroid = self.cluster_centroid_dict[clu_key].copy()
+        centroid_id = self.cluster_centroid_dict[clu_key]
+        centroid = self.vdms[centroid_id].copy()
         supperimpose_target_bb(self.target, centroid, w)
 
         pr.writePDB(evaldir + tag + centroid.query.getTitle(), centroid.query)
-        clu_allmetal_coords = centroid.get_hull_points()
+        clu_allmetal_coords = centroid.get_metal_mem_coords()
         hull.write2pymol(clu_allmetal_coords, evaldir, tag + '_w_' + str(w) +'_points.pdb') 
 
         origin_best_v = best_v.copy()
@@ -220,7 +217,7 @@ class Search_eval(Search_selfcenter):
 
     def eval_extract_closest_vdMs(self, wins, combs):
         '''
-        First supperimpose the all_metal_query. 
+        First supperimpose the all_metal_vdm. 
         Then use nearest neighbor to get candidates by calculate the metal distance with dist 0.25.
         Then superimpose and obtain the one with min rmsd. 
         '''
@@ -242,7 +239,7 @@ class Search_eval(Search_selfcenter):
                 if best_v:
                     best_wins.append(w)
                     best_vdMs.append(best_v)
-                    clu_id = self.id_cluster_dict[best_id]
+                    clu_id = self.vdms[best_id].get_cluster_key()
                     tag = '/win_' + str(w) + '_clu_' + '_'.join([str(ci) for ci in clu_id]) + '_rmsd_' + str(round(min_rmsd, 3)) + '_'                   
                     print(tag + ' : best_id ' + str(best_id))
                     pr.writePDB(evaldir + tag + best_v.query.getTitle(), best_v.query)

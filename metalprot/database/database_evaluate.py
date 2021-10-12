@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from numpy.core.fromnumeric import argmin
 import itertools
+from sklearn.neighbors import NearestNeighbors
 
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
 
@@ -48,6 +49,73 @@ def calc_pair_geometry(pdb):
 
         pair_infos.append(pair_info)
     return pair_infos
+
+
+def calc_bb_clash_min_dist(pdb):
+    '''
+    in the clashing filter for bb and vdM sc clashing, we are trying to find the min dist between bb and any sc atoms.
+    Here we want to get the distribution of such infomation from core pdb.
+    '''
+    metal = pdb.select(metal_sel)[0]
+    _contact_aas = pdb.select('protein and not carbon and not hydrogen and within 2.83 of resindex ' + str(metal.getResindex()))
+    #For each aa, only select one contact atom. 
+    resindices = np.unique(_contact_aas.getResindices())
+
+    other_aa_bb_coords = pdb.select('bb and heavy and not resindex ' + ' '.join([str(r) for r in resindices])).getCoords()
+    neigh_y = NearestNeighbors(radius= 10)
+    neigh_y.fit(other_aa_bb_coords)
+    all_min_dist = []
+    for resindex in resindices:
+        contact_aa_sc = pdb.select('sc and heavy and resindex ' + str(resindex))
+        if not contact_aa_sc:
+            print('Failed extracting: ' + pdb.getTitle() + ' ' + str(resindex))
+            continue
+        contact_aa_sc_coords = contact_aa_sc.getCoords()
+        x_in_y = neigh_y.radius_neighbors(contact_aa_sc_coords)
+        min_dist = []
+        for at in x_in_y[0]:
+            if len(at) <= 0:
+                continue
+            min_dist.append(min(at))
+        all_min_dist.append(min(min_dist))
+
+    return all_min_dist
+
+def calc_vdm_clash_min_dist(pdb):
+    '''
+    in the clashing filter for bb and vdM sc clashing, we are trying to find the min dist between bb and any sc atoms.
+    Here we want to get the distribution of such infomation from core pdb.
+    '''
+    metal = pdb.select(metal_sel)[0]
+    _contact_aas = pdb.select('protein and not carbon and not hydrogen and within 2.83 of resindex ' + str(metal.getResindex()))
+    #For each aa, only select one contact atom. 
+    resindices = np.unique(_contact_aas.getResindices())
+
+    all_min_dist = []
+    for i, j in itertools.combinations(resindices, 2):
+        x = pdb.select('sc and heavy and resindex ' + str(i))
+        if not x:
+            print('Failed extracting: ' + pdb.getTitle() + ' ' + str(x))
+            continue
+        y = pdb.select('sc and heavy and resindex ' + str(j))
+        if not y:
+            print('Failed extracting: ' + pdb.getTitle() + ' ' + str(y))
+            continue
+
+        neigh_y = NearestNeighbors(radius= 10)
+        neigh_y.fit(x.getCoords())
+
+        x_in_y = neigh_y.radius_neighbors(y.getCoords())
+        min_dist = []
+        for at in x_in_y[0]:
+            if len(at) <= 0:
+                continue
+            min_dist.append(min(at))
+        if len(min_dist) <= 0:
+            continue
+        all_min_dist.append(min(min_dist))
+
+    return all_min_dist
 
 def ev_atom_distribution(pdbs, centroid_pdb, atom_sel = metal_sel, align_sel = 'bb'):
 

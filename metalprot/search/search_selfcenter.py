@@ -15,7 +15,6 @@ import datetime
 
 from sklearn import neighbors
 
-from ..basic import quco
 from ..basic import hull
 from ..basic import utils
 from ..database import core
@@ -34,14 +33,6 @@ class Search_selfcenter(Search_vdM):
     Inheritated from Search_vdM. 
     Except here is searching the selfcenter vdM database. 
     '''
-
-    def get_query_id_dict(self):
-        #TO DO: Temp useage for query id extraction. the id will be in quco.query in the future.
-        query_id_dict = {}
-        for i in range(len(self.querys)):
-            key = self.querys[i].query.getTitle()
-            query_id_dict[key] = i
-        return query_id_dict
 
     def run_selfcenter_search(self):
         '''
@@ -157,7 +148,7 @@ class Search_selfcenter(Search_vdM):
             if (x, y) not in self.neighbor_pair_dict.keys():
                 return None
         
-        graph = Graph(win_comb, [len(self.querys) for i in range(len(win_comb))])
+        graph = Graph(win_comb, [len(self.vdms) for i in range(len(win_comb))])
 
         graph.calc_pair_connectivity(self.neighbor_pair_dict)
 
@@ -166,14 +157,14 @@ class Search_selfcenter(Search_vdM):
         print('graph.paths len {}'.format(len(graph.all_paths)))
 
         #TO DO: Here is a temp method to solve extream solutions. Mostly happened in 4 CYS binding cores.
-        if len(graph.all_paths) > 10000:
-            print('Too many paths to be considered so far.')
-            graph.all_paths = graph.all_paths[0:10001]
+        # if len(graph.all_paths) > 10000:
+        #     print('Too many paths to be considered so far.')
+        #     graph.all_paths = graph.all_paths[0:10001]
 
         # path represent the id of each metal vdM.
         for path in graph.all_paths:
             
-            clu_key = tuple([self.id_cluster_dict[p] for p in path])
+            clu_key = tuple([self.vdms[p].get_cluster_key() for p in path])
 
             comb = dict()
             for i in range(len(win_comb)):
@@ -201,13 +192,13 @@ class Search_selfcenter(Search_vdM):
 
             len_s = []
             for w in win_comb:
-                ns = comb_dict[key].centroid_dict[w].get_hull_points()
+                ns = comb_dict[key].centroid_dict[w].get_metal_mem_coords()
                 len_s.append(len(ns))
 
             for wx, wy in itertools.combinations(win_comb, 2):
 
-                n_x = comb_dict[key].centroid_dict[wx].get_hull_points()
-                n_y = comb_dict[key].centroid_dict[wy].get_hull_points()
+                n_x = comb_dict[key].centroid_dict[wx].get_metal_mem_coords()
+                n_y = comb_dict[key].centroid_dict[wy].get_metal_mem_coords()
                 # print('-------------------')
                 # print(wx)
                 # print(wy)
@@ -224,33 +215,33 @@ class Search_selfcenter(Search_vdM):
 
             graph.get_paths()
 
-            overlap_id_dict = {} 
+            overlap_ind_dict = {} 
             overlap_query_id_dict = {} # {win:[overlap ids]} need to get {win:[query ids]} 
 
             for path in graph.all_paths:
                 for i in range(len(win_comb)):
                     w = win_comb[i]
-                    value = list(comb_dict[key].centroid_dict[w].selfcenter_cluster_queryid)[path[i]]
+                    value = list(comb_dict[key].centroid_dict[w].clu_member_ids)[path[i]]
 
                     if self.search_filter.selfcenter_filter_member_phipsi:
                         phix, psix = self.phipsi[w]
-                        if (not utils.filter_phipsi(phix, self.querys[value].phi, self.search_filter.max_phipsi_val)) or (not utils.filter_phipsi(psix, self.querys[value].psi, self.search_filter.max_phipsi_val)):
+                        if (not utils.filter_phipsi(phix, self.vdms[value].phi, self.search_filter.max_phipsi_val)) or (not utils.filter_phipsi(psix, self.vdms[value].psi, self.search_filter.max_phipsi_val)):
                             continue
 
                     if w in overlap_query_id_dict.keys():
-                        overlap_id_dict[w].add(path[i])
+                        overlap_ind_dict[w].add(path[i])
                         overlap_query_id_dict[w].add(value)
                     else:
-                        overlap_id_dict[w] = set()
-                        overlap_id_dict[w].add(path[i])
+                        overlap_ind_dict[w] = set()
+                        overlap_ind_dict[w].add(path[i])
                         overlap_query_id_dict[w] = set()
                         overlap_query_id_dict[w].add(value)
 
             #TO DO: there is a bug here. The filter_phipsi filter the centroid vdM?
-            if len(overlap_id_dict.keys()) != len(win_comb):
+            if len(overlap_ind_dict.keys()) != len(win_comb):
                 continue
             
-            comb_dict[key].overlap_id_dict = overlap_id_dict
+            comb_dict[key].overlap_ind_dict = overlap_ind_dict
             comb_dict[key].overlap_query_id_dict = overlap_query_id_dict 
 
         return
@@ -261,8 +252,6 @@ class Search_selfcenter(Search_vdM):
         Here we try to remove any solution have seen in a better solution. The comb is in the overlap of a better comb.
         '''
         comb_dict_filter = {}
-
-        query_id_dict = self.get_query_id_dict()
 
         comb_dict_sorted = {k: v for k, v in sorted(comb_dict.items(), key=lambda item: sum(item[1].totals), reverse = True)}
 
@@ -301,9 +290,7 @@ class Search_selfcenter(Search_vdM):
 
                 seen_here = []
                 for w in key[0]:
-                    title = info.centroid_dict[w].query.getTitle()
-                    id = query_id_dict[title]
-                    
+                    id = info.centroid_dict[w].id
                     if id not in binfo.overlap_query_id_dict[w]:
                         seen_here.append(False)
                     else:
@@ -349,11 +336,11 @@ class Search_selfcenter(Search_vdM):
                 centroid = comb_dict[key].centroid_dict[w]
                 pdb_path = outdir + tag + '_centroid_' + centroid.query.getTitle() + '.pdb'
                 pr.writePDB(pdb_path, centroid.query)
-                clu_allmetal_coords = centroid.get_hull_points()
+                clu_allmetal_coords = centroid.get_metal_mem_coords()
                 hull.write2pymol(clu_allmetal_coords, outdir, tag + '_w_' + str(w) +'_points.pdb')  
             
             #Write overlap
-            if not comb_dict[key].overlap_id_dict:
+            if not comb_dict[key].overlap_ind_dict:
                 continue
             for w in key[0]:
                 metal_coords = []
@@ -361,7 +348,7 @@ class Search_selfcenter(Search_vdM):
                 #candidate_ids = comb_dict[key].overlap_query_id_dict[w]
                 # max_out = 0 #To reduce number of output. 
                 # for cid in candidate_ids:   
-                #     cquery = self.querys[cid].copy()
+                #     cquery = self.vdms[cid].copy()
                 #     pdb_path = outdir + tag + cquery.query.getTitle() + '_w_' + str(w) + '_apble_' + cquery.abple + '.pdb'
                  
                 #     try:
@@ -375,10 +362,10 @@ class Search_selfcenter(Search_vdM):
                     
                 #     metal_coords.append(cquery.get_metal_coord())
 
-                candidate_ids = comb_dict[key].overlap_id_dict[w]
+                candidate_ids = comb_dict[key].overlap_ind_dict[w]
                 #print(len(candidate_ids))
                 centroid = comb_dict[key].centroid_dict[w]
-                clu_allmetal_coords = centroid.get_hull_points()
+                clu_allmetal_coords = centroid.get_metal_mem_coords()
                 for cid in candidate_ids:
                     #print(len(clu_allmetal_coords[cid]))
                     metal_coords.append(clu_allmetal_coords[cid])
@@ -497,12 +484,13 @@ class Search_selfcenter(Search_vdM):
                 comb_dict[(wins, clu_key)].query_dict[win] = []
 
                 clu = clu_key[i]
-                centroid = self.cluster_centroid_dict[clu].copy()
+                centroid_id = self.cluster_centroid_dict[clu]
+                centroid = self.vdms[centroid_id].copy()
                 supperimpose_target_bb(_target, centroid, win)
                 comb_dict[(wins, clu_key)].centroid_dict[win] = centroid
 
                 for id in comb_dict[(wins, clu_key)].comb[win]:
-                    _query = self.querys[id].copy()
+                    _query = self.vdms[id].copy()
 
                     supperimpose_target_bb(_target, _query, win)
                     comb_dict[(wins, clu_key)].query_dict[win].append(_query)

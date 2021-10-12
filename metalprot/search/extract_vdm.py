@@ -5,6 +5,7 @@ import prody as pr
 from scipy.spatial.distance import cdist
 from ..database.database_extract import get_all_pbd_prody
 from ..database.database_cluster import clu_info
+from ..basic.vdm import VDM
 from ..basic.quco import Query, Comb, Cluster
 from ..basic.hull import transfer2pdb
 
@@ -39,7 +40,7 @@ def extract_query(workdir, file_path = '_summary.txt', score_cut = 0, clu_num_cu
     for info in filtered_infos:
         centroid = [file for file in os.listdir(workdir  + str(info.clu_rank)) if 'centroid' in file][0]
         pbd = pr.parsePDB(workdir + str(info.clu_rank) + '/' + centroid)
-        query = Query(pbd, info.score, info.clu_num, info.total_num)
+        query = VDM(pbd, score = info.score, clu_num = info.clu_num, clu_total_num = info.total_num)
         query.path = workdir + str(info.clu_rank) + '/'
         querys.append(query)
 
@@ -79,7 +80,7 @@ def extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_inc
     return querys
 
 
-def get_vdm_cluster(query):
+def get_mem_vdms(query):
     '''
     load all members of one centroid and build the cluster. 
     '''
@@ -91,49 +92,17 @@ def get_vdm_cluster(query):
 
     for ind in ks:
         pdb = pdbs[ind]
-        querys.append(Query(pdb, query.score, query.clu_num, query.clu_total_num, query.is_bivalent, query.win, query.path))
+        querys.append(VDM(pdb, score = query.score, clu_num = query.clu_num, clu_total_num = query.clu_total_num))
 
-    cluster = Cluster(querys)
-
-    return cluster
+    return querys
 
 
-'''
-Deprecated. The function will be used similar as get_vdm_cluster.
-'''
-def get_vdm_mem(query, random = None):
-    '''
-    load all members of one centroid.
-    '''
-    vdms = []
-    
-    pdbs = get_all_pbd_prody(query.path)
+def get_mem_vdm_names(query):
+    vdm_names = []
 
-    ks = list(range(len(pdbs)))
+    for vn in os.listdir(query.path):
+        if '.pdb' not in vn:
+            continue
+        vdm_names.append(vn.split('.')[0])
 
-    if random and len(ks) > random:
-        ks = np.random.choice(ks, random, replace=False)
-    for ind in ks:
-        pdb = pdbs[ind]
-        vdms.append(Query(pdb, query.score, query.clu_num, query.clu_total_num, query.is_bivalent, query.win, query.path))
-
-    return vdms
-
-
-'''
-Deprecated. The function will be transfered into Cluster.
-'''
-def extract_mem_metal_point(query, align_sel = 'name N C CA', metal_sel = 'ion or name NI MN ZN CO CU MG FE'):
-
-    pdbs = get_all_pbd_prody(query.path)
-    points = []
-    for pdb in pdbs:
-
-        pr.calcTransformation(pdb.select(align_sel), query.query.select(align_sel)).apply(pdb)
-
-        points.append(pdb.select(metal_sel)[0].getCoords())
-
-    query.hull_ag = transfer2pdb(points)
-
-    return
-
+    return vdm_names

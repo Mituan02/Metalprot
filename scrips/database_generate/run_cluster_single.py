@@ -4,6 +4,7 @@ import prody as pr
 #sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
 from metalprot.database import database_extract as ldb
 from metalprot.database import database_cluster as ldb_clu
+from metalprot.database import database_vdMAtomOrder
 
 def extract_single_vdm(cores, outdir, AA, key, basic = True, extention = None, n = None, key_out = None, phipsi = False):
     for c in cores:   
@@ -20,7 +21,7 @@ def extract_single_vdm(cores, outdir, AA, key, basic = True, extention = None, n
 
 ### set up parameters
 
-workdir = "/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20210624/"
+workdir = "/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211008/"
 
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
 align_sel_backbone = 'name C CA N O NI MN ZN CO CU MG FE or ion'
@@ -28,7 +29,7 @@ align_sel_backbone = 'name C CA N O NI MN ZN CO CU MG FE or ion'
 cores = ldb.load_cores(workdir + '_Seq_core_date_reps/')
 
 
-AA = 'CYS'
+AA = 'ASP'
 
 len_sel = 9
 
@@ -91,12 +92,27 @@ ldb.run_cluster(_pdbs, workdir, 'M3-1_AAext5Metal_' + AA + '_cluster02/', rmsd =
 ### Align his core with phipsi------------------------------------------------------------------------------------ 
 
 # AAMetal_HIS
-outdir = workdir + '20210916_2017_2018/'
+outdir = workdir + '20211009_all/'
 os.makedirs(outdir, exist_ok = True)
 
 extract_single_vdm(cores, outdir + 'AAMetalPhiPsi_' + AA + '_reps/', AA = AA, key = 'AAMetalPhiPsi_' + AA, basic = False, phipsi=True)
 
-_pdbs = ldb.get_all_pbd_prody(outdir + 'AAMetalPhiPsi_' + AA + '_reps/')
+if AA == 'ASP' or AA == 'GLU':
+    _pdbs = []
+    for file in os.listdir(outdir + 'AAMetalPhiPsi_' + AA + '_reps/'):
+        #print(file)
+        if '.pdb' not in file:
+            continue
+        pdb = pr.parsePDB(outdir + 'AAMetalPhiPsi_' + AA + '_reps/' + file)
+        database_vdMAtomOrder.asp_glu_oxy_shift(pdb)
+        _pdbs.append(pdb)
+
+    _outdir =  outdir + 'AAMetalPhiPsi_' + AA + '_reps_shift/'
+    os.makedirs(_outdir, exist_ok=True)
+    for pdb in _pdbs:
+        pr.writePDB(_outdir + pdb.getTitle(), pdb)
+else:
+    _pdbs = ldb.get_all_pbd_prody(outdir + 'AAMetalPhiPsi_' + AA + '_reps/')
 
 ldb_clu.run_cluster(_pdbs, outdir, 'AAMetalPhiPsi_' + AA + '_cluster05/', rmsd = 0.5, metal_sel = metal_sel, len_sel = len_sel_sc, align_sel = 'heavy', min_cluster_size = 0, tag = 'AAMetalPhiPsi_' + AA + '_')
 

@@ -52,7 +52,7 @@ class Search_filter:
 
 
     @staticmethod
-    def vdm_clash(vdms, target, clash_dist = 1.8, unsupperimposed = True, wins = None, align_sel = 'name N CA C'):
+    def vdm_clash(vdms, target, vdm_vdm_clash_dist = 2.7, vdm_bb_clash_dist = 2.2, unsupperimposed = True, wins = None, align_sel = 'name N CA C'):
         '''
         clashing with sklearn.neighbors NearestNeighbors method.
         All sc except CB atom of vdm are used for clashing checking.
@@ -76,22 +76,26 @@ class Search_filter:
                 transform.apply(vdm.query)
             
             vdm_sel = 'protein and heavy and sc and not name CB'
-
             coord = vdm.query.select(vdm_sel).getCoords()
             coords.append(coord)
 
-        coord = target.select('protein and heavy and bb').getCoords()
-        coords.append(coord)
-
         for i, j in itertools.combinations(range(len(coords)), 2):
 
-            neigh_y = NearestNeighbors(radius= clash_dist)
+            neigh_y = NearestNeighbors(radius= vdm_vdm_clash_dist)
             neigh_y.fit(coords[i])
             x_in_y = neigh_y.radius_neighbors(coords[j])
             x_has_y = any([True if len(a) >0 else False for a in x_in_y[1]])
             if x_has_y:
                 return True
         
+        bb_coord = target.select('protein and heavy and bb').getCoords()
+        for i in range(len(coords)):
+            neigh_y = NearestNeighbors(radius= vdm_bb_clash_dist)
+            neigh_y.fit(bb_coord)
+            x_in_y = neigh_y.radius_neighbors(coords[i])
+            x_has_y = any([True if len(a) >0 else False for a in x_in_y[1]])
+            if x_has_y:
+                return True
         return False
 
 

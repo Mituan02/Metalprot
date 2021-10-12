@@ -1,4 +1,5 @@
 import os
+from re import T
 import sys
 import prody as pr
 import numpy as np
@@ -12,24 +13,21 @@ import pickle
 python /mnt/e/GitHub_Design/Metalprot/scrips/search_selfcenter/run_selfcenter_search.py
 '''
 
-query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/20210916_2017_2018_selfcenter/pickle_noCys/'
+query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211008/20211009_selfcenter/pickle_noCYS_alignBB/'
 
 
-with open(query_dir + 'AllMetalQuery.pkl', 'rb') as f:
-    query_all_metal = pickle.load(f)
+with open(query_dir + 'all_metal_vdm.pkl', 'rb') as f:
+    all_metal_vdm = pickle.load(f)
 
 with open(query_dir + 'AAMetalPhiPsi.pkl', 'rb') as f:
-    all_querys = pickle.load(f)
+    all_vdms = pickle.load(f)
 
 with open(query_dir + 'cluster_centroid_dict.pkl', 'rb') as f:
     cluster_centroid_dict = pickle.load(f)
 
-with open(query_dir + 'id_cluster_dict.pkl', 'rb') as f:
-    id_cluster_dict = pickle.load(f)
 
-cluster_centroid_origin_dict = None 
 
-print(len(all_querys))
+print(len(all_vdms))
 
 
 ### run Search_struct
@@ -63,9 +61,8 @@ _filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_p
     after_search_filter = True, pair_angle_range = [92, 116], pair_aa_aa_dist_range = [3.0, 3.5], pair_metal_aa_dist_range = None,
     filter_qt_clash = True, write_filtered_result = True)
 
-ss =  search_selfcenter.Search_selfcenter(target_path, outdir, all_querys, id_cluster_dict, cluster_centroid_dict, 
-    query_all_metal, cluster_centroid_origin_dict, num_iters, rmsd_cuts, 
-    win_filter, validateOriginStruct = False, search_filter= _filter, parallel = True)
+ss =  search_selfcenter.Search_selfcenter(target_path, outdir, all_vdms, cluster_centroid_dict, all_metal_vdm, 
+    num_iters, rmsd_cuts, win_filter, validateOriginStruct = True, search_filter= _filter, parallel = False)
 
 ss.run_selfcenter_search()
 #ss.run_selfcenter_search2()

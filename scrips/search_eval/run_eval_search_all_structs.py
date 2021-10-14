@@ -46,7 +46,7 @@ def run_search(workdir, target_file, query_all_metal, all_querys, cluster_centro
     _filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_phipsi_val = 25, 
         filter_vdm_score = False, min_vdm_score = 0, filter_vdm_count = False, min_vdm_clu_num = 20,
         after_search_filter = True, pair_angle_range = [92, 116], pair_aa_aa_dist_range = [3.0, 3.5], pair_metal_aa_dist_range = None,
-        filter_qt_clash = True, write_filtered_result = False, selfcenter_filter_member_phipsi = True)
+        filter_qt_clash = True, write_filtered_result = True, selfcenter_filter_member_phipsi = True)
 
     ss =  search_eval.Search_eval(target_path, outdir, all_querys, cluster_centroid_dict, 
         query_all_metal, num_iters, rmsd_cuts, 

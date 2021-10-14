@@ -73,11 +73,9 @@ class Search_eval(Search_selfcenter):
         self.comb_overlap(comb_dict)
         self.neighbor_calc_comb_score(comb_dict)
 
-        #self.neighbor_aftersearch_filt(_target, comb_dict)
-        #comb_dict = self.selfcenter_redu(comb_dict)
         
-        if len([comb_dict.keys()]) <= 0:
-            return comb_dict
+        # if len([comb_dict.keys()]) <= 0:
+        #     return comb_dict
 
         self.selfcenter_write_win(comb_dict)
         outpath = 'win_' + '-'.join([str(w) for w in win_comb]) + '/'
@@ -103,27 +101,80 @@ class Search_eval(Search_selfcenter):
         #Extract closest vdMs and the cluster infomation. 
         win_combs, vdM_combs = self.eval_extract_closest_vdMs(wins, combs)
 
+        ### No search but summary the result
+        nature_comb_dict = self.eval_selfcenter_construct(win_combs[0], vdM_combs[0])
+        # if len(list(nature_comb_dict)) > 0:
+        #     nature_sel_key = list(nature_comb_dict.keys())[0]
+        #     nature_comb_dict[nature_sel_key].after_search_filtered = False
+        #     self.neighbor_write_summary(self.workdir, nature_comb_dict, name = '_summary_nature.tsv')
+        #     if nature_sel_key not in self.neighbor_comb_dict.keys():
+        #         self.neighbor_comb_dict.update(nature_comb_dict)
+        if len(list(nature_comb_dict)) <= 0:
+            return 
+            
         ### The normal search process focus on the current wins.
         self.neighbor_generate_pair_dict()
         for win_comb in wins:
-            print(win_comb)      
-            comb_dict = self.selfcenter_run_comb(win_comb)
-            if not comb_dict: continue
-            self.neighbor_comb_dict.update(comb_dict)     
-
-        ### No search but summary the result
-        # comb_dict = self.eval_selfcenter_construct(win_combs[0], vdM_combs[0])
-        # self.neighbor_comb_dict.update(comb_dict)
-
+            comb_dict = self.eval_selfcenter_run_comb(win_comb, nature_comb_dict)
+            if not comb_dict:
+                continue
+            self.neighbor_comb_dict.update(comb_dict)
+        print('neighbor_comb_dict: '.format(self.neighbor_comb_dict))
         ### Evaluate search result.
         self.eval_search_results(wins, combs)
         self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, eval=True)
         
-        comb_dict_filtered = self.find_best_for_nature_sel()
-        self.neighbor_write_summary(self.workdir, comb_dict_filtered, name = '_summary_nature_sel.tsv', eval=True)
+        # comb_dict_filtered = self.find_best_for_nature_sel()
+        # self.neighbor_write_summary(self.workdir, comb_dict_filtered, name = '_summary_nature_sel.tsv', eval=True)
 
         return 
                 
+    def eval_selfcenter_run_comb(self, win_comb, nature_comb_dict):
+        # try:
+        print('selfcenter-run at: ' + ','.join([str(w) for w in win_comb]))
+        comb_dict = self.selfcenter_construct_comb(win_comb)
+        if len([comb_dict.keys()]) <= 0:
+            return comb_dict
+            
+        _target = self.target.copy()
+        
+        self.neighbor_extract_query(_target, comb_dict)
+        
+        nature_key = list(nature_comb_dict.keys())[0]
+        print('nature key')
+        print(nature_key)
+        nature_info = nature_comb_dict[nature_key]
+        comb_dict_filter = {}
+        for key in comb_dict.keys():
+            if not key[0] == nature_key[0]: 
+                continue
+            combinfo = comb_dict[key]
+            exists = []
+            for w in win_comb:
+                _id = combinfo.centroid_dict[w].id
+                if _id in nature_info.centroid_dict[w].clu_member_ids:
+                    exists.append(True)
+                else:
+                    exists.append(False)
+            if all(exists):
+                comb_dict_filter[key]=comb_dict[key]
+
+        if len([comb_dict_filter.keys()]) <= 0:
+            return comb_dict_filter
+        self.neighbor_calc_geometry(comb_dict_filter)
+        self.neighbor_aftersearch_filt(_target, comb_dict_filter) 
+
+        self.comb_overlap(comb_dict_filter)
+        self.neighbor_calc_comb_score(comb_dict_filter)
+        #self.selfcenter_write_win(comb_dict_filter)
+
+        # outpath = 'win_' + '-'.join([str(w) for w in win_comb]) + '/'
+        # outdir = self.workdir + outpath  
+        
+        # self.neighbor_write_summary(outdir, comb_dict_filter, name = '_summary_' + '_'.join([str(w) for w in win_comb]) + '.tsv')
+
+        return comb_dict_filter
+
 
     def eval_get_comb(self):
         '''
@@ -235,8 +286,7 @@ class Search_eval(Search_selfcenter):
             for j in range(len(wins[i])):
                 w = wins[i][j]
                 v = combs[i][j]
-                best_v, best_id, min_rmsd = self._eval_extract_closest_vdM(w, v)
-                
+                best_v, best_id, min_rmsd = self._eval_extract_closest_vdM(w, v)               
                 if not v:
                     continue
                 pr.writePDB(evaldir + '/win_' + str(w) + '_' + v.getTitle(), v)
@@ -283,8 +333,8 @@ class Search_eval(Search_selfcenter):
         After the nearest neighbor search, find the closest one from each neighbor_comb_dict.
         '''
         for i in range(len(wins)):
-            evaldir = self.workdir + 'eval_win_' + '_'.join([str(w) for w in wins[i]])
-            os.makedirs(evaldir, exist_ok=True)
+            #evaldir = self.workdir + 'eval_win_' + '_'.join([str(w) for w in wins[i]])
+            #os.makedirs(evaldir, exist_ok=True)
             
             for key in self.neighbor_comb_dict.keys():
                 if not key[0] == tuple([w for w in wins[i]]): 
@@ -305,10 +355,10 @@ class Search_eval(Search_selfcenter):
 
                     if not v:
                         continue
-                    pr.writePDB(evaldir + '/win_' + str(w) + '_' + v.getTitle(), v)
-                    if best_v:
-                        tag = '/clu_' + '_'.join([str(ci) for cid in clu_id for ci in cid]) + '_rmsd_' + str(round(min_rmsd, 3)) + '_win_' + str(w) + '_clu_' + '_'.join([str(ci) for ci in clu_id[j]]) + '_'                   
-                        pr.writePDB(evaldir + tag + best_v.query.getTitle(), best_v.query)   
+                    # pr.writePDB(evaldir + '/win_' + str(w) + '_' + v.getTitle(), v)
+                    # if best_v:
+                    #     tag = '/clu_' + '_'.join([str(ci) for cid in clu_id for ci in cid]) + '_rmsd_' + str(round(min_rmsd, 3)) + '_win_' + str(w) + '_clu_' + '_'.join([str(ci) for ci in clu_id[j]]) + '_'                   
+                    #     pr.writePDB(evaldir + tag + best_v.query.getTitle(), best_v.query)   
                 self.neighbor_comb_dict[key].eval_mins = min_rmsds
                 self.neighbor_comb_dict[key].eval_min_vdMs = best_vs
                 if all([m < 0.05 for m in min_rmsds]):

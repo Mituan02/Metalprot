@@ -5,7 +5,7 @@ import prody as pr
 from scipy.spatial.distance import cdist
 from ..database.database_extract import get_all_pbd_prody
 from ..database.database_cluster import clu_info
-from ..basic.vdm import VDM
+from ..basic.vdmer import VDM
 from ..basic.quco import Query, Comb, Cluster
 from ..basic.hull import transfer2pdb
 

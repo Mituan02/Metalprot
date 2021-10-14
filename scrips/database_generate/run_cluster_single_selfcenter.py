@@ -1,3 +1,6 @@
+'''
+Self-center clustering method. 
+'''
 import os
 import sys
 import prody as pr

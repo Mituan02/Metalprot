@@ -9,8 +9,11 @@ import sys
 import prody as pr
 from metalprot.database import database_extract as ldb
 
+'''
+python /mnt/e/GitHub_Design/Metalprot/scrips/core_vdm_analysis/core_aa_category.py
+'''
 
-workdir = "/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20210624/"
+workdir = "/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/"
 
 cores = ldb.load_cores(workdir + '_Seq_core_date_reps/')
 
@@ -41,7 +44,7 @@ with open(workdir + 'core_aa_summary.tsv', 'w') as f:
         contain_otheraa = False
         if any([True for name in names if name not in select_aa]):
             contain_otheraa = True
-        f.write(key + '\t' + str(len(names)) + '\t' + str(contain_otheraa) + '\t'+ str(res_dict[key]) + '\n')
+        f.write(key + '\t' + str(len(names)) + '\t' + str(contain_otheraa) + '\t'+ str(res_num_dict[key]) + '\n')
 
 
 with open(workdir + 'core_aa_info.tsv', 'w') as f:

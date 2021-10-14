@@ -2,7 +2,7 @@ import os
 import prody as pr
 import shutil
 from . import core
-from ..basic.quco import get_metal_contact_atoms
+from ..basic.vdmer import get_metal_contact_atoms
 
 # Basic function. 
 
@@ -154,7 +154,8 @@ def superimpose_core_and_writepdb(cores, first, metal_sel, outdir):
 # Filter pdbs based on B factor, contacting aa number etc.
 def rm_core(workdir, outdir, bfactor_cutoff = 45, min_contact_aa_num = 3):
     '''
-    For core pdbs, we may want to filter based on the B factor, as bfactor = 45 roughly is equal resolution 2.5. 
+    For core pdbs, we filter based on the B factor, as bfactor = 45 roughly is equal resolution 2.5. 
+    we filter based on the occupancy less than 1, which means there is some ambiguity of the data. 
     Also for Zn or most metal, we want to keep contact aa to be at least 3.
     Read and write pdb could be slow. Here is just copy and paste them.
     '''
@@ -164,14 +165,20 @@ def rm_core(workdir, outdir, bfactor_cutoff = 45, min_contact_aa_num = 3):
 
     for pdb in pdbs:
         cts = get_metal_contact_atoms(pdb)
-        if len(cts) < min_contact_aa_num:
+        if len(cts) < min_contact_aa_num+1:
             continue
         bs = []
         for c in cts:
             bs.append(c.getBeta())
-
         if not all([b <= bfactor_cutoff for b in bs]):
             continue
+
+        occupancy = []
+        for c in cts:
+            occupancy.append(c.getOccupancy())
+        if not all([o >= 0.999 for o in occupancy]):
+            continue
+
         filtered_pdb_titles.add(pdb.getTitle())
 
     os.makedirs(outdir, exist_ok=True)

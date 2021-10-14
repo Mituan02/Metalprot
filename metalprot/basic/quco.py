@@ -5,78 +5,9 @@ from numpy.core.fromnumeric import argmin
 from prody.atomic import pointer
 from .hull import transfer2pdb, write2pymol
 from .utils import get_ABPLE
+from .vdmer import get_contact_atom
 
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
-
-def get_metal_contact_atoms(pdb):
-    '''
-    Extract list of contact atoms from pdb. 
-    Here the pdb could be the core that contain multiple contact atoms.
-    '''
-    #Get metal, binding atom for each binding atom
-    cts = []
-
-    metal = pdb.select(metal_sel)[0]
-    cts.append(metal)
-    _contact_aas = pdb.select('protein and not carbon and not hydrogen and within 2.83 of resindex ' + str(metal.getResindex()))
-    #For each aa, only select one contact atom. 
-    resindices = np.unique(_contact_aas.getResindices())
-    for rid in resindices:
-        #TO DO: Not the first one, but the closest one for the  such ASP contains two contact atoms.
-        _ct = _contact_aas.select('resindex ' + str(rid))
-        if len(_ct) > 1:
-            dists = [None]*len(_ct)
-            for i in range(len(_ct)):
-                dist = pr.calcDistance(metal, _ct[i])
-                dists[i] = dist
-            ct = _ct[argmin(dists)]
-        else:
-            ct = _ct[0]
-        cts.append(ct)
-
-    return cts
-
-def get_contact_atom(pdb):
-    '''
-    Get contact atom of a vdM.
-    '''
-    metal = pdb.select(metal_sel)[0]
-    _contact_aas = pdb.select('protein and not carbon and not hydrogen and within 2.83 of resindex ' + str(metal.getResindex()))
-    if not _contact_aas:
-        print('No contact atom: ' + pdb.getTitle())
-        _contact_aas = pdb.select('protein and not carbon and not hydrogen and within 5 of resindex ' + str(metal.getResindex()))      
-    if len(_contact_aas) > 1:
-        dists = [None]*len(_contact_aas)
-        for i in range(len(_contact_aas)):
-            dist = pr.calcDistance(metal, _contact_aas[i])
-            dists[i] = dist
-        contact_aa = _contact_aas[argmin(dists)]
-    else:
-        contact_aa = _contact_aas[0]
-    return contact_aa
-
-
-def pair_wise_geometry(geometry_ag):
-    '''
-    cts: contact atoms
-    '''
-    metal = geometry_ag.select('name NI')[0]
-    cts = geometry_ag.select('name N')
-    ct_len = len(cts)
-    #print(cts.getNames())
-    aa_aa_pair = []
-    metal_aa_pair =[]
-    angle_pair = []
-    for i, j in itertools.combinations(range(ct_len), 2):   
-        dist = pr.calcDistance(cts[i], cts[j])
-        aa_aa_pair.append(dist)
-        angle = pr.calcAngle(cts[i], metal, cts[j])
-        angle_pair.append(angle)
-    for i in range(ct_len):
-        metal_aa_pair.append(pr.calcDistance(cts[i], metal))
-        
-    return aa_aa_pair, metal_aa_pair, angle_pair  
-
 
 class Query:
     def __init__(self, query, score = 0, clu_num = 0, clu_total_num = 0, is_bivalent = False, win = None, path = None, ag = None, hull_ag = None, cluster = None, selfcenter_cluster_queryid = None):

@@ -21,13 +21,13 @@ from metalprot.basic import hull
 import pickle
 
 '''
-python /mnt/e/GitHub_Design/Metalprot/scrips/search_selfcenter/database_pickle.py
+python /mnt/e/GitHub_Design/Metalprot/scrips/search_selfcenter/database_selfcenter_pickle.py
 '''
 
-query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211008/20211009_selfcenter/'
+query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/'
 
 
-centroid_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['AAMetalPhiPsi', 'cluster'], file_name_not_includes=['CYS'], score_cut = 0, clu_num_cut = 0)
+centroid_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['AAMetalPhiPsi', 'cluster'], file_name_not_includes=['NULL'], score_cut = 0, clu_num_cut = 0)
 
 
 centroid_query_dict = {}
@@ -101,7 +101,7 @@ hull.write2pymol(points, query_dir, 'align_' + all_metal_vdm.query.getTitle())
 '''
 
 #query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/20210916_2017_2018_selfcenter_alignBB/'
-outdir = query_dir + 'pickle_noCYS_alignBB/'
+outdir = query_dir + 'pickle_alignBB/'
 os.makedirs(outdir, exist_ok= True)
 
 with open(outdir + 'all_metal_vdm.pkl', 'wb') as f:

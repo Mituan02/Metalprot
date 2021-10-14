@@ -35,7 +35,7 @@ def seq_get_ABPLE(target):
     return abples, phipsi
     
 
-def get_contact_map(target, win_filter = None):
+def get_contact_map(target, win_filter = []):
     '''
     calculate contact map for 2aa_sep database.
     return the ordered distance array and resindex array.
@@ -51,7 +51,7 @@ def get_contact_map(target, win_filter = None):
 
     for i in range(len(xyzs)):
         for j in range(i+1, len(xyzs)):
-            if win_filter:
+            if len(win_filter) >0:
                 if i not in win_filter or j not in win_filter:
                     continue
             dist_array.append(dists[i, j])  

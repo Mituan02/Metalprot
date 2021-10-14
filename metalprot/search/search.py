@@ -68,7 +68,7 @@ class Search_vdM:
     The function to search comb is based on nearest neighbor function of sklearn.
     '''
     def __init__(self, target_pdb, workdir, vdms, cluster_centroid_dict, all_metal_vdm, 
-    num_iters = [3], rmsd = 0.45, win_filtered = None, secondshell_querys = None, 
+    num_iters = [3], rmsd = 0.45, win_filtered = [], secondshell_querys = None, 
     validateOriginStruct = False, search_filter = None, parallel = False, selfcenter_rmsd = 0.45):
 
         if workdir:
@@ -196,7 +196,7 @@ class Search_vdM:
         '''
         print('neighbor_generate_query_dict')
         wins = []
-        if self.win_filtered:
+        if len(self.win_filtered) > 0:
             wins.extend([w for w in self.win_filtered])
         else:
             t = self.target.select('name CA').getResindices()

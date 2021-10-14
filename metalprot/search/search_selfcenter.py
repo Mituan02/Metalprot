@@ -115,9 +115,10 @@ class Search_selfcenter(Search_vdM):
             if len([key for key in comb_dict.keys() if not comb_dict[key].after_search_filtered]) > 0:
                 self.neighbor_write_summary(outdir, comb_dict, name = '_summary_' + '_'.join([str(w) for w in win_comb]) + '.tsv')
         else:
-            self.neighbor_write_summary(outdir, comb_dict, name = '_summary_' + '_'.join([str(w) for w in win_comb]) + '.tsv')
+            if len(comb_dict)>0:
+                self.neighbor_write_summary(outdir, comb_dict, name = '_summary_' + '_'.join([str(w) for w in win_comb]) + '.tsv')
 
-        comb_dict = self.selfcenter_redu(comb_dict)
+        #comb_dict = self.selfcenter_redu(comb_dict)
 
         return comb_dict
         # except:
@@ -183,7 +184,7 @@ class Search_selfcenter(Search_vdM):
         '''
         for key in comb_dict.keys():
             
-            if self.search_filter.after_search_filter and comb_dict[key].after_search_filtered:
+            if not self.search_filter.write_filtered_result and comb_dict[key].after_search_filtered:
                 continue
 
             win_comb = key[0]
@@ -558,7 +559,7 @@ class Search_selfcenter(Search_vdM):
         else:
             self.neighbor_write_summary(outdir, comb_dict, name = '_summary_' + '_'.join([str(w) for w in win_comb]) + '.tsv')
 
-        comb_dict = self.selfcenter_redu(comb_dict)
+        #comb_dict = self.selfcenter_redu(comb_dict)
 
         return comb_dict
         # except:

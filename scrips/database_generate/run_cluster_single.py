@@ -6,6 +6,10 @@ from metalprot.database import database_extract as ldb
 from metalprot.database import database_cluster as ldb_clu
 from metalprot.database import database_vdMAtomOrder
 
+'''
+python /mnt/e/GitHub_Design/Metalprot/scrips/database_generate/run_cluster_single.py
+'''
+
 def extract_single_vdm(cores, outdir, AA, key, basic = True, extention = None, n = None, key_out = None, phipsi = False):
     for c in cores:   
         if basic:
@@ -21,7 +25,7 @@ def extract_single_vdm(cores, outdir, AA, key, basic = True, extention = None, n
 
 ### set up parameters
 
-workdir = "/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211008/"
+workdir = "/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/"
 
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
 align_sel_backbone = 'name C CA N O NI MN ZN CO CU MG FE or ion'
@@ -29,7 +33,7 @@ align_sel_backbone = 'name C CA N O NI MN ZN CO CU MG FE or ion'
 cores = ldb.load_cores(workdir + '_Seq_core_date_reps/')
 
 
-AA = 'ASP'
+AA = 'CYS'
 
 len_sel = 9
 
@@ -92,7 +96,7 @@ ldb.run_cluster(_pdbs, workdir, 'M3-1_AAext5Metal_' + AA + '_cluster02/', rmsd =
 ### Align his core with phipsi------------------------------------------------------------------------------------ 
 
 # AAMetal_HIS
-outdir = workdir + '20211009_all/'
+outdir = workdir + '20211013_all/'
 os.makedirs(outdir, exist_ok = True)
 
 extract_single_vdm(cores, outdir + 'AAMetalPhiPsi_' + AA + '_reps/', AA = AA, key = 'AAMetalPhiPsi_' + AA, basic = False, phipsi=True)

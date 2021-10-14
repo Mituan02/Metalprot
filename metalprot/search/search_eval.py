@@ -2,7 +2,7 @@ import os
 import numpy as np
 import prody as pr
 
-from ..basic import vdm
+from ..basic import vdmer
 from ..basic import hull
 from ..basic import utils
 from ..database import core
@@ -104,20 +104,24 @@ class Search_eval(Search_selfcenter):
         win_combs, vdM_combs = self.eval_extract_closest_vdMs(wins, combs)
 
         ### The normal search process focus on the current wins.
-        # self.neighbor_generate_pair_dict()
-        # for win_comb in wins:
-        #     print(win_comb)      
-        #     comb_dict = self.selfcenter_run_comb(win_comb)
-        #     if not comb_dict: continue
-        #     self.neighbor_comb_dict.update(comb_dict)     
+        self.neighbor_generate_pair_dict()
+        for win_comb in wins:
+            print(win_comb)      
+            comb_dict = self.selfcenter_run_comb(win_comb)
+            if not comb_dict: continue
+            self.neighbor_comb_dict.update(comb_dict)     
 
         ### No search but summary the result
-        comb_dict = self.eval_selfcenter_construct(win_combs[0], vdM_combs[0])
-        self.neighbor_comb_dict.update(comb_dict)
+        # comb_dict = self.eval_selfcenter_construct(win_combs[0], vdM_combs[0])
+        # self.neighbor_comb_dict.update(comb_dict)
 
         ### Evaluate search result.
         self.eval_search_results(wins, combs)
         self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, eval=True)
+        
+        comb_dict_filtered = self.find_best_for_nature_sel()
+        self.neighbor_write_summary(self.workdir, comb_dict_filtered, name = '_summary_nature_sel.tsv', eval=True)
+
         return 
                 
 
@@ -129,7 +133,7 @@ class Search_eval(Search_selfcenter):
 
         wins = []
         combs = []
-        _cores = database_extract.get_metal_core_seq(self.target, vdm.metal_sel, extend = 4)
+        _cores = database_extract.get_metal_core_seq(self.target, vdmer.metal_sel, extend = 4)
         cores = [core.Core(c[1]) for c in _cores]
 
         if len(_cores) <= 0:
@@ -158,7 +162,7 @@ class Search_eval(Search_selfcenter):
             print('The vdM at {} from the protein bb is not successfully extracted.'.format(w))
             return best_v, best_id, min_rmsd
 
-        coord = [v.select(vdm.metal_sel)[0].getCoords()]
+        coord = [v.select(vdmer.metal_sel)[0].getCoords()]
 
         ns = self.neighbor_query_dict[w].get_metal_mem_coords()
 
@@ -310,3 +314,37 @@ class Search_eval(Search_selfcenter):
                 if all([m < 0.05 for m in min_rmsds]):
                     self.neighbor_comb_dict[key].eval_is_origin = True
         return
+
+    def find_best_for_nature_sel(self):
+        '''
+        In the eval search, we can find the nature's selected vdm if the protein is included in the database. 
+        The nature's selected vdms may be low overlap vdms, but they may be the member of a better vdm combinations.
+        '''
+        comb_dict_filter = {}
+
+        nature_key = [key for key in self.neighbor_comb_dict.keys() if self.neighbor_comb_dict[key].eval_is_origin == True][0]
+        nature_info = self.neighbor_comb_dict[nature_key]
+
+        for key in self.neighbor_comb_dict.keys():
+            info = self.neighbor_comb_dict[key]
+
+            # if not info.pair_angle_ok == nature_info.pair_angle_ok:
+            #     continue
+            # if not info.pair_aa_aa_dist_ok == nature_info.pair_aa_aa_dist_ok:
+            #     continue            
+            # if not info.vdm_no_clash == nature_info.vdm_no_clash:
+            #     continue
+
+            seen_here = []
+            for w in key[0]:
+                id = nature_info.centroid_dict[w].id
+                if id not in info.overlap_query_id_dict[w]:
+                    seen_here.append(False)
+                else:
+                    seen_here.append(True)
+                
+            if all(seen_here):
+                comb_dict_filter[key] = self.neighbor_comb_dict[key]
+
+        return comb_dict_filter
+

@@ -9,7 +9,7 @@ import pandas
 #workdir = '/mnt/e/DesignData/ligands/LigandBB/zn_eval_bench_mark/2013_new_dist45_phipsi15/'
 #workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/_Seq_core_date_3contact_B45/eval_selfcenter/'
 
-workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/_Seq_core_date_3contact/output_eval/' 
+workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/_Seq_core_date_3contact/20211015_out_eval/' 
 
 #test = 'output_2013_4bm9_ZN_1'
 
@@ -86,15 +86,15 @@ for _dir in os.listdir(workdir):
     maxinfo.append(_dir)
     maxinfo.append(len(df))
     if len(x) > 0:
-        maxinfo.append(len(df['Wins'][x[0]].split('_')))
-        maxinfo.append(x == y)
-        maxinfo.append(df['TotalVdMScore'][x[0]])
-        maxinfo.append(df['FracScore'][x[0]])
-        maxinfo.append(df['MultiScore'][x[0]])
-        maxinfo.append(df['overlap#'][x[0]])
-        maxinfo.append(df['overlaps#'][x[0]])
-        maxinfo.append(df['total_clu#'][x[0]])
-        maxinfo.append(df['clu_nums'][x[0]])
+        maxinfo.append(len(df['Wins'][y].split('_')))
+        maxinfo.append(x[0] == y)
+        maxinfo.append(df['TotalVdMScore'][y])
+        maxinfo.append(df['FracScore'][y])
+        maxinfo.append(df['MultiScore'][y])
+        maxinfo.append(df['overlap#'][y])
+        maxinfo.append(df['overlaps#'][y])
+        maxinfo.append(df['total_clu#'][y])
+        maxinfo.append(df['clu_nums'][y])
     else:
         maxinfo.append(0)
         maxinfo.append(False)
@@ -105,7 +105,7 @@ for _dir in os.listdir(workdir):
         maxinfo.append('0||0||0')
         maxinfo.append(0)
         maxinfo.append('0||0||0')
-
+    max_infos.append(maxinfo)
 
 with open(workdir + '_extract.tsv', 'w') as f:
     #f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tMaxTotalVdMScore\tMaxFracScore\tMinMultiScore\n')
@@ -116,7 +116,7 @@ with open(workdir + '_extract.tsv', 'w') as f:
 with open(workdir + '_extract_max.tsv', 'w') as f:
     #f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tMaxTotalVdMScore\tMaxFracScore\tMinMultiScore\n')
     f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tOverlap\tOverlaps\tclu_num\tclu_nums\n')
-    for info in infos:
+    for info in max_infos:
         f.write('\t'.join([str(o) for o in info]) + '\n')
 
 with open(workdir + '_notexist.tsv', 'w') as f:

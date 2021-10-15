@@ -154,7 +154,7 @@ class Search_eval(Search_selfcenter):
         comb_dict_filter = {}
 
         for key in comb_dict.keys():
-            if len(list(comb_dict.keys()))>=1000:
+            if len(list(comb_dict_filter.keys()))>=1000:
                 break
             if not key[0] == nature_key[0]: 
                 continue

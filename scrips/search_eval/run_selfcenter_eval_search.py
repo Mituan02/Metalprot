@@ -38,9 +38,9 @@ print(len(all_querys))
 
 workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/_Seq_core_date_3contact/'
 
-outdir = workdir + 'output_eval_5cpa'
+outdir = workdir + 'output_eval_4tln'
 
-target_path = workdir + '1982_5cpa_ZN_1.pdb'
+target_path = workdir + '1982_4tln_ZN_1.pdb'
 
 
 rmsd_cuts = 0.45

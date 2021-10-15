@@ -6,9 +6,10 @@ import os
 import pandas
 
 
-workdir = '/mnt/e/DesignData/ligands/LigandBB/zn_eval_bench_mark/2013_new_dist45_phipsi15/'
-workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/_Seq_core_date_3contact_B45/eval_selfcenter/'
+#workdir = '/mnt/e/DesignData/ligands/LigandBB/zn_eval_bench_mark/2013_new_dist45_phipsi15/'
+#workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/_Seq_core_date_3contact_B45/eval_selfcenter/'
 
+workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/_Seq_core_date_3contact/output_eval/' 
 
 #test = 'output_2013_4bm9_ZN_1'
 
@@ -21,6 +22,8 @@ NotExist = []
 Failed = []
 
 infos = []
+
+max_infos = []
 
 for _dir in os.listdir(workdir):
     # if '.pdb' in _dir or '.tsv' in _dir:
@@ -37,11 +40,12 @@ for _dir in os.listdir(workdir):
         print('Fail: ' + _dir)
         Failed.append(_dir)
         continue
+
+    #Extract info
     info = []
     info.append(_dir)
     x = df.index[df['eval_is_origin']== True]
-
-
+    
     info.append(len(df))
     
     if len(x) > 0:
@@ -61,7 +65,9 @@ for _dir in os.listdir(workdir):
         info.append(0)
         info.append(0)
         info.append(0)
-
+        info.append('0||0||0')
+        info.append(0)
+        info.append('0||0||0')
 
     # ind = df['TotalVdMScore'].idxmax(axis = 1)
     # info.append(df['TotalVdMScore'][ind])
@@ -74,7 +80,40 @@ for _dir in os.listdir(workdir):
 
     infos.append(info)
 
+    #Extract max info
+    maxinfo = []
+    y = df['overlap#'].idxmax()
+    maxinfo.append(_dir)
+    maxinfo.append(len(df))
+    if len(x) > 0:
+        maxinfo.append(len(df['Wins'][x[0]].split('_')))
+        maxinfo.append(x == y)
+        maxinfo.append(df['TotalVdMScore'][x[0]])
+        maxinfo.append(df['FracScore'][x[0]])
+        maxinfo.append(df['MultiScore'][x[0]])
+        maxinfo.append(df['overlap#'][x[0]])
+        maxinfo.append(df['overlaps#'][x[0]])
+        maxinfo.append(df['total_clu#'][x[0]])
+        maxinfo.append(df['clu_nums'][x[0]])
+    else:
+        maxinfo.append(0)
+        maxinfo.append(False)
+        maxinfo.append(0)
+        maxinfo.append(0)
+        maxinfo.append(0)
+        maxinfo.append(0)
+        maxinfo.append('0||0||0')
+        maxinfo.append(0)
+        maxinfo.append('0||0||0')
+
+
 with open(workdir + '_extract.tsv', 'w') as f:
+    #f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tMaxTotalVdMScore\tMaxFracScore\tMinMultiScore\n')
+    f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tOverlap\tOverlaps\tclu_num\tclu_nums\n')
+    for info in infos:
+        f.write('\t'.join([str(o) for o in info]) + '\n')
+
+with open(workdir + '_extract_max.tsv', 'w') as f:
     #f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tMaxTotalVdMScore\tMaxFracScore\tMinMultiScore\n')
     f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tOverlap\tOverlaps\tclu_num\tclu_nums\n')
     for info in infos:

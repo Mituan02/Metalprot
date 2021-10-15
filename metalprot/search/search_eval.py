@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from numpy.core.numeric import count_nonzero
 import prody as pr
 
 from ..basic import vdmer
@@ -7,6 +8,7 @@ from ..basic import hull
 from ..basic import utils
 from ..database import core
 from ..database import database_extract
+from ..database import database_vdMAtomOrder
 
 from sklearn.neighbors import NearestNeighbors
 import multiprocessing as mp
@@ -49,40 +51,9 @@ class Search_eval(Search_selfcenter):
 
         self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, eval=True)
 
+        self.neighbor_write_log()
+
         return 
-
-    def eval_selfcenter_construct(self, win_comb, vdM_comb):
-        '''
-        Use the path to create comb_dict.
-        '''
-        clu_key = tuple([v.get_cluster_key() for v in vdM_comb])
-        path = [v.id for v in vdM_comb]
-
-        comb_dict = {}
-        comb = dict()
-        for i in range(len(win_comb)):
-            comb[win_comb[i]] = [path[i]]
-        combinfo = CombInfo()
-        combinfo.comb = comb 
-        comb_dict[(tuple(win_comb), clu_key)] = combinfo
-        
-        _target = self.target.copy()
-        self.neighbor_extract_query(_target, comb_dict)
-
-        self.neighbor_calc_geometry(comb_dict)
-        self.comb_overlap(comb_dict)
-        self.neighbor_calc_comb_score(comb_dict)
-
-        
-        # if len([comb_dict.keys()]) <= 0:
-        #     return comb_dict
-
-        self.selfcenter_write_win(comb_dict)
-        outpath = 'win_' + '-'.join([str(w) for w in win_comb]) + '/'
-        outdir = self.workdir + outpath  
-        self.neighbor_write_summary(outdir, comb_dict)
-
-        return comb_dict
 
 
     def run_eval_selfcenter_search(self):
@@ -127,7 +98,43 @@ class Search_eval(Search_selfcenter):
         # comb_dict_filtered = self.find_best_for_nature_sel()
         # self.neighbor_write_summary(self.workdir, comb_dict_filtered, name = '_summary_nature_sel.tsv', eval=True)
 
+        self.neighbor_write_log()
         return 
+
+
+    def eval_selfcenter_construct(self, win_comb, vdM_comb):
+        '''
+        Use the path to create comb_dict.
+        '''
+        clu_key = tuple([v.get_cluster_key() for v in vdM_comb])
+        path = [v.id for v in vdM_comb]
+
+        comb_dict = {}
+        comb = dict()
+        for i in range(len(win_comb)):
+            comb[win_comb[i]] = [path[i]]
+        combinfo = CombInfo()
+        combinfo.comb = comb 
+        comb_dict[(tuple(win_comb), clu_key)] = combinfo
+        
+        _target = self.target.copy()
+        self.neighbor_extract_query(_target, comb_dict)
+
+        self.neighbor_calc_geometry(comb_dict)
+        self.comb_overlap(comb_dict)
+        self.neighbor_calc_comb_score(comb_dict)
+
+        
+        # if len([comb_dict.keys()]) <= 0:
+        #     return comb_dict
+
+        self.selfcenter_write_win(comb_dict)
+        outpath = 'win_' + '-'.join([str(w) for w in win_comb]) + '/'
+        outdir = self.workdir + outpath  
+        self.neighbor_write_summary(outdir, comb_dict)
+
+        return comb_dict
+
                 
     def eval_selfcenter_run_comb(self, win_comb, nature_comb_dict):
         # try:
@@ -145,7 +152,10 @@ class Search_eval(Search_selfcenter):
         print(nature_key)
         nature_info = nature_comb_dict[nature_key]
         comb_dict_filter = {}
+
         for key in comb_dict.keys():
+            if len(list(comb_dict.keys()))>=1000:
+                break
             if not key[0] == nature_key[0]: 
                 continue
             combinfo = comb_dict[key]
@@ -200,7 +210,14 @@ class Search_eval(Search_selfcenter):
                 self.log += 'core extract None.\n'
                 continue
             wins.append(c.contact_aa_resinds)
-            combs.append(comb)
+            #Try to shit th oxy of asp and glu to the right order.
+            _comb = []
+            for c in comb:
+                if vdmer.get_contact_atom(c).getResname() == 'GLU' or vdmer.get_contact_atom(c).getResname() == 'ASP':
+                    database_vdMAtomOrder.asp_glu_oxy_shift(c)
+                _comb.append(c)
+
+            combs.append(_comb)
         return wins, combs
 
 

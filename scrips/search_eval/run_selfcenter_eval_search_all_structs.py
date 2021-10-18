@@ -13,12 +13,12 @@ import multiprocessing as mp
 python /mnt/e/GitHub_Design/Metalprot/scrips/search_eval/run_eval_search_all_structs.py
 '''
 
-query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_category/pickle_noCYS/'
+query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS_alignBB/'
 
 with open(query_dir + 'all_metal_vdm.pkl', 'rb') as f:
     query_all_metal = pickle.load(f)
 
-with open(query_dir + 'all_vdms.pkl', 'rb') as f:
+with open(query_dir + 'AAMetalPhiPsi.pkl', 'rb') as f:
     all_querys = pickle.load(f)
 
 with open(query_dir + 'cluster_centroid_dict.pkl', 'rb') as f:
@@ -54,7 +54,7 @@ def run_search(workdir, target_file, query_all_metal, all_querys, cluster_centro
     win_search = set()
 
     try:
-        ss.run_eval_search()
+        ss.run_eval_selfcenter_search()
     except:
         return (target_file + ' Error', win_search)
 

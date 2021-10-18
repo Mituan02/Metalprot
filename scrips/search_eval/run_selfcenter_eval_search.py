@@ -12,7 +12,7 @@ import pickle
 python /mnt/e/GitHub_Design/Metalprot/scrips/search_eval/run_selfcenter_eval_search.py
 '''
 
-query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS_alignBB/'
+query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS/'
 
 with open(query_dir + 'all_metal_vdm.pkl', 'rb') as f:
     query_all_metal = pickle.load(f)

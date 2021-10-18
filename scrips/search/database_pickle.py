@@ -23,7 +23,7 @@ import pickle
 python /mnt/e/GitHub_Design/Metalprot/scrips/search/database_pickle.py
 '''
 
-query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211008/20211009_category/'
+query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_category/'
 
 # Get query pdbs, Add the cluster metal points into the query.hull_points
 
@@ -49,21 +49,20 @@ for _query in centroid_querys:
 
     mem_vdms = extract_vdm.get_mem_vdms(query)
     clu = quco.Cluster(mem_vdms)
+    melal_coord_in_clu = [q.query.select(metal_sel)[0].getCoords() for q in clu.querys]
     #clu.realign_by_HEAVY_candidates(target = query, align_sel='heavy') #The position of each point is decided by how the vdM is supperimposed.
     clu.realign_by_CCAN(target = query, align_sel=align_sel)
     for q in clu.querys:
         q.id = query_id
-        all_vdms.append(q)
-        if 'centroid' in q.query.getTitle():
-            q.clu_rank = int(q.query.getTitle().split('_')[3])
+        q.clu_rank = int(query.query.getTitle().split('_')[3])
+        if 'centroid' in q.query.getTitle():      
+            q.metal_atomgroup = hull.transfer2pdb(melal_coord_in_clu)  
             cluster_key = q.get_cluster_key()
-            cluster_centroid_dict[cluster_key] = query.id
+            cluster_centroid_dict[cluster_key] = q.id
+        all_vdms.append(q)
+
         all_coords.append(q.query.select(metal_sel)[0].getCoords())
         query_id += 1
-
-    query.clu_rank = int(query.query.getTitle().split('_')[3]) 
-
-
 
 all_metal_vdm.metal_atomgroup = hull.transfer2pdb(all_coords)
 
@@ -73,27 +72,10 @@ os.makedirs(outdir, exist_ok= True)
 with open(outdir + 'all_metal_vdm.pkl', 'wb') as f:
     pickle.dump(all_metal_vdm, f)
 
-with open(outdir + 'AAMetalPhiPsi.pkl', 'wb') as f:
+with open(outdir + 'all_vdms.pkl', 'wb') as f:
     pickle.dump(all_vdms, f)
 
 with open(outdir + 'cluster_centroid_dict.pkl', 'wb') as f:
     pickle.dump(cluster_centroid_dict, f)
 
 
-'''
-# depre function
-cluster_centroid_origin_dict = {}
-for _query in centroid_querys:
-    query = _query.copy()
-    cluster_key = query.get_cluster_key()
-    cluster_centroid_origin_dict[cluster_key] = query
-    cluster_coords = []
-
-    clu = extract_vdm.get_vdm_cluster(query)
-    for q in clu.querys:
-        cluster_coords.append(q.query.select(metal_sel)[0].getCoords())
-    cluster_centroid_origin_dict[cluster_key].hull_ag = hull.transfer2pdb(cluster_coords)
-
-with open(outdir + 'cluster_centroid_origin_dict.pkl', 'wb') as f:
-    pickle.dump(cluster_centroid_origin_dict, f)
-'''

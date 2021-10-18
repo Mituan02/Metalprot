@@ -9,7 +9,7 @@ import pandas
 #workdir = '/mnt/e/DesignData/ligands/LigandBB/zn_eval_bench_mark/2013_new_dist45_phipsi15/'
 #workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/_Seq_core_date_3contact_B45/eval_selfcenter/'
 
-workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/_Seq_core_date_3contact/20211015_out_eval/' 
+workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/_Seq_core_date_3contact/20211015_out_eval2/' 
 
 #test = 'output_2013_4bm9_ZN_1'
 

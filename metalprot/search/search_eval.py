@@ -156,8 +156,8 @@ class Search_eval(Search_selfcenter):
         for key in comb_dict.keys():
             if len(list(comb_dict_filter.keys()))>=1000:
                 break
-            if not key[0] == nature_key[0]: 
-                continue
+            # if not key[0] == nature_key[0]: 
+            #     continue
             combinfo = comb_dict[key]
             exists = []
             for w in win_comb:

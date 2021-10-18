@@ -29,18 +29,18 @@ print(len(all_querys))
 ### run Search_struct
 
 
-# workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
+workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
 
-# outdir = workdir + 'output_eval_selfcenter_/'
+outdir = workdir + 'output_eval_selfcenter_/'
 
-# target_path = workdir + '5od1_zn.pdb'
+target_path = workdir + '5od1_zn.pdb'
 
 
-workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/_Seq_core_date_3contact/'
+# workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/_Seq_core_date_3contact/'
 
-outdir = workdir + 'output_eval_4tln'
+# outdir = workdir + 'output_eval_4tln'
 
-target_path = workdir + '1982_4tln_ZN_1.pdb'
+# target_path = workdir + '1982_4tln_ZN_1.pdb'
 
 
 rmsd_cuts = 0.45

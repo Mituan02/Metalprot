@@ -52,6 +52,7 @@ for _dir in os.listdir(workdir):
         info.append(len(df['Wins'][x[0]].split('_')))
         info.append(True)
         info.append(df['TotalVdMScore'][x[0]])
+        info.append(df['vdm_scores'][x[0]])
         info.append(df['FracScore'][x[0]])
         info.append(df['MultiScore'][x[0]])
         info.append(df['overlap#'][x[0]])
@@ -65,18 +66,11 @@ for _dir in os.listdir(workdir):
         info.append(0)
         info.append(0)
         info.append(0)
+        info.append(0)
         info.append('0||0||0')
         info.append(0)
         info.append('0||0||0')
 
-    # ind = df['TotalVdMScore'].idxmax(axis = 1)
-    # info.append(df['TotalVdMScore'][ind])
-    # ind = df['FracScore'].idxmax(axis = 1)
-    # info.append(df['FracScore'][ind])
-    # ind = df['MultiScore'].idxmin(axis = 1)
-    # info.append(df['MultiScore'][ind])
-    # info.append(df['overlap#'][ind])
-    # info.append(df['clu_nums'][x[0]])
 
     infos.append(info)
 
@@ -89,6 +83,7 @@ for _dir in os.listdir(workdir):
         maxinfo.append(len(df['Wins'][y].split('_')))
         maxinfo.append(x[0] == y)
         maxinfo.append(df['TotalVdMScore'][y])
+        maxinfo.append(df['vdm_scores'][y])
         maxinfo.append(df['FracScore'][y])
         maxinfo.append(df['MultiScore'][y])
         maxinfo.append(df['overlap#'][y])
@@ -102,6 +97,7 @@ for _dir in os.listdir(workdir):
         maxinfo.append(0)
         maxinfo.append(0)
         maxinfo.append(0)
+        maxinfo.append(0)
         maxinfo.append('0||0||0')
         maxinfo.append(0)
         maxinfo.append('0||0||0')
@@ -109,13 +105,15 @@ for _dir in os.listdir(workdir):
 
 with open(workdir + '_extract.tsv', 'w') as f:
     #f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tMaxTotalVdMScore\tMaxFracScore\tMinMultiScore\n')
-    f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tOverlap\tOverlaps\tclu_num\tclu_nums\n')
+    f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tscores\tOriginFracScore\tOriginMultiScore\tOverlap\tOverlaps\tclu_num\tclu_nums\n')
     for info in infos:
+        # if info[8] <= 0:
+        #     continue
         f.write('\t'.join([str(o) for o in info]) + '\n')
 
 with open(workdir + '_extract_max.tsv', 'w') as f:
     #f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tMaxTotalVdMScore\tMaxFracScore\tMinMultiScore\n')
-    f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tOverlap\tOverlaps\tclu_num\tclu_nums\n')
+    f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tscores\tOriginFracScore\tOriginMultiScore\tOverlap\tOverlaps\tclu_num\tclu_nums\n')
     for info in max_infos:
         f.write('\t'.join([str(o) for o in info]) + '\n')
 
@@ -130,13 +128,17 @@ with open(workdir + '_failed.tsv', 'w') as f:
 
 with open(workdir + '_extract_split.tsv', 'w') as f:
     #f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tMaxTotalVdMScore\tMaxFracScore\tMinMultiScore\n')
-    f.write('Title\tOverlap\tOverlap1\tOverlap2\tOverlap3\tclu_num\tclu_num1\tclu_num2\tclu_num3\n')
+    f.write('Title\tOverlap\tOverlap1\tOverlap2\tOverlap3\tclu_num\tclu_num1\tclu_num2\tclu_num3\tTotalScore\tscore1\tscore2\tscore3\n')
     for info in infos:
+        if info[8] <= 0:
+            continue
         title = info[0] 
-        overlap = str(info[7])
-        overlaps = sorted([int(x) for x in info[8].split('||')])
-        clu_num = str(info[9])
-        clu_nums = sorted([int(x) for x in info[10].split('||')])
-        f.write(title + '\t' + overlap + '\t' + '\t'.join([str(o) for o in overlaps]) + '\t' + clu_num + '\t' + '\t'.join([str(o) for o in clu_nums]) + '\n')
-
+        overlap = str(info[8])
+        overlaps = sorted([int(x) for x in info[9].split('||')])
+        clu_num = str(info[10])
+        clu_nums = sorted([int(x) for x in info[11].split('||')])
+        f.write(title + '\t' + overlap + '\t' + '\t'.join([str(o) for o in overlaps]) + '\t')
+        f.write(clu_num + '\t' + '\t'.join([str(o) for o in clu_nums]) + '\t')
+        scores = sorted([float(x) for x in info[5].split('||')])
+        f.write(str(info[4]) + '\t' + '\t'.join([str(o) for o in scores]) + '\n')
 

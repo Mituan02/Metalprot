@@ -79,7 +79,7 @@ def pair_wise_geometry(geometry_ag):
 
 
 class VDM:
-    def __init__(self, query, id = -1, clu_rank = -1, score = 0, clu_num = 0, clu_total_num = 0, clu_member_ids= None, metal_atomgroup = None, win = None, path = None):
+    def __init__(self, query, id = -1, clu_rank = -1, score = 0, clu_num = 0, max_clu_num = 0, clu_total_num = 0, clu_member_ids= None, metal_atomgroup = None, win = None, path = None):
         '''
         Note that the query or the metal_atomgroup are prody object, which may be transformed during the searching.
         '''
@@ -91,6 +91,7 @@ class VDM:
         # vdM info
         self.score = score
         self.clu_num = clu_num
+        self.max_clu_num = max_clu_num
         self.clu_total_num = clu_total_num
 
         # cluster member info
@@ -160,7 +161,7 @@ class VDM:
         metal_atomgroup = None
         if self.metal_atomgroup:
             metal_atomgroup = self.metal_atomgroup.copy()
-        return VDM(self.query.copy(), self.id, self.clu_rank, self.score, self.clu_num, self.clu_total_num, self.clu_member_ids, metal_atomgroup, self.win, self.path)
+        return VDM(self.query.copy(), self.id, self.clu_rank, self.score, self.clu_num, self.max_clu_num, self.clu_total_num, self.clu_member_ids, metal_atomgroup, self.win, self.path)
     
     def writepdb(self, outpath):
         pr.writePDB(outpath, self.query)

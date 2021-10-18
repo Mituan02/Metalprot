@@ -559,6 +559,7 @@ class Search_vdM:
             comb_dict[key].totals = totals
             comb_dict[key].scores = scores
 
+            '''
             #Calc fraction score
             fracScore = sum([self.vdms[self.cluster_centroid_dict[clu_key[i]]].clu_num for i in range(len(wins))])/sum([self.vdms[self.cluster_centroid_dict[clu_key[i]]].clu_total_num for i in range(len(wins))])
             weight = 0
@@ -570,6 +571,10 @@ class Search_vdM:
             #Calc multiScore (By Bill: -ln(Na/SumNa * Nb/SumNb * Nc/SumNc))
             aa_numbs = [self.aa_num_dict[c[0]] for c in clu_key]
             comb_dict[key].multiScore = -log(np.prod(totals)/np.prod(aa_numbs))
+            '''
+            comb_dict[key].fracScore = sum([self.vdms[self.cluster_centroid_dict[clu_key[i]]].clu_num/self.vdms[self.cluster_centroid_dict[clu_key[i]]].max_clu_num for i in range(len(wins))])
+            
+            comb_dict[key].multiScore =1000*np.prod([self.vdms[self.cluster_centroid_dict[clu_key[i]]].clu_num/self.vdms[self.cluster_centroid_dict[clu_key[i]]].max_clu_num for i in range(len(wins))])
 
         return
     
@@ -703,7 +708,7 @@ class Search_vdM:
         os.makedirs(outdir, exist_ok=True)
 
         with open(outdir + name, 'w') as f:
-            f.write('Wins\tClusterIDs\tproteinABPLEs\tCentroidABPLEs\tproteinPhiPsi\tCentroidPhiPsi\tvolume\tvol2metal\tdiameter\tTotalVdMScore\tFracScore\tMultiScore\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tvdm_scores\ttotal_clu#\tclu_nums')
+            f.write('Wins\tClusterIDs\tproteinABPLEs\tCentroidABPLEs\tproteinPhiPsi\tCentroidPhiPsi\tvolume\tvol2metal\tdiameter\tTotalVdMScore\tFracScore\tMultiScore\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tvdm_scores\ttotal_clu#\tclu_nums\tmax_clu_nums')
             f.write('\tpair_aa_aa_dist_ok\tpair_angle_ok\tpair_metal_aa_dist_ok\tvdm_no_clash')
             if eval:
                 f.write('\teval_min_rmsd\teval_min_vdMs\teval_phi\teval_psi\teval_abple\teval_is_origin')
@@ -716,6 +721,7 @@ class Search_vdM:
                 vdm_scores = [c for c in info.scores]
                 overlaps = [c for c in info.totals]
                 clu_nums = [c.clu_num for c in info.centroid_dict.values()]
+                max_clu_nums = [c.max_clu_num for c in info.centroid_dict.values()]
                 
                 f.write('_'.join([str(x) for x in key[0]]) + '\t')
                 f.write('_'.join([x[0] + '-' + str(x[1]) for x in key[1]]) + '\t')
@@ -744,6 +750,7 @@ class Search_vdM:
                 f.write('||'.join([str(round(s, 2)) for s in vdm_scores]) + '\t')
                 f.write(str(sum(clu_nums)) + '\t')
                 f.write('||'.join([str(c) for c in clu_nums]) + '\t')
+                f.write('||'.join([str(c) for c in max_clu_nums]) + '\t')
 
                 f.write(str(info.pair_aa_aa_dist_ok) + '\t')
                 f.write(str(info.pair_angle_ok) + '\t')

@@ -27,7 +27,7 @@ python /mnt/e/GitHub_Design/Metalprot/scrips/search_selfcenter/database_selfcent
 query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/'
 
 
-centroid_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['AAMetalPhiPsi', 'cluster'], file_name_not_includes=['NULL'], score_cut = 0, clu_num_cut = 0)
+centroid_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['AAMetalPhiPsi', 'cluster'], file_name_not_includes=['CYS'], score_cut = 0, clu_num_cut = 0)
 
 
 centroid_query_dict = {}
@@ -47,7 +47,7 @@ cluster_centroid_dict = {}
 
 all_coords = []
 
-
+max_clu_num = 0
 for query_id in range(len(centroid_querys)):
     print(query_id)
     query = centroid_querys[query_id].copy()
@@ -64,6 +64,8 @@ for query_id in range(len(centroid_querys)):
     selfcenter_cluster_queryid = []
 
     mem_vdm_names = extract_vdm.get_mem_vdm_names(query)
+    if 'cluster_0' in query.query.getTitle():
+        max_clu_num = len(mem_vdm_names)
     for vn in mem_vdm_names:
         splits = vn.split('_')
         if 'centroid' in splits:
@@ -84,6 +86,7 @@ for query_id in range(len(centroid_querys)):
 
     query.id = query_id
     query.clu_rank = int(query.query.getTitle().split('_')[3]) 
+    query.max_clu_num = max_clu_num
     query.metal_atomgroup = hull.transfer2pdb(cluster_coords)
     query.clu_member_ids = selfcenter_cluster_queryid
     all_vdms.append(query)
@@ -101,7 +104,7 @@ hull.write2pymol(points, query_dir, 'align_' + all_metal_vdm.query.getTitle())
 '''
 
 #query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/20210916_2017_2018_selfcenter_alignBB/'
-outdir = query_dir + 'pickle_alignBB/'
+outdir = query_dir + 'pickle_noCYS/'
 os.makedirs(outdir, exist_ok= True)
 
 with open(outdir + 'all_metal_vdm.pkl', 'wb') as f:

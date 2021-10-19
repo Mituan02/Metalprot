@@ -59,6 +59,7 @@ for _dir in os.listdir(workdir):
         info.append(df['overlaps#'][x[0]])
         info.append(df['total_clu#'][x[0]])
         info.append(df['clu_nums'][x[0]])
+        info.append(df['max_clu_nums'][x[0]])
     else:
         info.append(0)
         info.append(False)
@@ -70,7 +71,7 @@ for _dir in os.listdir(workdir):
         info.append('0||0||0')
         info.append(0)
         info.append('0||0||0')
-
+        info.append('0||0||0')
 
     infos.append(info)
 
@@ -90,6 +91,7 @@ for _dir in os.listdir(workdir):
         maxinfo.append(df['overlaps#'][y])
         maxinfo.append(df['total_clu#'][y])
         maxinfo.append(df['clu_nums'][y])
+        maxinfo.append(df['max_clu_nums'][y])
     else:
         maxinfo.append(0)
         maxinfo.append(False)
@@ -101,11 +103,12 @@ for _dir in os.listdir(workdir):
         maxinfo.append('0||0||0')
         maxinfo.append(0)
         maxinfo.append('0||0||0')
+        maxinfo.append('0||0||0')
     max_infos.append(maxinfo)
 
 with open(workdir + '_extract.tsv', 'w') as f:
     #f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tMaxTotalVdMScore\tMaxFracScore\tMinMultiScore\n')
-    f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tscores\tOriginFracScore\tOriginMultiScore\tOverlap\tOverlaps\tclu_num\tclu_nums\n')
+    f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tscores\tOriginFracScore\tOriginMultiScore\tOverlap\tOverlaps\tclu_num\tclu_nums\tmax_clu\n')
     for info in infos:
         # if info[8] <= 0:
         #     continue
@@ -113,7 +116,7 @@ with open(workdir + '_extract.tsv', 'w') as f:
 
 with open(workdir + '_extract_max.tsv', 'w') as f:
     #f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tMaxTotalVdMScore\tMaxFracScore\tMinMultiScore\n')
-    f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tscores\tOriginFracScore\tOriginMultiScore\tOverlap\tOverlaps\tclu_num\tclu_nums\n')
+    f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tscores\tOriginFracScore\tOriginMultiScore\tOverlap\tOverlaps\tclu_num\tclu_nums\tmax_clu\n')
     for info in max_infos:
         f.write('\t'.join([str(o) for o in info]) + '\n')
 
@@ -135,10 +138,36 @@ with open(workdir + '_extract_split.tsv', 'w') as f:
         title = info[0] 
         overlap = str(info[8])
         overlaps = sorted([int(x) for x in info[9].split('||')])
+        f.write(title + '\t' + overlap + '\t' + '\t'.join([str(o) for o in overlaps]) + '\t')
+        
         clu_num = str(info[10])
         clu_nums = sorted([int(x) for x in info[11].split('||')])
-        f.write(title + '\t' + overlap + '\t' + '\t'.join([str(o) for o in overlaps]) + '\t')
         f.write(clu_num + '\t' + '\t'.join([str(o) for o in clu_nums]) + '\t')
-        scores = sorted([float(x) for x in info[5].split('||')])
-        f.write(str(info[4]) + '\t' + '\t'.join([str(o) for o in scores]) + '\n')
 
+        score = str(info[4])
+        scores = sorted([float(x) for x in info[5].split('||')])
+        f.write(score + '\t' + '\t'.join([str(o) for o in scores]) + '\n')
+        
+with open(workdir + '_extract_split_ratio.tsv', 'w') as f:
+    #f.write('Title\tTotalSolutions\twin_size\tIsOriginVdm\tOriginTotalVdMScore\tOriginFracScore\tOriginMultiScore\tMaxTotalVdMScore\tMaxFracScore\tMinMultiScore\n')
+    f.write('Title\tclu_num1\tclu_num2\tclu_num3\tmax_clu1\tmax_clu2\tmax_clu3\tratio1\tratio2\tratio3\todratio1\todratio2\todratio3\n')
+    for info in infos:
+        if info[8] <= 0:
+            continue
+        title = info[0] 
+        f.write(title + '\t')
+
+        clu_nums = [int(x) for x in info[11].split('||')]
+        f.write( '\t'.join([str(o) for o in clu_nums]) + '\t')
+
+        max_clus = [int(x) for x in info[12].split('||')]
+        f.write('\t'.join([str(o) for o in max_clus]) + '\t')
+
+        ratios = [clu_nums[i]/max_clus[i] for i in range(len(clu_nums))]
+        f.write('\t'.join([str(o) for o in ratios]) + '\t')
+
+        ratio_ordered = sorted(ratios)
+        f.write('\t'.join([str(o) for o in ratio_ordered]) + '\n')
+
+
+        

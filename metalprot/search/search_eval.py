@@ -154,8 +154,8 @@ class Search_eval(Search_selfcenter):
         comb_dict_filter = {}
 
         for key in comb_dict.keys():
-            if len(list(comb_dict_filter.keys()))>=1000:
-                break
+            # if len(list(comb_dict_filter.keys()))>=1000:
+            #     break
             # if not key[0] == nature_key[0]: 
             #     continue
             combinfo = comb_dict[key]
@@ -174,7 +174,7 @@ class Search_eval(Search_selfcenter):
         self.neighbor_calc_geometry(comb_dict_filter)
         self.neighbor_aftersearch_filt(_target, comb_dict_filter) 
 
-        self.comb_overlap(comb_dict_filter)
+        #self.comb_overlap(comb_dict_filter)
         self.neighbor_calc_comb_score(comb_dict_filter)
         #self.selfcenter_write_win(comb_dict_filter)
 

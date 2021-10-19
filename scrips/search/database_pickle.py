@@ -54,6 +54,7 @@ for _query in centroid_querys:
     clu.realign_by_CCAN(target = query, align_sel=align_sel)
     for q in clu.querys:
         q.id = query_id
+        q.max_clu_num = len(clu.querys)
         q.clu_rank = int(query.query.getTitle().split('_')[3])
         if 'centroid' in q.query.getTitle():      
             q.metal_atomgroup = hull.transfer2pdb(melal_coord_in_clu)  

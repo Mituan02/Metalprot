@@ -33,7 +33,7 @@ align_sel_backbone = 'name C CA N O NI MN ZN CO CU MG FE or ion'
 cores = ldb.load_cores(workdir + '_Seq_core_date_reps/')
 
 
-AA = 'CYS'
+AA = 'HIS'
 
 len_sel = 9
 

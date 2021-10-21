@@ -382,6 +382,7 @@ class Search_eval(Search_selfcenter):
                     self.neighbor_comb_dict[key].eval_is_origin = True
         return
 
+
     def find_best_for_nature_sel(self):
         '''
         In the eval search, we can find the nature's selected vdm if the protein is included in the database. 

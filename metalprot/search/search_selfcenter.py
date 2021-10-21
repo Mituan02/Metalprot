@@ -71,14 +71,12 @@ class Search_selfcenter(Search_vdM):
             pool.close()
             pool.join()
             for r in results: 
-                if not r:
-                    self.neighbor_comb_dict.update(r)
+                self.neighbor_comb_dict.update(r)
         else:
             for win_comb in win_combs:
                 print(win_comb)      
                 comb_dict = self.selfcenter_run_comb(win_comb)
-                if not comb_dict:
-                    self.neighbor_comb_dict.update(comb_dict)
+                self.neighbor_comb_dict.update(comb_dict)
         return
 
 
@@ -147,7 +145,7 @@ class Search_selfcenter(Search_vdM):
 
         for x, y in itertools.permutations(win_comb, 2):
             if (x, y) not in self.neighbor_pair_dict.keys():
-                return None
+                return comb_dict
         
         graph = Graph(win_comb, [len(self.vdms) for i in range(len(win_comb))])
 
@@ -520,8 +518,7 @@ class Search_selfcenter(Search_vdM):
         pool.close()
         pool.join()
         for r in results: 
-            if not r:
-                self.neighbor_comb_dict.update(r)
+            self.neighbor_comb_dict.update(r)
 
 
     def selfcenter_run_combkey2(self, wins_dict_values):

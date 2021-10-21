@@ -35,22 +35,24 @@ print(len(all_querys))
 
 # target_path = workdir + '5od1_zn.pdb'
 
+# win_filter = [34, 60, 64]
 
-workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/_Seq_core_date_3contact/'
+workdir = '/mnt/e/DesignData/ligands/LigandBB/6dwv/'
 
-outdir = workdir + 'output_eval_2ddf'
+outdir = workdir + 'output_eval/'
 
-target_path = workdir + '2006_2ddf_ZN_2.pdb'
+target_path = workdir + '6dwv_core.pdb'
 
+win_filter = [4, 6, 15]
 
 rmsd_cuts = 0.45
 
 num_iters = [3]
 
-win_filter = []
 
 
-_filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_phipsi_val = 15, 
+
+_filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_phipsi_val = 25, 
     filter_vdm_score = False, min_vdm_score = 0, filter_vdm_count = False, min_vdm_clu_num = 20,
     after_search_filter = True, pair_angle_range = [92, 116], pair_aa_aa_dist_range = [3.0, 3.5], pair_metal_aa_dist_range = None,
     filter_qt_clash = True, write_filtered_result = True, selfcenter_filter_member_phipsi = True)

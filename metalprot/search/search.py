@@ -60,7 +60,8 @@ def supperimpose_centroid(_vdm, centroid, align_sel='heavy'):
     
     transform = pr.calcTransformation(_vdm.query.select(align_sel), centroid.query.select(align_sel))
     transform.apply(_vdm.query)
-
+    if _vdm.metal_atomgroup:
+        transform.apply(_vdm.metal_atomgroup) 
     return True
 
 class Search_vdM:
@@ -402,8 +403,7 @@ class Search_vdM:
         for win_comb in win_combs:
             print(win_comb)      
             comb_dict = self.neighbor_run_comb(win_comb)
-            if not comb_dict:
-                self.neighbor_comb_dict.update(comb_dict)
+            self.neighbor_comb_dict.update(comb_dict)
         return
 
 
@@ -425,8 +425,7 @@ class Search_vdM:
         pool.close()
         pool.join()
         for r in results: 
-            if not r:
-                self.neighbor_comb_dict.update(r)
+            self.neighbor_comb_dict.update(r)
         return
 
 
@@ -467,7 +466,7 @@ class Search_vdM:
 
         for x, y in itertools.permutations(win_comb, 2):
             if (x, y) not in self.neighbor_pair_dict.keys():
-                return None
+                return comb_dict
         
         graph = Graph(win_comb, [len(self.vdms) for i in range(len(win_comb))])
 
@@ -478,9 +477,9 @@ class Search_vdM:
         print('graph.paths len {}'.format(len(graph.all_paths)))
 
         #TO DO: Here is a temp method to solve extream solutions. Mostly happened in 4 CYS binding cores.
-        if len(graph.all_paths) > 10000:
+        if len(graph.all_paths) > 15000:
             print('Too many paths to be considered so far.')
-            graph.all_paths = graph.all_paths[0:10001]
+            graph.all_paths = graph.all_paths[0:15001]
 
         clu_dict = {}
 
@@ -506,29 +505,83 @@ class Search_vdM:
 
         return comb_dict
 
+    def neighbor_construct_comb2(self, win_comb):
+        '''
+        win_comb: [0, 1, 2, 3]
+
+        cluster_dict: {(0, 0, 0, 0): {0:[1, 3, 4], 1:[2, 3, 4], 2: [2, 6, 7], 3:[1, 2, 3]}}
+        The key is win, the value is list of index, each represent one metal coord exist in all other wins' metal.
+        
+        self.neighbor_comb_dict
+        # { (wins, ids), (comb, combinfo)}
+        # {((0, 1, 2, 3)(0, 0, 0, 0)): {(0:[1, 3, 4], 1:[2, 3, 4], 2: [2, 6, 7], 3:[1, 2, 3]), combinfo}}
+
+
+        As we calculate all metals at the same time. 
+        We need to extract vdm representations.
+        '''
+        print('neighbor_construct comb: {}'.format(win_comb))
+
+        comb_dict = dict()
+
+        for x, y in itertools.permutations(win_comb, 2):
+            if (x, y) not in self.neighbor_pair_dict.keys():
+                return comb_dict
+        
+        graph = Graph(win_comb, [len(self.vdms) for i in range(len(win_comb))])
+
+        graph.calc_pair_connectivity(self.neighbor_pair_dict)
+
+        graph.get_paths()
+
+        print('graph.paths len {}'.format(len(graph.all_paths)))
+
+        #TO DO: Here is a temp method to solve extream solutions. Mostly happened in 4 CYS binding cores.
+        if len(graph.all_paths) > 15000:
+            print('Too many paths to be considered so far.')
+            graph.all_paths = graph.all_paths[0:15001]
+
+        # path represent the id of each metal vdM.
+        count = 0
+        for path in graph.all_paths:
+            clu_key = tuple([self.vdms[p].get_cluster_key() for p in path])
+
+            comb = dict()
+            for i in range(len(win_comb)):
+                comb[win_comb[i]] = [path[i]]
+
+            combinfo = CombInfo()
+            combinfo.comb = comb 
+            comb_dict[(tuple(win_comb), clu_key, count)] = combinfo           
+            count += 1
+
+        return comb_dict
+
 
     def neighbor_extract_query(self, _target, comb_dict):
         '''
         for each (comb, combinfo), we extract candidate querys and add it in combinfo.
         '''
         print('neighbor-extract-query')
-        for wins, clu_key in comb_dict.keys():
+        for key in comb_dict.keys():
+            wins = key[0]
+            clu_key = key[1]
             for i in range(len(wins)):
                 win = wins[i]
-                comb_dict[(wins, clu_key)].query_dict[win] = []
+                comb_dict[key].query_dict[win] = []
 
                 clu = clu_key[i]
                 centroid_id = self.cluster_centroid_dict[clu]
                 centroid = self.vdms[centroid_id].copy()
 
                 supperimpose_target_bb(_target, centroid, win)
-                comb_dict[(wins, clu_key)].centroid_dict[win] = centroid
+                comb_dict[key].centroid_dict[win] = centroid
 
-                for id in comb_dict[(wins, clu_key)].comb[win]:
+                for id in comb_dict[key].comb[win]:
                     _query = self.vdms[id].copy()
 
                     supperimpose_target_bb(_target, _query, win)
-                    comb_dict[(wins, clu_key)].query_dict[win].append(_query)
+                    comb_dict[key].query_dict[win].append(_query)
 
         return
 
@@ -547,11 +600,11 @@ class Search_vdM:
             clu_key = key[1]
             
             # From here we will calculate the score for each comb. 
-            totals = [len(qs) for qs in comb_dict[key].query_dict.values()]
+            totals = [len(comb_dict[key].query_dict[w]) for w in wins]
             try:
                 #This is for the Search_selfcenter.
                 if comb_dict[key].overlap_query_id_dict:
-                    totals = [len(v) for v in comb_dict[key].overlap_query_id_dict.values()]
+                    totals = [len(comb_dict[key].overlap_query_id_dict[w]) for w in wins]
             except:
                 print('totals: ' + str(totals)) 
             #total_clu = sum([self.cluster_centroid_dict[clu_key[i]].total_clu for i in range(len(wins))])
@@ -586,8 +639,8 @@ class Search_vdM:
         Check CombInfo.calc_geometry()
         '''
         print('neighbor-calc-geometry')
-        for wins, clu_key in comb_dict.keys():
-            comb_dict[(wins, clu_key)].calc_geometry()         
+        for key in comb_dict.keys():
+            comb_dict[key].calc_geometry()         
         return
 
 

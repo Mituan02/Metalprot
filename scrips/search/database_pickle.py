@@ -49,9 +49,9 @@ for _query in centroid_querys:
 
     mem_vdms = extract_vdm.get_mem_vdms(query)
     clu = quco.Cluster(mem_vdms)
-    melal_coord_in_clu = [q.query.select(metal_sel)[0].getCoords() for q in clu.querys]
     #clu.realign_by_HEAVY_candidates(target = query, align_sel='heavy') #The position of each point is decided by how the vdM is supperimposed.
     clu.realign_by_CCAN(target = query, align_sel=align_sel)
+    melal_coord_in_clu = [q.query.select(metal_sel)[0].getCoords() for q in clu.querys]
     for q in clu.querys:
         q.id = query_id
         q.max_clu_num = len(clu.querys)

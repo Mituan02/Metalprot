@@ -21,6 +21,7 @@ from ..database import database_extract
 from .graph import Graph
 from .comb_info import CombInfo
 
+
 from sklearn.neighbors import NearestNeighbors
 import multiprocessing as mp
 from multiprocessing.dummy import Pool as ThreadPool
@@ -64,13 +65,15 @@ def supperimpose_centroid(_vdm, centroid, align_sel='heavy'):
         transform.apply(_vdm.metal_atomgroup) 
     return True
 
+
 class Search_vdM:
     '''
     The function to search comb is based on nearest neighbor function of sklearn.
     '''
     def __init__(self, target_pdb, workdir, vdms, cluster_centroid_dict, all_metal_vdm, 
-    num_iters = [3], rmsd = 0.45, win_filtered = [], secondshell_querys = None, 
-    validateOriginStruct = False, search_filter = None, parallel = False, selfcenter_rmsd = 0.45):
+    num_iters = [3], rmsd = 0.45, win_filtered = [], 
+    validateOriginStruct = False, search_filter = None, parallel = False, selfcenter_rmsd = 0.45,
+    secondshell_vdms = None, rmsd_2ndshell = 0.75):
 
         if workdir:
             _workdir = os.path.realpath(workdir) + '_' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S')            
@@ -115,7 +118,8 @@ class Search_vdM:
         # exp. {((0, 1, 2, 3)(0, 0, 0, 0)): {(0:[1, 3, 4], 1:[2, 3, 4], 2: [2, 6, 7], 3:[1, 2, 3]), combinfo}} Please check neighbor_win2comb()
 
         #secondshell-----------------------------
-        self.secondshell_querys = secondshell_querys
+        self.secondshell_vdms = secondshell_vdms
+        self.rmsd_2ndshell = rmsd_2ndshell
 
         #For multi scoring-----------------------------
         self.aa_num_dict = None

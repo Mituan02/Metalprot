@@ -7,7 +7,7 @@ import sys
 import prody as pr
 import shutil
 #sys.path.append(r'/mnt/e/GitHub_Design/MetalDesign')
-from metalprot import ligand_database as ldb
+from metalprot.database import database_extract as ldb
 
 
 #----------------------------------------------------------
@@ -29,14 +29,15 @@ with open(workdir + filename, 'r') as f:
         pdb_date[r[0].split('"')[1]] = r[3].split('"')[1].split('-')[0]
 
 
-workdir = "/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/_Seq_cores/"
+workdir = "/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211018/_Seq_core_2ndshell/"
+outdir = "/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211018/_Seq_core_2ndshell_date/"
 
 for file in os.listdir(workdir):
     if file.endswith(".pdb"):
         name = file.split('_')[0].upper()
         date = pdb_date[name]
 
-        shutil.copy(workdir + file, workdir + '_seq_core_date/' + date + '_' + file)
+        shutil.copy(workdir + file, outdir + date + '_' + file)
 
 
 #---------------------------------------------------------

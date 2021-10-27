@@ -29,22 +29,22 @@ print(len(all_querys))
 ### run Search_struct
 
 
-# workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
+workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
 
-# outdir = workdir + 'output_eval_selfcenter_/'
+outdir = workdir + 'output_eval_selfcenter_/'
 
-# target_path = workdir + '5od1_zn.pdb'
+target_path = workdir + '5od1_zn.pdb'
 
-#win_filter = [34,  60,  64]
+win_filter = [34,  60,  64]
 
 
-workdir = '/mnt/e/DesignData/ligands/LigandBB/6dwv/'
+# workdir = '/mnt/e/DesignData/ligands/LigandBB/6dwv/'
 
-outdir = workdir + 'output_selfcenter_eval/'
+# outdir = workdir + 'output_selfcenter_eval/'
 
-target_path = workdir + '6dwv_core.pdb'
+# target_path = workdir + '6dwv_core.pdb'
 
-win_filter = [4, 6, 15]
+# win_filter = [4, 6, 15]
 
 rmsd_cuts = 0.45
 

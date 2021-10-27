@@ -1,4 +1,3 @@
-import contextlib
 from math import comb, log
 import os
 from typing import Dict
@@ -12,6 +11,7 @@ from prody.proteins.pdbfile import writePDB
 import scipy.spatial
 from scipy.spatial.distance import cdist, dice
 import datetime
+import math
 
 from sklearn import neighbors
 
@@ -94,10 +94,14 @@ class Search_selfcenter(Search_vdM):
         self.neighbor_calc_geometry(comb_dict)
         self.neighbor_aftersearch_filt(_target, comb_dict) 
 
-        self.comb_overlap(comb_dict)
-        self.neighbor_calc_comb_score(comb_dict)
+        #self.comb_overlap(comb_dict)
+        self.log += 'key\tradius\toverlap\tvolume\tdensity\tov1\tov2\tov3\ttotal_clu\tclu1\tclu2\tclu3\n'
+        for radius in range(20, 100, 5):
+            self.selfcenter_calc_density(comb_dict, radius/100)
 
-             
+        #self.selfcenter_calc_density(comb_dict, self.selfcenter_rmsd)
+        self.neighbor_calc_comb_score(comb_dict)
+            
         
         if len([comb_dict.keys()]) <= 0:
             return comb_dict
@@ -116,7 +120,7 @@ class Search_selfcenter(Search_vdM):
             if len(comb_dict)>0:
                 self.neighbor_write_summary(outdir, comb_dict, name = '_summary_' + '_'.join([str(w) for w in win_comb]) + '.tsv')
 
-        #comb_dict = self.selfcenter_redu(comb_dict)
+        comb_dict = self.selfcenter_redu(comb_dict)
 
         return comb_dict
         # except:
@@ -245,6 +249,97 @@ class Search_selfcenter(Search_vdM):
 
         return
 
+    def selfcenter_calc_density(self, comb_dict, radius):
+        '''
+        For each path, calc the density. 
+        The density here is defined: 1. volume, a ball with the center of centroid metal and a radius 0.5. 
+                                     2. Number, all members from each centroid vdM in this ball.
+        This method is similar to overlap but is less computational heavy.
+        '''
+        print('selfcenter-calc-density')
+        
+        for key in comb_dict.keys():
+            
+            if not self.search_filter.write_filtered_result and comb_dict[key].after_search_filtered:
+                continue
+
+            win_comb = key[0]
+
+            ### get all metal coords
+            coords = []
+            w_ind_s = []
+ 
+            for w in win_comb:               
+                member_metal_coords = comb_dict[key].centroid_dict[w].get_metal_mem_coords()
+                coords.extend(member_metal_coords)
+                member_metal_ids = comb_dict[key].centroid_dict[w].clu_member_ids
+                for ind in range(len(member_metal_ids)):                    
+                    w_ind_s.append((w, ind))
+
+            ### Get the center point. 
+            '''
+            Here the center can be:
+            1. The geometry center, which in some cases the geometry center is not the metal center of the vdM's all member.
+            2. The all coords center, which bias toward the large clusters.
+            3. The center of vdM members center.
+            '''
+            metal_coords = []  
+            for _query in comb_dict[key].centroid_dict.values():                                
+                metal_coords.append(_query.get_metal_coord())   
+            center = [pr.calcCenter(hull.transfer2pdb(metal_coords))]
+            # center = [pr.calcCenter(hull.transfer2pdb(coords))]
+
+
+            ### get the overlap. 
+            coord_in_center, coord_has_center = self.calc_pairwise_neighbor(coords, center, radius)
+
+            overlap_ind_dict = {} 
+            overlap_query_id_dict = {} # {win:[overlap ids]} need to get {win:[query ids]} 
+
+            for i in range(len(w_ind_s)):
+                w, ind = w_ind_s[i]
+
+                if len(coord_in_center[i]) <= 0:
+                    continue
+
+                value = comb_dict[key].centroid_dict[w].clu_member_ids[ind]
+                if self.search_filter.selfcenter_filter_member_phipsi:
+                    phix, psix = self.phipsi[w]
+                    if (not utils.filter_phipsi(phix, self.vdms[value].phi, self.search_filter.max_phipsi_val)) or (not utils.filter_phipsi(psix, self.vdms[value].psi, self.search_filter.max_phipsi_val)):
+                        continue
+                
+                if w in overlap_query_id_dict.keys():
+                    overlap_ind_dict[w].add(ind)
+                    overlap_query_id_dict[w].add(value)
+                else:
+                    overlap_ind_dict[w] = set()
+                    overlap_ind_dict[w].add(ind)
+                    overlap_query_id_dict[w] = set()
+                    overlap_query_id_dict[w].add(value)
+
+            if len(overlap_ind_dict.keys()) != len(win_comb):
+                continue
+            
+            comb_dict[key].overlap_ind_dict = overlap_ind_dict
+            comb_dict[key].overlap_query_id_dict = overlap_query_id_dict 
+                        
+            #write into log
+            x = str(key) + '\t'
+            x += str(radius) + '\t'
+            volume = 4.0/3.0 * math.pi * (radius*radius*radius)
+            total = sum([len(comb_dict[key].overlap_ind_dict[w]) for w in win_comb])
+            
+            x += str(total) + '\t'
+            x += str(round(volume, 2)) + '\t'
+            x += str(round(total/volume, 2)) + '\t'
+            x += '\t'.join([str(len(comb_dict[key].overlap_ind_dict[w])) for w in win_comb]) + '\t'
+            clu_total = sum([comb_dict[key].centroid_dict[w].clu_num for w in win_comb])
+            x += str(clu_total) + '\t'
+            x += '\t'.join([str(comb_dict[key].centroid_dict[w].clu_num) for w in win_comb]) + '\n'
+            self.log += x
+
+        return      
+
 
     def selfcenter_redu(self, comb_dict):
         '''
@@ -369,7 +464,14 @@ class Search_selfcenter(Search_vdM):
                     #print(len(clu_allmetal_coords[cid]))
                     metal_coords.append(clu_allmetal_coords[cid])
 
-                hull.write2pymol(metal_coords, outdir, tag + '_w_' + str(w) +'_overlap_points.pdb')        
+                hull.write2pymol(metal_coords, outdir, tag + '_w_' + str(w) +'_overlap_points.pdb')  
+
+                        
+            volume = 4.0/3.0 * math.pi * (self.selfcenter_rmsd*self.selfcenter_rmsd*self.selfcenter_rmsd)
+            total = sum([len(comb_dict[key].overlap_ind_dict[w]) for w in key[0]])
+            comb_dict[key].volume = volume
+            comb_dict[key].volPerMetal = total/volume
+
         return   
         
 
@@ -472,6 +574,7 @@ class Search_selfcenter(Search_vdM):
         comb_dict = self.selfcenter_construct_comb(win_comb)
         return comb_dict
 
+
     def selfcenter_extract_query2(self, _target, comb_dict):
         '''
         for each (comb, combinfo), we extract candidate querys and add it in combinfo.
@@ -530,15 +633,11 @@ class Search_selfcenter(Search_vdM):
             return comb_dict
             
         _target = self.target.copy()
-        
-        #self.neighbor_extract_query(_target, comb_dict)
 
-        #self.selfcenter_calc_centroid_geometry(comb_dict)
-        self.comb_overlap(comb_dict)
+        #self.comb_overlap(comb_dict)
+        self.selfcenter_calc_density(comb_dict)
         self.neighbor_calc_comb_score(comb_dict)
 
-        #self.neighbor_aftersearch_filt(_target, comb_dict)
-        #comb_dict = self.selfcenter_redu(comb_dict)
         
         if len([comb_dict.keys()]) <= 0:
             return comb_dict
@@ -556,7 +655,7 @@ class Search_selfcenter(Search_vdM):
         else:
             self.neighbor_write_summary(outdir, comb_dict, name = '_summary_' + '_'.join([str(w) for w in win_comb]) + '.tsv')
 
-        #comb_dict = self.selfcenter_redu(comb_dict)
+        comb_dict = self.selfcenter_redu(comb_dict)
 
         return comb_dict
         # except:

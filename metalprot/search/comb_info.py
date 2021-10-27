@@ -27,8 +27,11 @@ class CombInfo:
         self.volPerMetal = 0
         self.diameter = 0
 
-        #Querys
+        #Centroid
         self.centroid_dict = {}
+
+        #2nd shell vdm
+        self.second_dict = {}
 
         #evaluation property for evaluation search
         self.eval_mins = None
@@ -71,7 +74,7 @@ class CombInfo:
 
         for _query in self.centroid_dict.values():                                
             all_coords.append(_query.get_contact_coord())
-            metal_coords.append(_query.get_candidate_metal_coords())   
+            metal_coords.append(_query.get_metal_coord())   
         all_coords.append(pr.calcCenter(hull.transfer2pdb(metal_coords)))
 
         self.geometry = hull.transfer2pdb(all_coords, ['NI' if i == len(all_coords)-1 else 'N' for i in range(len(all_coords))])

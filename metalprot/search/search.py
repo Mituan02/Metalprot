@@ -73,7 +73,7 @@ class Search_vdM:
     def __init__(self, target_pdb, workdir, vdms, cluster_centroid_dict, all_metal_vdm, 
     num_iters = [3], rmsd = 0.45, win_filtered = [], 
     validateOriginStruct = False, search_filter = None, parallel = False, selfcenter_rmsd = 0.45,
-    secondshell_vdms = None, rmsd_2ndshell = 0.75):
+    secondshell_vdms = None, rmsd_2ndshell = 0.5):
 
         if workdir:
             _workdir = os.path.realpath(workdir) + '_' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S')            
@@ -123,7 +123,11 @@ class Search_vdM:
 
         #For multi scoring-----------------------------
         self.aa_num_dict = None
-        
+        self.aa_vdm_info_dict = {
+            'HIS':[2662, 285, 92.08, 60],
+            'GLU':[829, 50, 16.32, 11],
+            'ASP':[896, 90, 26.12, 22]
+        }
         #For developing output purpose-----------
         self.log = ''
 

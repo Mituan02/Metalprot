@@ -95,8 +95,8 @@ class Search_selfcenter(Search_vdM):
         self.neighbor_aftersearch_filt(_target, comb_dict) 
 
         #self.comb_overlap(comb_dict)
-        self.log += 'key\tradius\toverlap\tvolume\tdensity\tov1\tov2\tov3\ttotal_clu\tclu1\tclu2\tclu3\n'
-        for radius in range(20, 100, 5):
+        self.log += 'key\tradius\toverlap\tvolume\tdensity\tov1\tov2\tov3\ttotal_clu\tclu1\tclu2\tclu3\tf_total\tf_max\tf_avg\tf_median\n'
+        for radius in range(20, 105, 5):
             self.selfcenter_calc_density(comb_dict, radius/100)
 
         #self.selfcenter_calc_density(comb_dict, self.selfcenter_rmsd)
@@ -327,15 +327,32 @@ class Search_selfcenter(Search_vdM):
             x = str(key) + '\t'
             x += str(radius) + '\t'
             volume = 4.0/3.0 * math.pi * (radius*radius*radius)
-            total = sum([len(comb_dict[key].overlap_ind_dict[w]) for w in win_comb])
+
+            overlaps = [len(comb_dict[key].overlap_ind_dict[w]) for w in win_comb]     
+            total = sum(overlaps)
             
             x += str(total) + '\t'
             x += str(round(volume, 2)) + '\t'
             x += str(round(total/volume, 2)) + '\t'
             x += '\t'.join([str(len(comb_dict[key].overlap_ind_dict[w])) for w in win_comb]) + '\t'
-            clu_total = sum([comb_dict[key].centroid_dict[w].clu_num for w in win_comb])
+
+            clus = [comb_dict[key].centroid_dict[w].clu_num for w in win_comb]
+            clu_total = sum(clus)
             x += str(clu_total) + '\t'
-            x += '\t'.join([str(comb_dict[key].centroid_dict[w].clu_num) for w in win_comb]) + '\n'
+            x += '\t'.join([str(comb_dict[key].centroid_dict[w].clu_num) for w in win_comb]) + '\t'
+            
+            aas = [a[0] for a in key[1]]
+            
+            f_total = np.prod(overlaps)/np.prod([self.aa_vdm_info_dict[a][0] for a in aas])*clu_total/volume
+            x += str(round(f_total * 10000, 2))  + '\t'
+            f_max = np.prod(overlaps)/np.prod([self.aa_vdm_info_dict[a][1] for a in aas])*clu_total/volume
+            x += str(round(f_max * 100, 2))  + '\t'
+            f_avg = np.prod(overlaps)/np.prod([self.aa_vdm_info_dict[a][2] for a in aas])*clu_total/volume
+            x += str(round(f_avg, 2))  + '\t'
+            f_median = np.prod(overlaps)/np.prod([self.aa_vdm_info_dict[a][3] for a in aas])*clu_total/volume
+            x += str(round(f_median, 2))  + '\t'
+
+            x += '\n'
             self.log += x
 
         return      
@@ -635,7 +652,7 @@ class Search_selfcenter(Search_vdM):
         _target = self.target.copy()
 
         #self.comb_overlap(comb_dict)
-        self.selfcenter_calc_density(comb_dict)
+        self.selfcenter_calc_density(comb_dict, self.selfcenter_rmsd)
         self.neighbor_calc_comb_score(comb_dict)
 
         

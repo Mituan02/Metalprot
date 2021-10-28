@@ -31,7 +31,7 @@ class CombInfo:
         self.centroid_dict = {}
 
         #2nd shell vdm
-        self.second_dict = {}
+        self.secondshell_dict = {}
 
         #evaluation property for evaluation search
         self.eval_mins = None

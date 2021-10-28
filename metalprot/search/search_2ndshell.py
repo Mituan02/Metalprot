@@ -1,33 +1,10 @@
-from math import comb, log
 import os
-from typing import Dict
-from numba.cuda import target
 import numpy as np
-import itertools
-from numpy.lib.function_base import extract
 import prody as pr
-from prody.measure.transform import superpose
-from prody.proteins.pdbfile import writePDB
-import scipy.spatial
-from scipy.spatial.distance import cdist, dice
-import datetime
-import math
 
-from sklearn import neighbors
-
-from ..basic import hull
-from ..basic import utils
-from ..database import core
-from ..database import database_extract
-from ..basic.vdmer import metal_sel
-
-from sklearn.neighbors import NearestNeighbors
-import multiprocessing as mp
-from multiprocessing.dummy import Pool as ThreadPool
-
-from .search import Search_vdM, supperimpose_target_bb
-from .graph import Graph
-from .comb_info import CombInfo
+from ..basic.vdmer import get_contact_atom
+#from ..basic.vdmer import metal_sel
+metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
 
 def construct_pseudo_2ndshellVdm(target, vdM, w):
     '''
@@ -46,12 +23,14 @@ def construct_pseudo_2ndshellVdm(target, vdM, w):
             continue
         neary_aas_coords = []
         neary_aas_coords.extend(target.select('name N C CA O and resindex ' + str(resind)).getCoords())
-        neary_aas_coords.extend(vdM.query.select('bb or ion or name NI MN ZN CO CU MG FE').getCoords())
+        neary_aas_coords.extend(vdM.query.select('name N C CA O and resindex ' + str(vdM.contact_resind)).getCoords())
+        neary_aas_coords.extend(vdM.query.select(metal_sel).getCoords())
         coords = np.array(neary_aas_coords)
 
         names = []
         names.extend(target.select('name N C CA O and resindex ' + str(resind)).getNames())
-        names.extend(vdM.query.select('bb or ion or name NI MN ZN CO CU MG FE').getNames())
+        names.extend(vdM.query.select('name N C CA O and resindex ' + str(vdM.contact_resind)).getNames())
+        names.extend(vdM.query.select(metal_sel).getNames())
         
         atom_contact_pdb = pr.AtomGroup('nearby_bb' + str(count))
         atom_contact_pdb.setCoords(coords)
@@ -61,80 +40,106 @@ def construct_pseudo_2ndshellVdm(target, vdM, w):
 
     return ags
 
+    
 
-def supperimpose_2ndshell(ag, _2ndvdm, rmsd_cut):
+
+def supperimpose_2ndshell(ag, vdm, _2ndvdm, rmsd_cut):
     '''
     supperimpose query to ag. 
     '''
     #print('supperimpose_2ndshell ' + query_2nd.query.getTitle())
+
+    if not ag:
+        #print('ag None')
+        return None
+    if not _2ndvdm.ag_2ndshell:
+        #print('_2ndvdm ' + _2ndvdm.query.getTitle() + ' None')
+        return None
+    
+    #if _2ndvdm.aa_type != vdm.aa_type:
+    if get_contact_atom(_2ndvdm.query).getResname() != vdm.aa_type:
+        return None
+
+    if len(_2ndvdm.ag_2ndshell) != len(ag):
+        #print('_2ndvdm ' + _2ndvdm.query.getTitle() + ' len: ' + str(len(_2ndvdm.ag_2ndshell)))
+        #print('ag ' + ' len: ' + str(len(ag)))
+        return None
+
     _2ndvdm = _2ndvdm.copy()
     transform = pr.calcTransformation(_2ndvdm.ag_2ndshell, ag)
     transform.apply(_2ndvdm.ag_2ndshell)
     transform.apply(_2ndvdm.query)
-    rmsd = pr.calcRMSD(ag, _2ndvdm.ag)
+    rmsd = pr.calcRMSD(ag, _2ndvdm.ag_2ndshell)
 
     if rmsd <= rmsd_cut:
         candidate = _2ndvdm.copy()
-        return candidate
+        return (candidate, rmsd)
     return None
 
-class Search_2ndshell(Search_vdM):
+
+'''
+Inheritated from Search_vdM. 
+Search the 2nd shell h-hond. 
+'''
+
+def run_search_2ndshell(comb_dict, target, secondshell_vdms, rmsd_2ndshell):
     '''
-    Inheritated from Search_vdM. 
-    Search the 2nd shell h-hond. 
+    
     '''
+    print('run search 2nd-shell vdM.')
+    if not comb_dict:
+        print('No 1st shell metal-binding vdM found. No need to search 2ndshell.')
 
-    def run_search_2ndshell(self, comb_dict):
-        '''
+    for key in comb_dict.keys():
+        search_2ndshell(comb_dict, key, target, secondshell_vdms, rmsd_2ndshell)
+
+    return 
+
+
+def search_2ndshell(comb_dict, key, target, secondshell_vdms, rmsd_2ndshell):
+    '''
+    
+    '''
+    for w in key[0]:
+        vdm = comb_dict[key].centroid_dict[w]
+        ags = construct_pseudo_2ndshellVdm(target, vdm, w)
+
+        #TO DO: Try to use nearest neighbor.
+        candidates = []
+        for ag in ags:   
+            for _2ndvdm in secondshell_vdms:
+                candidate = supperimpose_2ndshell(ag, vdm, _2ndvdm, rmsd_2ndshell)
+                if candidate:
+                    candidates.append(candidate)
+
+        comb_dict[key].secondshell_dict[w] = candidates
+
+    return
+
+
+def write_2ndshell(workdir, comb_dict):
+    '''
+    #Could be combined in write_comb_info.
+    '''
+    for key in comb_dict.keys():
+        outdir = workdir + 'win_' + '-'.join(str(k) for k in key[0]) + '/'
         
-        '''
-        print('run search 2nd-shell vdM.')
-        if not comb_dict:
-            print('No 1st shell metal-binding vdM found. No need to search 2ndshell.')
-
-        for key in comb_dict.keys():
-            self.search_2ndshell(key)
-
-        return 
-
-
-    def search_2ndshell(self, key):
-        '''
+        tag = 'win_' + '-'.join([str(k) for k in key[0]]) + '_clu_' + '-'.join(k[0] + '-' + str(k[1]) for k in key[1])
         
-        '''
-        for w in key[0]:
-            vdm = self.best_aa_comb_dict[key].centroid_dict[w]
-            ags = construct_pseudo_2ndshellVdm(self.target, vdm, w)
-
-            #TO DO: Try to use nearest neighbor.
-            for ag in ags:
-                candidates = []
-                for _2ndvdm in self.secondshell_vdms:
-                    candidate = supperimpose_2ndshell(ag, _2ndvdm, self.rmsd_2ndshell)
-                    if candidate:
-                        candidates.append(candidate)
-
-            self.best_aa_comb_dict[key].second_dict[w] = candidates
-
-        return
-
-
-    def write_2ndshell(self, rank, outpath = '/mem_combs/'):
-        '''
-        #Could be combined in write_comb_info.
-        '''
-        outdir = self.workdir + outpath
+        outdir += tag + '_2ndS/'
         if not os.path.exists(outdir):
             os.mkdir(outdir)
 
-        comb = self.combs[rank]
-        count = 1
-        for query in comb.querys:
-            count2 = 1
-            for _2ndshell in query._2nd_shells:
-                pdb_path = outdir + str(rank + 1) + '_' + str(count) + '_2ndshell_' + str(count2) + '_' + str(round(_2ndshell.score, 2)) + '_' + _2ndshell.query.getTitle()
-                pr.writePDB(pdb_path, _2ndshell.query)
-                count2+=1
-            count+=1
+        for w in key[0]:
+            for c in comb_dict[key].secondshell_dict[w]:
+                out_file = outdir + tag + '_w_' + str(w) + '_2ndS_' + c[0].query.getTitle()
+                pr.writePDB(out_file, c[0].query)
 
-        return 
+        with open(outdir + tag + '_2ndshell_summary.tsv', 'w') as f:
+            f.write('name\twin\trmsd\n')
+            for w in key[0]:
+                for c in comb_dict[key].secondshell_dict[w]:
+                    name = tag + '_w_' + str(w) + '_2ndS_' + c[0].query.getTitle()
+                    f.write(name + '\t' + str(w) + '\t' + str(round(c[1], 2)) + '\n')
+    
+    return 

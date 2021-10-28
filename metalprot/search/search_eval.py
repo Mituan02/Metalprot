@@ -122,8 +122,8 @@ class Search_eval(Search_selfcenter):
 
         self.neighbor_calc_geometry(comb_dict)
 
-        self.log += 'key\tradius\toverlap\tvolume\tdensity\tov1\tov2\tov3\ttotal_clu\tclu1\tclu2\tclu3\n'
-        for radius in range(20, 100, 5):
+        self.log += 'key\tradius\toverlap\tvolume\tdensity\tov1\tov2\tov3\ttotal_clu\tclu1\tclu2\tclu3\tf_total\tf_max\tf_avg\tf_median\n'
+        for radius in range(20, 105, 5):
             self.selfcenter_calc_density(comb_dict, radius/100)
             
         #self.selfcenter_calc_density(comb_dict, self.selfcenter_rmsd)

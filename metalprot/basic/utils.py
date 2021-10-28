@@ -12,7 +12,9 @@ def get_ABPLE(resn, phi, psi):
             psi = -170
         if phi == -180:
             phi = -170
-        return constant.abple_dict[resn][psi][phi]
+        if resn in constant.abple_dict.keys():
+            return constant.abple_dict[resn][psi][phi]
+        return 'n'
     except ValueError:
         return 'n'
 

@@ -12,7 +12,7 @@ import numpy as np
 #sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
 from metalprot.search import extract_vdm
 from metalprot.basic import hull
-from metalprot.basic import SecondShellVDM
+from metalprot.basic import vdmer_2ndshell
 import pickle
 
 '''
@@ -22,7 +22,7 @@ python /mnt/e/GitHub_Design/Metalprot/scrips/search_2ndshell/database_2ndshell_p
 vdm_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211018/20211026_2ndshell_selfcenter/'
 
 
-centroid_vdms = extract_vdm.extract_all_centroid(vdm_dir, summary_name = '_summary.txt', file_name_includes = ['AAMetalPhiPsi', 'cluster'], file_name_not_includes=['CYS'], score_cut = 0, clu_num_cut = 0)
+centroid_vdms = extract_vdm.extract_all_centroid(vdm_dir, summary_name = '_summary.txt', file_name_includes = ['AA2ndS', 'cluster'], file_name_not_includes=['CYS'], score_cut = 0, clu_num_cut = 0)
 
 
 all_2ndshell_vdms = []
@@ -30,8 +30,9 @@ all_2ndshell_vdms = []
 max_clu_num = 0
 for vdm_id in range(len(centroid_vdms)):
     print(vdm_id)
-    _vdm = centroid_vdms[centroid_vdms]
-    vdm = SecondShellVDM(_vdm.query.copy(), score = _vdm.score, clu_num = _vdm.clu_num, clu_total_num = _vdm.total_num)
+    _vdm = centroid_vdms[vdm_id]
+    ag_2ndshell = vdmer_2ndshell.organize_2ndshellVdm(_vdm.query)
+    vdm = vdmer_2ndshell.SecondShellVDM(_vdm.query.copy(), score = _vdm.score, clu_num = _vdm.clu_num, clu_total_num = _vdm.clu_total_num, ag_2ndshell = ag_2ndshell)
     
     if 'cluster_0' in vdm.query.getTitle():
         max_clu_num = vdm.clu_num
@@ -42,6 +43,7 @@ for vdm_id in range(len(centroid_vdms)):
     all_2ndshell_vdms.append(vdm)
 
 outdir = vdm_dir + 'pickle_noCYS/'
+os.makedirs(outdir, exist_ok=True)
 
 with open(outdir + 'all_2ndshell_vdms.pkl', 'wb') as f:
     pickle.dump(all_2ndshell_vdms, f)

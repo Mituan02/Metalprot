@@ -3,6 +3,7 @@ import numpy as np
 import prody as pr
 
 from ..basic.vdmer import get_contact_atom
+from ..basic import cluster
 #from ..basic.vdmer import metal_sel
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
 
@@ -90,15 +91,22 @@ def run_search_2ndshell(comb_dict, target, secondshell_vdms, rmsd_2ndshell):
     if not comb_dict:
         print('No 1st shell metal-binding vdM found. No need to search 2ndshell.')
 
+    secondshellvdm_coords = []
+    # for _2ndvdm in secondshell_vdms:
+    #     if not _2ndvdm.ag_2ndshell:
+    #         secondshellvdm_coords.append(np.zeros(secondshell_vdms[0].ag_2ndshell.getCoords().shape))
+    #         continue
+    #     secondshellvdm_coords.append(_2ndvdm.ag_2ndshell.getCoords())
+
     for key in comb_dict.keys():
-        search_2ndshell(comb_dict, key, target, secondshell_vdms, rmsd_2ndshell)
+        search_2ndshell(comb_dict, key, target, secondshell_vdms, rmsd_2ndshell, secondshellvdm_coords)
+
 
     return 
 
 
-def search_2ndshell(comb_dict, key, target, secondshell_vdms, rmsd_2ndshell):
+def search_2ndshell(comb_dict, key, target, secondshell_vdms, rmsd_2ndshell, secondshellvdm_coords = None):
     '''
-    
     '''
     for w in key[0]:
         vdm = comb_dict[key].centroid_dict[w]
@@ -106,11 +114,31 @@ def search_2ndshell(comb_dict, key, target, secondshell_vdms, rmsd_2ndshell):
 
         #TO DO: Try to use nearest neighbor.
         candidates = []
+
         for ag in ags:   
             for _2ndvdm in secondshell_vdms:
                 candidate = supperimpose_2ndshell(ag, vdm, _2ndvdm, rmsd_2ndshell)
                 if candidate:
                     candidates.append(candidate)
+
+        # coords = []
+        # for ag in ags:
+        #     coords.append(ag.getCoords())
+        # coords.extend(secondshellvdm_coords)
+
+        # pdb_coords = np.array(coords, dtype = 'float32')
+        # rmsd_mat = cluster._make_pairwise_rmsd_mat(pdb_coords)
+
+        # for i in range(len(ags)):
+        #     ag = ags[i]
+        #     inds = np.argwhere(np.array(rmsd_mat[i]) < rmsd_2ndshell) 
+        #     for ind in inds:
+        #         if ind < len(ags):
+        #             continue
+        #         _2ndvdm = secondshell_vdms[ind - len(ags)]
+        #         candidate = supperimpose_2ndshell(ag, vdm, _2ndvdm, rmsd_2ndshell)
+        #         if candidate:
+        #             candidates.append(candidate)
 
         comb_dict[key].secondshell_dict[w] = candidates
 

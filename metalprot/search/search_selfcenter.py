@@ -95,11 +95,12 @@ class Search_selfcenter(Search_vdM):
         self.neighbor_aftersearch_filt(_target, comb_dict) 
 
         #self.comb_overlap(comb_dict)
+        '''
         self.log += 'key\tradius\toverlap\tvolume\tdensity\tov1\tov2\tov3\ttotal_clu\tclu1\tclu2\tclu3\tf_total\tf_max\tf_avg\tf_median\n'
         for radius in range(20, 105, 5):
             self.selfcenter_calc_density(comb_dict, radius/100)
-
-        #self.selfcenter_calc_density(comb_dict, self.selfcenter_rmsd)
+        '''
+        self.selfcenter_calc_density(comb_dict, self.selfcenter_rmsd)
         self.neighbor_calc_comb_score(comb_dict)
             
         
@@ -322,7 +323,8 @@ class Search_selfcenter(Search_vdM):
             
             comb_dict[key].overlap_ind_dict = overlap_ind_dict
             comb_dict[key].overlap_query_id_dict = overlap_query_id_dict 
-                        
+
+            '''         
             #write into log
             x = str(key) + '\t'
             x += str(radius) + '\t'
@@ -354,7 +356,7 @@ class Search_selfcenter(Search_vdM):
 
             x += '\n'
             self.log += x
-
+            '''   
         return      
 
 

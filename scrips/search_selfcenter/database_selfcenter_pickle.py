@@ -24,7 +24,8 @@ import pickle
 python /mnt/e/GitHub_Design/Metalprot/scrips/search_selfcenter/database_selfcenter_pickle.py
 '''
 
-query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/'
+query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211008/20211009_selfcenter/'
+#query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/'
 
 
 centroid_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['AAMetalPhiPsi', 'cluster'], file_name_not_includes=['CYS'], score_cut = 0, clu_num_cut = 0)

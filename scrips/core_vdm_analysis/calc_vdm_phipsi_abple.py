@@ -13,14 +13,14 @@ from metalprot.search import search, search_eval
 from metalprot.basic import filter
 import pickle
 from metalprot.database import database_extract as ldb
-from metalprot.basic import utils
+from metalprot.basic import utils, vdmer
 
 '''
 python /mnt/e/GitHub_Design/Metalprot/scrips/search_eval/run_selfcenter_eval_search.py
 '''
 
 ### without CYS
-query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS_alignBB/'
+query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS/'
 
 with open(query_dir + 'AAMetalPhiPsi.pkl', 'rb') as f:
     all_querys = pickle.load(f)
@@ -31,6 +31,49 @@ with open(outdir + 'vdm_phipsi_abple_noCYS.tsv', 'w') as f:
     f.write('title\ttype\tphi\tpsi\tabple\n')
     for v in all_querys:
         f.write(v.query.getTitle() + '\t' + v.aa_type + '\t' + str(round(v.phi, 3)) + '\t'+ str(round(v.psi, 3)) + '\t'+ v.abple + '\n')
+
+
+metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
+def calc_AB_angle(vdm):
+    metal = vdm.query.select(metal_sel)[0]
+    contact_atom = vdmer.get_contact_atom(vdm.query)
+    third_atom = None
+    forth_atom = None
+    if vdm.aa_type == 'HIS':    
+        third_atom = vdm.query.select('name CE1')[0]
+        if contact_atom.getName() == 'ND1':
+            forth_atom = vdm.query.select('name NE2')[0]
+        elif contact_atom.getName() == 'NE2':
+            forth_atom = vdm.query.select('name ND1')[0]
+        else:
+            forth_atom = vdm.query.select('name NE2')[0]
+    elif vdm.aa_type == 'GLU':
+        third_atom = vdm.query.select('name CD')[0]
+        forth_atom = vdm.query.select('name OE1')[0]
+    elif vdm.aa_type == 'ASP':
+        third_atom = vdm.query.select('name CG')[0]
+        forth_atom = vdm.query.select('name OD1')[0]
+    try:
+        A = pr.calcAngle(metal, contact_atom, third_atom)
+        B = pr.calcDihedral(metal, contact_atom, third_atom, forth_atom)
+        return A, B
+    except:
+        print(vdm.query.getTitle())
+        print(third_atom)
+        print(forth_atom)
+        return None, None
+
+
+# Extra angle
+outdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/reason/'
+with open(outdir + 'vdm_contact_angles_noCYS.tsv', 'w') as f:
+    f.write('title\ttype\tA\tB_dihidral\n')
+    for v in all_querys:
+        A, B = calc_AB_angle(v)
+        if not A:
+            continue
+        f.write(v.query.getTitle() + '\t' + v.aa_type + '\t' + str(round(A, 3)) + '\t'+ str(round(B, 3)) + '\n')
+
 
 ### with CYS
 query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_alignBB/'

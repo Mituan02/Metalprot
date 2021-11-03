@@ -6,9 +6,12 @@ The databases, scripts are located at: /wynton/home/degradolab/lonelu/GitHub_Des
 
 Using 'run_selfcenter_one_structre.py' as an example:
 1. using development mode in wynton. > ssh dev1
-2. get into the folder. cd /wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/
-3. Activate the conda environment. > conda activate env_conda
-4. run line14 'python /wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/run_selfcenter_one_structure.py'.
+2. Activate the conda environment. > conda activate env_conda
+    If you don't have the environment, you may need to install one. 
+    The environment info is here 'Metalprot/docs/environment_linux.yml' Google 'conda install environment'.
+3. get into the folder. cd /wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/
+4. run > pip install -e .
+5. run line14 'python /wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/run_selfcenter_one_structure.py'.
 
 Inside the scripts:
 1. query_dir (line_17) is the metal-vdMer database. (line_19 - 28 load the database)
@@ -38,7 +41,12 @@ Inside the scripts:
 
 To search your own structure, copy and rename the script 'run_selfcenter_one_structre.py' in your folder. change the workdir and other parameters accordingly. 
 To search multiple sctuctures, use script 'run_selfcenter_multiple_structres.py'.
-Please let me know if you have any questions. 
+Please let me know if you have any questions lei.lu@ucsf.edu. 
+
+
+
+Notes:
+Change Wynton permission > chmod -R go+rwx ~
 
 
 

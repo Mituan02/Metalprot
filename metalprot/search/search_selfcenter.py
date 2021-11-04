@@ -144,15 +144,15 @@ class Search_selfcenter(Search_vdM):
         As we calculate all metals at the same time. 
         We need to extract vdm representations.
         '''
-        print('neighbor_construct comb: {}'.format(win_comb))
+        print('selfcenter_construct comb: {}'.format(win_comb))
 
         comb_dict = dict()
 
-        for x, y in itertools.permutations(win_comb, 2):
+        for x, y in itertools.combinations(win_comb, 2):
             if (x, y) not in self.neighbor_pair_dict.keys():
                 return comb_dict
         
-        graph = Graph(win_comb, [len(self.vdms) for i in range(len(win_comb))])
+        graph = Graph(win_comb, len(self.vdms))
 
         graph.calc_pair_connectivity(self.neighbor_pair_dict)
 

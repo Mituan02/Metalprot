@@ -250,20 +250,21 @@ class Search_vdM:
                 # print(wx)
                 # print(wy)
                 x_in_y, x_has_y = self.calc_pairwise_neighbor(n_x, n_y, self.rmsd)
-                y_in_x, y_has_x = self.calc_pairwise_neighbor(n_y, n_x, self.rmsd)
+                #y_in_x, y_has_x = self.calc_pairwise_neighbor(n_y, n_x, self.rmsd)
 
                 # print(x_has_y)
                 # print(y_has_x)
 
                 x_in_y, x_has_y = self.neighbor_filter_new(wx, wy, x_in_y)
-                y_in_x, y_has_x = self.neighbor_filter_new(wy, wx, y_in_x)
+                #y_in_x, y_has_x = self.neighbor_filter_new(wy, wx, y_in_x)
 
                 # print(x_has_y)
                 # print(y_has_x)
 
-                if x_has_y and y_has_x:
+                #if x_has_y and y_has_x:
+                if x_has_y:
                     self.neighbor_pair_dict[(wx, wy)] = x_in_y
-                    self.neighbor_pair_dict[(wy, wx)] = y_in_x
+                    #self.neighbor_pair_dict[(wy, wx)] = y_in_x
         return
 
 
@@ -476,7 +477,7 @@ class Search_vdM:
             if (x, y) not in self.neighbor_pair_dict.keys():
                 return comb_dict
         
-        graph = Graph(win_comb, [len(self.vdms) for i in range(len(win_comb))])
+        graph = Graph(win_comb,len(self.vdms))
 
         graph.calc_pair_connectivity(self.neighbor_pair_dict)
 
@@ -536,7 +537,7 @@ class Search_vdM:
             if (x, y) not in self.neighbor_pair_dict.keys():
                 return comb_dict
         
-        graph = Graph(win_comb, [len(self.vdms) for i in range(len(win_comb))])
+        graph = Graph(win_comb, len(self.vdms))
 
         graph.calc_pair_connectivity(self.neighbor_pair_dict)
 

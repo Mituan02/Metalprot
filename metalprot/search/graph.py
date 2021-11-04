@@ -2,38 +2,37 @@ import itertools
 
 
 class Graph:
-    def __init__(self, wins, all_pos_lens):
+    def __init__(self, wins, all_pos_len):
         #print('graph.')
         self.wins = wins
         self.win_inds = list(range(len(wins)))
-        self.all_pos_lens = all_pos_lens
+        self.all_pos_len = all_pos_len
 
         self.pair_dict = {}
-        for c, c2 in itertools.permutations(self.win_inds, 2):
-            self.pair_dict[(c, c2)] = set()
+        for c, c2 in itertools.combinations(self.win_inds, 2):
+            self.pair_dict[(c, c2)] = {}
 
         self.all_paths = []
 
 
     def calc_pair_connectivity(self, neighbor_pair_dict):
 
-        for c, c2 in itertools.permutations(self.win_inds, 2):
+        for c, c2 in itertools.combinations(self.win_inds, 2):
             wx = self.wins[c]
             wy = self.wins[c2]    
-            for r in range(self.all_pos_lens[c]):
+            for r in range(self.all_pos_len):
                 connect = neighbor_pair_dict[(wx, wy)][r]
                 #print('The len of connect in {} is {}'.format(r, len(connect)))
                 if len(connect) <= 0:
-                    continue     
-                for y in connect:
-                    self.pair_dict[(c, c2)].add((r, y))
+                    continue        
+                self.pair_dict[(c, c2)][r] = set(connect)
         return
 
     
     def get_paths(self):
 
         c = 0
-        for r in range(self.all_pos_lens[c]):
+        for r in range(self.all_pos_len):
             self.get_path_helper(c, r, [r])
         return
 
@@ -46,20 +45,22 @@ class Graph:
             self.all_paths.append([t for t in temp])
             return
         #print('c ' + str(c) + ' r ' + str(r))
-        rs = []
-        for i in range(self.all_pos_lens[c+1]):
-            if (r, i) in self.pair_dict[(c, c+1)]:
-                rs.append(i)
 
-        if len(rs) == 0:
-            return      
+        if r not in self.pair_dict[(c, c+1)].keys():
+            return
+
+        rs = self.pair_dict[(c, c+1)][r]
+
         for _r in rs:
             #print('col ' + str(c) + ' temp ' + '_'.join([str(t) for t in temp]))
             satisfy = True
             for ci in range(len(temp)-1):
-                tv = temp[ci]
-                if not (tv, _r) in self.pair_dict[(ci, c+1)]:
+                _r_ci = temp[ci]
+                if _r_ci not in self.pair_dict[(ci, c+1)].keys():
                     satisfy = False
+                else:
+                    if _r not in self.pair_dict[(ci, c+1)][_r_ci]:
+                        satisfy = False
                     #break
             if satisfy:
                 _temp = temp.copy()

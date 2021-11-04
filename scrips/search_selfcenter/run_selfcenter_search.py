@@ -8,10 +8,13 @@ import numpy as np
 from metalprot.search import search_selfcenter
 from metalprot.basic import filter
 import pickle
+import time
+
 
 '''
 python /mnt/e/GitHub_Design/Metalprot/scrips/search_selfcenter/run_selfcenter_search.py
 '''
+start_time = time.time()
 
 query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS/'
 
@@ -62,4 +65,5 @@ ss =  search_selfcenter.Search_selfcenter(target_path, outdir, all_querys, clust
 
 ss.run_selfcenter_search()
 
-
+end_time = time.time()
+print(end_time - start_time, "seconds")

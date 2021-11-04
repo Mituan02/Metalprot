@@ -40,9 +40,15 @@ Inside the scripts:
 
 
 To search your own structure, copy and rename the script 'run_selfcenter_one_structre.py' in your folder. change the workdir and other parameters accordingly. 
-To search multiple sctuctures, use script 'run_selfcenter_multiple_structres.py'.
-Please let me know if you have any questions lei.lu@ucsf.edu. 
 
+You can also run submit job. Especially when searching multiple structures.
+To submit job in Wynton (to run multiple structures in parallel), please check the following scripts in /wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data.
+run_design.job
+run_selfcenter_search_wynton_submit.py
+After copy/modify the files, > qsub run_design.job
+
+
+Please let me know if you have any questions lei.lu@ucsf.edu. 
 
 
 Notes:

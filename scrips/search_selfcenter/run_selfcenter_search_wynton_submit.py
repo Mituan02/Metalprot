@@ -10,7 +10,8 @@ from metalprot.basic import filter
 import pickle
 
 '''
-python /mnt/e/GitHub_Design/Metalprot/scrips/search_selfcenter/run_selfcenter_search.py
+#To run in develop mode 
+python run_selfcenter_search.py
 '''
 
 query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS/'

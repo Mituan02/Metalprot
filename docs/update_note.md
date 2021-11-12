@@ -1,4 +1,10 @@
 2021/11/12
-The current version needs to fix ideal geometry supperimposition other than tetrahydral or num_contact_vdms other than 3.
-Working on change the workflow of eval_search with matrix method.
-It is possible to parallel the program for geometry calculation after paths are found. 
+DONE: Fix a few bugs related to the previous update. 
+TO DO: need to fix ideal geometry supperimposition other than tetrahydral or num_contact_vdms other than 3.
+TO DO: change the workflow of eval_search with matrix method.
+It is possible to parallel the program for geometry calculation etc after paths are found. 
+
+2021/11/11
+DONE: Workflow changed for search_selfcenter, with the matrix based path searching method.
+DONE: Search was restructured to deprecate the pairwise neighbor searching method in the future.
+DONE: Output was reformated to be more user friendly.

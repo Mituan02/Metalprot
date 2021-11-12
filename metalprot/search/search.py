@@ -123,7 +123,7 @@ class Search_vdM:
     The function to search comb is based on nearest neighbor function of sklearn.
     '''
     def __init__(self, target_pdb, workdir, vdms, cluster_centroid_dict, all_metal_vdm, 
-    num_iters = [3], metal_metal_dist = 0.45, win_filtered = [], 
+    num_contact_vdms = [3], metal_metal_dist = 0.45, win_filtered = [], 
     validateOriginStruct = False, search_filter = None, parallel = False, density_radius = 0.45,
     secondshell_vdms = None, rmsd_2ndshell = 0.5, 
     output_wincomb_overlap = False):
@@ -140,7 +140,7 @@ class Search_vdM:
 
         self.target = pr.parsePDB(target_pdb)
 
-        self.num_iters = num_iters
+        self.num_contact_vdms = num_contact_vdms
 
         self._resnum_filtered = win_filtered
 
@@ -241,7 +241,7 @@ class Search_vdM:
     def para2string(self):
         parameters = "Search parameters: \n"
         parameters += 'target: ' + self.target.getTitle() + ' \n'
-        parameters += 'num_iters: ' + str(self.num_iters) + ' \n'
+        parameters += 'num_contact_vdms: ' + str(self.num_contact_vdms) + ' \n'
         parameters += 'metal_metal_dist: ' + str(self.metal_metal_dist) + ' \n'
         parameters += 'win_filtered: ' + str(self._resnum_filtered) + ' \n'
         parameters += 'validateOriginStruct: ' + str(self.validateOriginStruct) + ' \n'

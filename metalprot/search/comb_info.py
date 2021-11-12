@@ -12,9 +12,9 @@ def supperimpose_ideal_geo(geometry):
     rmsd = pr.calcRMSD(ideal_geometry.getCoords(), all_coords)
 
     all_coords2 = np.array([all_coords[i] for i in [1, 0, 2, 3]])
-    ideal_geometry2 = ideal_geometry.copy()
+    ideal_geometry2 = constant.tetrahydra_geo.copy()
     pr.calcTransformation(ideal_geometry2.getCoords(), all_coords2).apply(ideal_geometry2)
-    rmsd2 = pr.calcRMSD(ideal_geometry.getCoords(), all_coords)
+    rmsd2 = pr.calcRMSD(ideal_geometry2.getCoords(), all_coords2)
 
     if rmsd2 < rmsd:
         return ideal_geometry2, rmsd2

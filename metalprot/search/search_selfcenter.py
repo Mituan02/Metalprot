@@ -757,8 +757,18 @@ def run_search_selfcenter(ss):
     '''
     ss.neighbor_generate_query_dict()
     m_adj_matrix, win_labels, vdm_inds = neighbor_generate_nngraph(ss)
-    paths = calc_adj_matrix_paths(m_adj_matrix.toarray())
+
+    paths = []
+    for _num_contact in ss.num_contact_vdms:
+        paths.extend(calc_adj_matrix_paths(m_adj_matrix.toarray(), _num_contact))
     print('Find {} possible solutions before aftersearch filter'.format(len(paths)))
+
+    if len(paths) <= 0:
+        ss.neighbor_write_log()
+        return
+        
+    # TO DO: The geometry is not working for geo other than tetrahydral.
+
     win_comb_dict = {}
     for path in paths:
         win_comb = tuple([win_labels[p] for p in path])

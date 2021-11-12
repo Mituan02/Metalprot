@@ -21,40 +21,6 @@ from .comb_info import CombInfo
 
 class Search_eval(Search_selfcenter):
 
-    def run_eval_search(self):
-        '''
-        Given a metal binding protein, extract the binding core. For each contact aa, find the original or best vdM as target. 
-        For all the 'target' vdMs, use nearest neighbor search to check overlap and combinfo.
-        '''
-        wins, combs = self.eval_get_comb()
-
-        uni_wins = set()
-        [uni_wins.add(w) for win in wins for w in win]
-        self.win_filtered = sorted(uni_wins)
-
-        self.neighbor_generate_query_dict()
-
-        #Extract closest vdMs and the cluster infomation. 
-        self.eval_extract_closest_vdMs(wins, combs)
-
-        #The normal search process focus on the current wins.
-        self.neighbor_generate_pair_dict()
-
-        for win_comb in wins:
-            print(win_comb)      
-            comb_dict = self.neighbor_run_comb(win_comb)
-            if not comb_dict: continue
-            self.neighbor_comb_dict.update(comb_dict)     
-
-        #Evaluate search result.
-        self.eval_search_results(wins, combs)
-
-        self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, name = '_summary_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
-
-        self.neighbor_write_log()
-
-        return 
-
 
     def run_eval_selfcenter_search(self):
         '''
@@ -366,7 +332,7 @@ class Search_eval(Search_selfcenter):
                 
                 clu_id = key[1]
                 combinfo = self.neighbor_comb_dict[key]
-                
+
                 min_rmsds = []
                 best_vs = []
                 for j in range(len(wins[i])):
@@ -423,3 +389,40 @@ class Search_eval(Search_selfcenter):
 
         return comb_dict_filter
 
+    #region functions plan to be deprecated
+
+    def run_eval_search(self):
+        '''
+        Given a metal binding protein, extract the binding core. For each contact aa, find the original or best vdM as target. 
+        For all the 'target' vdMs, use nearest neighbor search to check overlap and combinfo.
+        '''
+        wins, combs = self.eval_get_comb()
+
+        uni_wins = set()
+        [uni_wins.add(w) for win in wins for w in win]
+        self.win_filtered = sorted(uni_wins)
+
+        self.neighbor_generate_query_dict()
+
+        #Extract closest vdMs and the cluster infomation. 
+        self.eval_extract_closest_vdMs(wins, combs)
+
+        #The normal search process focus on the current wins.
+        self.neighbor_generate_pair_dict()
+
+        for win_comb in wins:
+            print(win_comb)      
+            comb_dict = self.neighbor_run_comb(win_comb)
+            if not comb_dict: continue
+            self.neighbor_comb_dict.update(comb_dict)     
+
+        #Evaluate search result.
+        self.eval_search_results(wins, combs)
+
+        self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, name = '_summary_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
+
+        self.neighbor_write_log()
+
+        return 
+
+    #endregion

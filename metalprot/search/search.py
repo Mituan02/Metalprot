@@ -221,7 +221,8 @@ class Search_vdM:
 
         self.win_filtered = [resnum2ind[str(rn)] for rn in self._resnum_filtered]
 
-        self.dist_array, self.id_array, self.dists = utils.get_contact_map(self.target, self.win_filtered)
+        # The contact map is used for the pair-wise neighbor method used before.
+        # self.dist_array, self.id_array, self.dists = utils.get_contact_map(self.target, self.win_filtered)
 
         #Vdm database infomation.
         aa_num_dict = {}
@@ -404,7 +405,7 @@ class Search_vdM:
                 clu_nums = [c.clu_num for c in info.centroid_dict.values()]
                 max_clu_nums = [c.max_clu_num for c in info.centroid_dict.values()]
                 
-                f.write('_'.join([str(x) for x in key[0]]) + '\t')
+                f.write('_'.join([self.target_index_dict[x] for x in key[0]]) + '\t')
                 f.write('_'.join([x[0] + '-' + str(x[1]) for x in key[1]]) + '\t')
 
                 f.write(str(round(info.volume,2))+ '\t')

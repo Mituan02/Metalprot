@@ -57,7 +57,7 @@ def run(target_path, win_filter, outdir):
     ss =  search_selfcenter.Search_selfcenter(target_path, outdir, all_querys, cluster_centroid_dict, query_all_metal, 
         num_iters, rmsd_cuts, win_filter, validateOriginStruct = True, search_filter= _filter, parallel = False)
 
-    ss.run_selfcenter_search()
+    search_selfcenter.run_search_selfcenter(ss)
 
 if __name__=='__main__':
     main()

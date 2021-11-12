@@ -18,7 +18,7 @@ query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfc
 
 workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
 
-win_filters = [[34,  60,  64] , [4, 6, 15]]
+win_filters = [[] , []]
 
 def main():
     pdb_files = sorted([fp for fp in os.listdir(workdir) if fp[0] != '.' and '.pdb' in fp])
@@ -45,7 +45,7 @@ def run(target_path, win_filter, outdir):
 
     ### run Search_struct
 
-    rmsd_cuts = 0.45
+    metal_metal_dist = 0.45
 
     num_iters = [3]
 
@@ -55,7 +55,7 @@ def run(target_path, win_filter, outdir):
         filter_qt_clash = True, write_filtered_result = False, selfcenter_filter_member_phipsi=True)
 
     ss =  search_selfcenter.Search_selfcenter(target_path, outdir, all_querys, cluster_centroid_dict, query_all_metal, 
-        num_iters, rmsd_cuts, win_filter, validateOriginStruct = True, search_filter= _filter, parallel = False)
+        num_iters, metal_metal_dist, win_filter, validateOriginStruct = True, search_filter= _filter, density_radius= 0.6, parallel = False)
 
     search_selfcenter.run_search_selfcenter(ss)
 

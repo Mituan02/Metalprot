@@ -47,7 +47,7 @@ win_filter = [35,  61,  65]
 
 metal_metal_dist = 0.45
 
-num_iters = [3]
+num_contact_vdms = [3]
 
 
 _filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_phipsi_val = 25, 
@@ -56,7 +56,7 @@ _filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_p
     filter_qt_clash = True, write_filtered_result = False, selfcenter_filter_member_phipsi=True)
 
 ss =  search_selfcenter.Search_selfcenter(target_path, outdir, all_querys, cluster_centroid_dict, query_all_metal, 
-    num_iters, metal_metal_dist, win_filter, validateOriginStruct = True, search_filter= _filter, density_radius = 0.6)
+    num_contact_vdms, metal_metal_dist, win_filter, validateOriginStruct = True, search_filter= _filter, density_radius = 0.6)
 
 #ss.run_selfcenter_search()
 search_selfcenter.run_search_selfcenter(ss)

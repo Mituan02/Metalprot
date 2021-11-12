@@ -219,7 +219,7 @@ class Search_vdM:
             resnum2ind[chid_resnum] = ind
             self.target_index_dict[ind] = chid_resnum
 
-        self.win_filtered = [resnum2ind[rn] for rn in self._resnum_filtered]
+        self.win_filtered = [resnum2ind[str(rn)] for rn in self._resnum_filtered]
 
         self.dist_array, self.id_array, self.dists = utils.get_contact_map(self.target, self.win_filtered)
 
@@ -384,13 +384,13 @@ class Search_vdM:
         '''
         Write a tab dilimited file.
         '''
-        print('neighbor-write-summary')
+        #print('write summary file.')
 
         os.makedirs(outdir, exist_ok=True)
 
         with open(outdir + name, 'w') as f:
-            f.write('Wins\tClusterIDs\tproteinABPLEs\tCentroidABPLEs\tproteinPhiPsi\tCentroidPhiPsi\tvolume\tvol2metal\tdiameter\tTotalVdMScore\tCluScore\tOverlapScore\tOverlapScoreLn\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tvdm_scores\ttotal_clu#\tclu_nums\tmax_clu_nums')
-            f.write('\tpair_aa_aa_dist_ok\tpair_angle_ok\tpair_metal_aa_dist_ok\tvdm_no_clash')
+            f.write('Wins\tClusterIDs\tDensityRadius\tCluScore\tOverlapScore\tOverlapScoreLn\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tclu_nums')
+            f.write('\tpair_aa_aa_dist_ok\tpair_angle_ok\tpair_metal_aa_dist_ok\tvdm_no_clash\tproteinABPLEs\tCentroidABPLEs\tproteinPhiPsi\tCentroidPhiPsi')
             if eval:
                 f.write('\teval_min_rmsd\teval_min_vdMs\teval_phi\teval_psi\teval_abple\teval_is_origin')
             f.write('\n')
@@ -407,16 +407,7 @@ class Search_vdM:
                 f.write('_'.join([str(x) for x in key[0]]) + '\t')
                 f.write('_'.join([x[0] + '-' + str(x[1]) for x in key[1]]) + '\t')
 
-                f.write('_'.join([self.target_abple[x] for x in key[0]]) + '\t')
-                f.write('_'.join([c.abple for c in info.centroid_dict.values()]) + '\t')
-                f.write('_'.join([str((round(self.phipsi[x][0],2), round(self.phipsi[x][1],2))) for x in key[0]]) + '\t')
-                f.write('_'.join([str((round(c.phi, 2), round(c.psi, 2))) for c in info.centroid_dict.values()]) + '\t')
-
                 f.write(str(round(info.volume,2))+ '\t')
-                f.write(str(round(info.volPerMetal,2))+ '\t')
-                f.write(str(round(info.diameter,2))+ '\t')
-
-                f.write(str(round(sum(info.scores), 2)) + '\t')
                 f.write(str(round(info.cluScore, 2)) + '\t')
                 f.write(str(round(info.overlapScore, 2)) + '\t')
                 f.write(str(round(math.log(info.overlapScore), 2)) + '\t')
@@ -427,16 +418,17 @@ class Search_vdM:
 
                 f.write(str(sum(overlaps)) + '\t')
                 f.write('||'.join([str(s) for s in overlaps]) + '\t')
-
-                f.write('||'.join([str(round(s, 2)) for s in vdm_scores]) + '\t')
-                f.write(str(sum(clu_nums)) + '\t')
                 f.write('||'.join([str(c) for c in clu_nums]) + '\t')
-                f.write('||'.join([str(c) for c in max_clu_nums]) + '\t')
 
                 f.write(str(info.pair_aa_aa_dist_ok) + '\t')
                 f.write(str(info.pair_angle_ok) + '\t')
                 f.write(str(info.pair_metal_aa_dist_ok) + '\t')
                 f.write(str(info.vdm_no_clash) + '\t')
+
+                f.write('_'.join([self.target_abple[x] for x in key[0]]) + '\t')
+                f.write('_'.join([c.abple for c in info.centroid_dict.values()]) + '\t')
+                f.write('_'.join([str((round(self.phipsi[x][0],2), round(self.phipsi[x][1],2))) for x in key[0]]) + '\t')
+                f.write('_'.join([str((round(c.phi, 2), round(c.psi, 2))) for c in info.centroid_dict.values()]) + '\t')
 
                 if eval:
                     f.write('||'.join([str(round(m, 2)) for m in info.eval_mins]) + '\t')

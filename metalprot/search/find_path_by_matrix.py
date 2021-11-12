@@ -102,13 +102,13 @@ def neighbor_generate_nngraph(ss):
         vdm_inds.extend(range(metal_vdm_size))
 
     nbrs = NearestNeighbors(radius= ss.metal_metal_dist).fit(all_coords)
-    adj_matrix = nbrs.radius_neighbors_graph(all_coords).toarray().astype(bool)
+    adj_matrix = nbrs.radius_neighbors_graph(all_coords).astype(bool)
 
     #create mask
     mask = generate_filter_mask(ss, wins, win_labels, metal_vdm_size, adj_matrix)
 
     #calc modified adj matrix
-    m_adj_matrix = np.multiply(adj_matrix, mask)
+    m_adj_matrix = adj_matrix.multiply(mask)
 
     return m_adj_matrix, win_labels, vdm_inds
 
@@ -137,7 +137,7 @@ def generate_filter_mask(ss, wins, win_labels, metal_vdm_size, adj_matrix):
         labels = np.zeros(len(wins)*metal_vdm_size, dtype=bool)
         for inx in range(len(wins)):
             labels[inx*metal_vdm_size:(inx+1)*metal_vdm_size] = v_aa == ress[inx]
-        labels_m = np.tile(labels, (len(wins)*metal_vdm_size, 1))
+        labels_m = np.broadcast_to(labels, (len(wins)*metal_vdm_size, len(wins)*metal_vdm_size))
         win_mask *= labels_m.T
         win_mask *= labels_m
 
@@ -147,7 +147,7 @@ def generate_filter_mask(ss, wins, win_labels, metal_vdm_size, adj_matrix):
         labels = np.zeros(len(wins)*metal_vdm_size, dtype=bool)
         for inx in range(len(wins)):
             labels[inx*metal_vdm_size:(inx+1)*metal_vdm_size] = v_abples == apxs[inx]
-        labels_m = np.tile(labels, (len(wins)*metal_vdm_size, 1))
+        labels_m = np.broadcast_to(labels, (len(wins)*metal_vdm_size, len(wins)*metal_vdm_size))
         win_mask *= labels_m.T
         win_mask *= labels_m       
 
@@ -167,7 +167,7 @@ def generate_filter_mask(ss, wins, win_labels, metal_vdm_size, adj_matrix):
                 psi_ok = utils.filter_phipsi(psis[inx], v_psis[i], ss.search_filter.max_phipsi_val)
                 if phi_ok and psi_ok:
                     labels[inx*metal_vdm_size + i] = True
-        labels_m = np.tile(labels, (len(wins)*metal_vdm_size, 1))
+        labels_m = np.broadcast_to(labels, (len(wins)*metal_vdm_size, len(wins)*metal_vdm_size))
         win_mask *= labels_m.T
         win_mask *= labels_m  
             

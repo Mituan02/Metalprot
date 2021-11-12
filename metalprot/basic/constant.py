@@ -2,6 +2,7 @@ import numpy as np
 import os
 from pathlib import Path
 import pickle
+import prody as pr
 
 # hydrophobicity from https://www.cgl.ucsf.edu/chimera/docs/UsersGuide/midas/hydrophob.html
 
@@ -128,3 +129,5 @@ APBEL_DICT = read_apble(Path(__file__).parent.parent / 'constants/APBLE.txt')
             
 with open(Path(__file__).parent.parent / 'constants/abple_dict.pkl', 'rb') as infile:
     abple_dict = pickle.load(infile)                
+
+tetrahydra_geo = pr.parsePDB(Path(__file__).parent.parent / 'constants/tetrahydral_geo.pdb')

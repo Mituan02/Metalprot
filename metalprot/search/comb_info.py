@@ -1,7 +1,24 @@
 import prody as pr
-
+import numpy as np
 from ..basic import vdmer
 from ..basic import hull
+from ..basic import constant
+
+
+def supperimpose_ideal_geo(geometry):
+    ideal_geometry = constant.tetrahydra_geo.copy()
+    all_coords = geometry.getCoords()
+    pr.calcTransformation(ideal_geometry.getCoords(), all_coords).apply(ideal_geometry)
+    rmsd = pr.calcRMSD(ideal_geometry.getCoords(), all_coords)
+
+    all_coords2 = np.array([all_coords[i] for i in [1, 0, 2, 3]])
+    ideal_geometry2 = ideal_geometry.copy()
+    pr.calcTransformation(ideal_geometry2.getCoords(), all_coords2).apply(ideal_geometry2)
+    rmsd2 = pr.calcRMSD(ideal_geometry.getCoords(), all_coords)
+
+    if rmsd2 < rmsd:
+        return ideal_geometry2, rmsd2
+    return ideal_geometry, rmsd
 
 
 class CombInfo:
@@ -15,11 +32,10 @@ class CombInfo:
         self.scores = None
         self.cluScore = -10.00
         self.overlapScore = -10.00 
-        self.rmsd_2_ideal = -10.0
 
         #Geometry
         self.geometry = None
-        self.ideal_geometry = None
+        self.geo_rmsd = -10.00
         self.aa_aa_pair = None
         self.metal_aa_pair = None
         self.angle_pair = None
@@ -70,8 +86,6 @@ class CombInfo:
         all_coords.append(pr.calcCenter(hull.transfer2pdb(metal_coords)))
 
         self.geometry = hull.transfer2pdb(all_coords, ['NI' if i == len(all_coords)-1 else 'N' for i in range(len(all_coords))])
-        self.ideal_geometry = self.geometry
-        
         self.aa_aa_pair, self.metal_aa_pair, self.angle_pair  = vdmer.pair_wise_geometry(self.geometry)
         return
 

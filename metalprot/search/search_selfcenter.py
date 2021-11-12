@@ -17,7 +17,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 
 from .search import Search_vdM, supperimpose_target_bb, calc_pairwise_neighbor, combine_vdm_into_ag
 from .graph import Graph
-from .comb_info import CombInfo
+from .comb_info import CombInfo, supperimpose_ideal_geo
 from .find_path_by_matrix import neighbor_generate_nngraph, calc_adj_matrix_paths
 from ..basic import constant
 
@@ -222,7 +222,7 @@ class Search_selfcenter(Search_vdM):
                 win_clu_keys = win_clu_2_win_aas[(wins, aas)]
                 if comb_dict[win_clu_keys['BestOPscore']].overlapScore < comb_dict[key].overlapScore:
                     win_clu_2_win_aas[(wins, aas)]['BestOPscore'] = key
-                if comb_dict[win_clu_keys['BestGeo']].rmsd_2_ideal > comb_dict[key].rmsd_2_ideal:
+                if comb_dict[win_clu_keys['BestGeo']].geo_rmsd > comb_dict[key].geo_rmsd:
                     win_clu_2_win_aas[(wins, aas)]['BestGeo'] = key
                 if comb_dict[win_clu_keys['BestCluscore']].cluScore < comb_dict[key].cluScore:
                     win_clu_2_win_aas[(wins, aas)]['BestCluscore'] = key
@@ -251,8 +251,11 @@ class Search_selfcenter(Search_vdM):
             ag = combine_vdm_into_ag(self.best_aa_comb_dict[key].centroid_dict, key, tag, self.best_aa_comb_dict[key].geometry)
             pdb_path = self.outdir_represent + tag + '.pdb'
             pr.writePDB(pdb_path, ag)    
-            pdb_path_idealgeo = self.outdir_represent + tag + '_idealgeo.pdb'
-            pr.writePDB(pdb_path_idealgeo, self.best_aa_comb_dict[key].ideal_geometry)                     
+            
+            ideal_geometry, rmsd = supperimpose_ideal_geo(self.best_aa_comb_dict[key].geometry)
+            self.best_aa_comb_dict[key].geo_rmsd = rmsd
+            pdb_path_idealgeo = self.outdir_represent + tag + '_idealgeo_' + str(round(rmsd, 2)) + '.pdb'
+            pr.writePDB(pdb_path_idealgeo, ideal_geometry)                     
 
         return
 
@@ -754,7 +757,7 @@ def run_search_selfcenter(ss):
     '''
     ss.neighbor_generate_query_dict()
     m_adj_matrix, win_labels, vdm_inds = neighbor_generate_nngraph(ss)
-    paths = calc_adj_matrix_paths(m_adj_matrix)
+    paths = calc_adj_matrix_paths(m_adj_matrix.toarray())
     print('Find {} possible solutions before aftersearch filter'.format(len(paths)))
     win_comb_dict = {}
     for path in paths:

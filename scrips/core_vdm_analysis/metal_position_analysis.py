@@ -6,6 +6,7 @@ import numpy as np
 #sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
 from metalprot import search_struct, extract_vdm, ligand_database
 from metalprot import hull
+
 '''
 python /mnt/e/GitHub_Design/Metalprot/scripts_other/metal_position_analysis.py
 '''

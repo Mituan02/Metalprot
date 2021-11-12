@@ -1,8 +1,3 @@
-import os
-from re import T
-import sys
-import prody as pr
-import numpy as np
 #You can either add the python package path.
 #sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
 from metalprot.search import search_selfcenter
@@ -32,25 +27,25 @@ print(len(all_querys))
 
 ### run Search_struct
 
-workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
-
-outdir = workdir + 'output_selfcenter/'
-
-target_path = workdir + '5od1_zn.pdb'
-
-win_filter = [34,  60,  64]
-
-
-# workdir = '/mnt/e/DesignData/ligands/LigandBB/6dwv/'
+# workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
 
 # outdir = workdir + 'output_selfcenter/'
 
-# target_path = workdir + '6dwv_core.pdb'
+# target_path = workdir + '5od1_zn.pdb'
 
-# win_filter = [4, 6, 15]
+# win_filter = [34,  60,  64]
 
 
-rmsd_cuts = 0.45
+workdir = '/mnt/e/DesignData/ligands/LigandBB/6dwv/'
+
+outdir = workdir + 'output_selfcenter/'
+
+target_path = workdir + '6dwv_core.pdb'
+
+win_filter = []
+
+
+metal_metal_dist = 0.45
 
 num_iters = [3]
 
@@ -61,9 +56,10 @@ _filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_p
     filter_qt_clash = True, write_filtered_result = False, selfcenter_filter_member_phipsi=True)
 
 ss =  search_selfcenter.Search_selfcenter(target_path, outdir, all_querys, cluster_centroid_dict, query_all_metal, 
-    num_iters, rmsd_cuts, win_filter, validateOriginStruct = True, search_filter= _filter, parallel = False)
+    num_iters, metal_metal_dist, win_filter, validateOriginStruct = True, search_filter= _filter, density_radius = 0.6)
 
-ss.run_selfcenter_search()
+#ss.run_selfcenter_search()
+search_selfcenter.run_search_selfcenter(ss)
 
 end_time = time.time()
 print(end_time - start_time, "seconds")

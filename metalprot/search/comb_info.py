@@ -11,13 +11,15 @@ class CombInfo:
         self.query_dict = {}
 
         #scores
-        self.totals = None
+        self.overlaps = None
         self.scores = None
-        self.fracScore = -10.00
-        self.multiScore = -10.00  #Calc multiScore (By Bill: -ln(Na/SumNa * Nb/SumNb * Nc/SumNc))
+        self.cluScore = -10.00
+        self.overlapScore = -10.00 
+        self.rmsd_2_ideal = -10.0
 
         #Geometry
         self.geometry = None
+        self.ideal_geometry = None
         self.aa_aa_pair = None
         self.metal_aa_pair = None
         self.angle_pair = None
@@ -48,8 +50,11 @@ class CombInfo:
         self.overlap_query_id_dict = None
         self.overlap_ind_dict = None
 
-        #After search filter result. If ture means any filter works.
+        #After search filter result. If ture means the CombInfo pass all filter conditions.
         self.after_search_filtered = False
+
+        #Tag
+        self.tag = '' # tag if the CombInfo has the best OverlapScore or best rmsd or best ClusterScore
 
 
     def calc_geometry(self):
@@ -65,8 +70,11 @@ class CombInfo:
         all_coords.append(pr.calcCenter(hull.transfer2pdb(metal_coords)))
 
         self.geometry = hull.transfer2pdb(all_coords, ['NI' if i == len(all_coords)-1 else 'N' for i in range(len(all_coords))])
+        self.ideal_geometry = self.geometry
+        
         self.aa_aa_pair, self.metal_aa_pair, self.angle_pair  = vdmer.pair_wise_geometry(self.geometry)
         return
+
     
     def calc_centroid_geometry(self):
         all_coords = []
@@ -77,9 +85,12 @@ class CombInfo:
             metal_coords.append(_query.get_metal_coord())   
         all_coords.append(pr.calcCenter(hull.transfer2pdb(metal_coords)))
 
-        self.geometry = hull.transfer2pdb(all_coords, ['NI' if i == len(all_coords)-1 else 'N' for i in range(len(all_coords))])
+        self.geometry = hull.transfer2pdb(all_coords, ['NI' if i == len(all_coords)-1 else 'N' for i in range(len(all_coords))])      
+        self.ideal_geometry = self.geometry
+        
         self.aa_aa_pair, self.metal_aa_pair, self.angle_pair  = vdmer.pair_wise_geometry(self.geometry)
-        return        
+        return     
+
 
     def after_search_condition_satisfied(self, pair_angle_range = None, pair_aa_aa_dist_range = None, pair_metal_aa_dist_range = None):
         '''

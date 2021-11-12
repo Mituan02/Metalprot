@@ -49,7 +49,7 @@ class Search_eval(Search_selfcenter):
         #Evaluate search result.
         self.eval_search_results(wins, combs)
 
-        self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, eval=True)
+        self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, name = '_summary_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
 
         self.neighbor_write_log()
 
@@ -93,7 +93,7 @@ class Search_eval(Search_selfcenter):
         print('neighbor_comb_dict: '.format(self.neighbor_comb_dict))
         ### Evaluate search result.
         self.eval_search_results(wins, combs)
-        self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, eval=True)
+        self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, name = '_summary_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
         
         # comb_dict_filtered = self.find_best_for_nature_sel()
         # self.neighbor_write_summary(self.workdir, comb_dict_filtered, name = '_summary_nature_sel.tsv', eval=True)
@@ -138,7 +138,7 @@ class Search_eval(Search_selfcenter):
         self.selfcenter_write_win(comb_dict)
         outpath = 'win_' + '-'.join([str(w) for w in win_comb]) + '/'
         outdir = self.workdir + outpath  
-        self.neighbor_write_summary(outdir, comb_dict)
+        self.neighbor_write_summary(outdir, comb_dict, name = '_summary_' + self.target.getTitle() + '_' + self.time_tag + '.tsv')
 
         return comb_dict
 
@@ -366,7 +366,7 @@ class Search_eval(Search_selfcenter):
                 
                 clu_id = key[1]
                 combinfo = self.neighbor_comb_dict[key]
-
+                
                 min_rmsds = []
                 best_vs = []
                 for j in range(len(wins[i])):

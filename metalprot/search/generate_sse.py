@@ -158,6 +158,7 @@ def MergeAtomGroupAuto(outdir, atomGroups, name, keep_metal = False, write_pdb =
         pr.writePDB(outdir + name + '.pdb', all_ags)
     return all_ags
 
+
 def MergeAtomGroup(atomGroups, name):
     chain_num = 0
     all_ags = atomGroups[0].toAtomGroup()
@@ -173,6 +174,7 @@ def MergeAtomGroup(atomGroups, name):
             all_ags = all_ags + chain
     all_ags.setTitle(name)
     return all_ags
+
 
 def cal_phipsi(pr_pdb):
     seq = []

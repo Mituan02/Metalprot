@@ -5,6 +5,7 @@ from numpy.core.fromnumeric import argmin
 from prody.atomic import pointer
 from .hull import transfer2pdb, write2pymol
 from .utils import get_ABPLE
+from . import constant 
 
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
 
@@ -116,8 +117,9 @@ class VDM:
     def set_vdm(self):
         cen_inds = np.unique(self.query.getResindices())
         self.contact_resind = cen_inds[int(cen_inds.shape[0]/2)-1]
-        self.aa_type = self.query.select('resindex ' + str(self.contact_resind)).getResnames()[0] # what the contacting amino acid.
-
+        aa_type = self.query.select('resindex ' + str(self.contact_resind)).getResnames()[0] # what the contacting amino acid.
+        self.aa_type = constant.one_letter_code[aa_type]
+        
         self.get_phi_psi()
         self.abple = get_ABPLE(self.query.select('name CA and resindex ' + str(self.contact_resind)).getResnames()[0], self.phi, self.psi)
         return

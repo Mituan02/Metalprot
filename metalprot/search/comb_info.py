@@ -1,7 +1,24 @@
 import prody as pr
-
+import numpy as np
 from ..basic import vdmer
 from ..basic import hull
+from ..basic import constant
+
+
+def supperimpose_ideal_geo(geometry):
+    ideal_geometry = constant.tetrahydra_geo.copy()
+    all_coords = geometry.getCoords()
+    pr.calcTransformation(ideal_geometry.getCoords(), all_coords).apply(ideal_geometry)
+    rmsd = pr.calcRMSD(ideal_geometry.getCoords(), all_coords)
+
+    all_coords2 = np.array([all_coords[i] for i in [1, 0, 2, 3]])
+    ideal_geometry2 = constant.tetrahydra_geo.copy()
+    pr.calcTransformation(ideal_geometry2.getCoords(), all_coords2).apply(ideal_geometry2)
+    rmsd2 = pr.calcRMSD(ideal_geometry2.getCoords(), all_coords2)
+
+    if rmsd2 < rmsd:
+        return ideal_geometry2, rmsd2
+    return ideal_geometry, rmsd
 
 
 class CombInfo:
@@ -11,13 +28,14 @@ class CombInfo:
         self.query_dict = {}
 
         #scores
-        self.totals = None
+        self.overlaps = None
         self.scores = None
-        self.fracScore = -10.00
-        self.multiScore = -10.00  #Calc multiScore (By Bill: -ln(Na/SumNa * Nb/SumNb * Nc/SumNc))
+        self.cluScore = -10.00
+        self.overlapScore = -10.00 
 
         #Geometry
         self.geometry = None
+        self.geo_rmsd = -10.00
         self.aa_aa_pair = None
         self.metal_aa_pair = None
         self.angle_pair = None
@@ -48,8 +66,11 @@ class CombInfo:
         self.overlap_query_id_dict = None
         self.overlap_ind_dict = None
 
-        #After search filter result. If ture means any filter works.
+        #After search filter result. If ture means the CombInfo pass all filter conditions.
         self.after_search_filtered = False
+
+        #Tag
+        self.tag = '' # tag if the CombInfo has the best OverlapScore or best rmsd or best ClusterScore
 
 
     def calc_geometry(self):
@@ -67,6 +88,7 @@ class CombInfo:
         self.geometry = hull.transfer2pdb(all_coords, ['NI' if i == len(all_coords)-1 else 'N' for i in range(len(all_coords))])
         self.aa_aa_pair, self.metal_aa_pair, self.angle_pair  = vdmer.pair_wise_geometry(self.geometry)
         return
+
     
     def calc_centroid_geometry(self):
         all_coords = []
@@ -77,9 +99,12 @@ class CombInfo:
             metal_coords.append(_query.get_metal_coord())   
         all_coords.append(pr.calcCenter(hull.transfer2pdb(metal_coords)))
 
-        self.geometry = hull.transfer2pdb(all_coords, ['NI' if i == len(all_coords)-1 else 'N' for i in range(len(all_coords))])
+        self.geometry = hull.transfer2pdb(all_coords, ['NI' if i == len(all_coords)-1 else 'N' for i in range(len(all_coords))])      
+        self.ideal_geometry = self.geometry
+        
         self.aa_aa_pair, self.metal_aa_pair, self.angle_pair  = vdmer.pair_wise_geometry(self.geometry)
-        return        
+        return     
+
 
     def after_search_condition_satisfied(self, pair_angle_range = None, pair_aa_aa_dist_range = None, pair_metal_aa_dist_range = None):
         '''

@@ -1,23 +1,15 @@
-import contextlib
-from math import comb, log
 import os
-from typing import Dict
-from numba.cuda import target
 import numpy as np
 import itertools
-from numpy.lib.function_base import extract
+from numpy.core.defchararray import multiply
 import prody as pr
-from prody.measure.transform import superpose
-from prody.proteins.pdbfile import writePDB
-import scipy.spatial
-from scipy.spatial.distance import cdist, dice
 import datetime
+import math
+import string
 
 from ..basic import hull
 from ..basic import utils
 from ..basic.filter import Search_filter
-from ..database import core
-from ..database import database_extract
 from .graph import Graph
 from .comb_info import CombInfo
 
@@ -66,19 +58,80 @@ def supperimpose_centroid(_vdm, centroid, align_sel='heavy'):
     return True
 
 
+def calc_pairwise_neighbor(n_x, n_y, r = 0.25):
+    '''
+    Use sklean NearestNeighbors. find every x point has how many neighbors from y.
+    '''
+
+    neigh_y = NearestNeighbors(radius= r) 
+    neigh_y.fit(n_y)
+
+    x_in_y = neigh_y.radius_neighbors(n_x)
+    x_has_y = any([True if len(a) >0 else False for a in x_in_y[1]])
+
+    return x_in_y[1], x_has_y
+
+
+def combine_vdm_into_ag(centroid_dict, key, tag, geometry = None, ideal_geometry = None):
+    '''
+    Merge all vdms from one CombInfo.centroid_dict in to an AtomGroup.
+    '''
+    ag = pr.AtomGroup(tag)
+    coords = []
+    chids = []
+    names = []
+    resnames = []
+    resnums = []
+    chain_num = 0
+    for w in key[0]:
+        c = centroid_dict[w].query.select('not name NI MN ZN CO CU MG FE' )
+        c.setChids(string.ascii_uppercase[chain_num])
+        coords.extend(c.getCoords())
+        chids.extend(c.getChids())
+        names.extend(c.getNames())
+        resnames.extend(c.getResnames())
+        resnums.extend(c.getResnums())
+        chain_num += 1
+
+    geometry.setChids(string.ascii_uppercase[chain_num])
+    _geo = geometry.select('name NI')
+    coords.extend(_geo.getCoords())
+    chids.extend(_geo.getChids())
+    names.extend(_geo.getNames())
+    resnames.extend(_geo.getResnames())
+    resnums.extend(_geo.getResnums())
+    chain_num += 1
+
+    if ideal_geometry:     
+        ideal_geometry.setChids(string.ascii_uppercase[chain_num])
+        coords.extend(ideal_geometry.getCoords())
+        chids.extend(ideal_geometry.getChids())
+        names.extend(ideal_geometry.getNames())
+        resnames.extend(ideal_geometry.getResnames())
+        resnums.extend(ideal_geometry.getResnums())
+
+    ag.setCoords(np.array(coords))
+    ag.setChids(chids)
+    ag.setNames(names)
+    ag.setResnames(resnames)
+    ag.setResnums(resnums)
+    return ag
+
+
 class Search_vdM:
     '''
     The function to search comb is based on nearest neighbor function of sklearn.
     '''
     def __init__(self, target_pdb, workdir, vdms, cluster_centroid_dict, all_metal_vdm, 
-    num_iters = [3], rmsd = 0.45, win_filtered = [], 
-    validateOriginStruct = False, search_filter = None, parallel = False, selfcenter_rmsd = 0.45,
-    secondshell_vdms = None, rmsd_2ndshell = 0.5):
-
+    num_contact_vdms = [3], metal_metal_dist = 0.45, win_filtered = [], 
+    validateOriginStruct = False, search_filter = None, parallel = False, density_radius = 0.45,
+    secondshell_vdms = None, rmsd_2ndshell = 0.5, 
+    output_wincomb_overlap = False):
+        self.time_tag = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') 
         if workdir:
-            _workdir = os.path.realpath(workdir) + '_' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S')            
+            _workdir = os.path.realpath(workdir) + '_' +  self.time_tag          
         else:
-            _workdir = os.getcwd() + '/output_' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S')          
+            _workdir = os.getcwd() + '/output_' + self.time_tag              
 
         os.makedirs(_workdir, exist_ok=True)
         self.workdir = _workdir + '/'
@@ -87,61 +140,91 @@ class Search_vdM:
 
         self.target = pr.parsePDB(target_pdb)
 
-        self.num_iters = num_iters
+        self.num_contact_vdms = num_contact_vdms
 
-        self.dist_array, self.id_array, self.dists = utils.get_contact_map(self.target, win_filtered)
+        self._resnum_filtered = win_filtered
+
 
         self.target_abple, self.phipsi = utils.seq_get_ABPLE(self.target)
 
-        self.rmsd = rmsd
-
-        self.win_filtered = win_filtered
+        self.metal_metal_dist = metal_metal_dist
 
 
-        #neighbor in search filter--------------
+        #neighbor in search filter-------------
         self.validateOriginStruct = validateOriginStruct
 
         self.search_filter = search_filter
 
-        #neighbor parallel mechanism------------- 
+        #neighbor parallel mechanism-----------
         self.parallel = parallel
 
-        #neighbor searching strategy------------- 
+        #neighbor searching strategy-----------
         self.vdms = vdms #[query]
         self.all_metal_vdm = all_metal_vdm #The query with all_metal_coord_ag
-        # (depre, delete when the program worked) self.id_cluster_dict = id_cluster_dict # {metal_id 1234: (HIS, 0)} 
         self.cluster_centroid_dict = cluster_centroid_dict #{(HIS, 0): centroid}
-
         self.neighbor_query_dict = dict() # {93: [the only centroid query with all metal coords]}
+
+        #NearestNeighbor_pairwise dist strategy. Will be deprecated.
         self.neighbor_pair_dict = dict() # {(33, 37): [xs-33 near 37 coords]}
         self.neighbor_comb_dict = dict() # { (wins, ids), (comb, combinfo)}
         # exp. {((0, 1, 2, 3)(0, 0, 0, 0)): {(0:[1, 3, 4], 1:[2, 3, 4], 2: [2, 6, 7], 3:[1, 2, 3]), combinfo}} Please check neighbor_win2comb()
+      
+        #NearestNeighbor_graph strategy.
 
-        #secondshell-----------------------------
+
+        #secondshell----------------------------
         self.secondshell_vdms = secondshell_vdms
         self.rmsd_2ndshell = rmsd_2ndshell
 
-        #For multi scoring-----------------------------
+        #For multi scoring----------------------
         self.aa_num_dict = None
         self.aa_vdm_info_dict = {
             'HIS':[2662, 285, 92.08, 60],
             'GLU':[829, 50, 16.32, 11],
             'ASP':[896, 90, 26.12, 22]
         }
-        #For developing output purpose-----------
-        self.log = ''
+
 
         #For Search_selfcenter-------------------
-        self.selfcenter_rmsd = selfcenter_rmsd
+        self.density_radius = density_radius
+
+        #Output control--------------------------
+        self.log = '' #For developing output purpose
         self.best_aa_comb_dict = {} # To store&Write the best comb for each combinations of wins. 
+        self.output_wincomb_overlap = False
+
         #----------------------------------------
         self.setup()
         #end-------------------------------------
 
 
     def setup(self):
+        '''
+        Write parameters and calc some properties.
+        '''
+        with open(self.workdir + self.target.getTitle() + '_' + self.time_tag + '_parameters.txt', 'w') as f:
+            f.write(self.para2string())
+            f.write(self.search_filter.para2string())
 
-        #For multiScore.
+        # reschain + resnum to resindex
+        target_resnums = self.target.select('name CA').getResnums()
+        target_chids = self.target.select('name CA').getChids()
+        self.target_index_dict = {}
+        resnum2ind = {}
+        for ind in range(len(target_resnums)):
+            if len(np.unique(target_chids)) != 1:
+                chid_resnum = target_chids[ind] + '-' + str(target_resnums[ind])
+            else:
+                chid_resnum = str(target_resnums[ind])
+            resnum2ind[chid_resnum] = ind
+            self.target_index_dict[ind] = chid_resnum
+
+        self.win_filtered = [resnum2ind[str(rn)] for rn in self._resnum_filtered]
+
+        # The contact map is used for the pair-wise neighbor method used before.
+        # self.dist_array, self.id_array, self.dists = utils.get_contact_map(self.target, self.win_filtered)
+
+        #Vdm database infomation.
         aa_num_dict = {}
         for v in self.vdms:
             aa = v.aa_type
@@ -158,45 +241,15 @@ class Search_vdM:
     def para2string(self):
         parameters = "Search parameters: \n"
         parameters += 'target: ' + self.target.getTitle() + ' \n'
-        parameters += 'num_iters: ' + str(self.num_iters) + ' \n'
-        parameters += 'rmsd: ' + str(self.rmsd) + ' \n'
-        parameters += 'win_filtered: ' + str(self.win_filtered) + ' \n'
+        parameters += 'num_contact_vdms: ' + str(self.num_contact_vdms) + ' \n'
+        parameters += 'metal_metal_dist: ' + str(self.metal_metal_dist) + ' \n'
+        parameters += 'win_filtered: ' + str(self._resnum_filtered) + ' \n'
         parameters += 'validateOriginStruct: ' + str(self.validateOriginStruct) + ' \n'
         parameters += 'parallel: ' + str(self.parallel) + ' \n'
-        parameters += 'selfcenter_rmsd: ' + str(self.selfcenter_rmsd) + ' \n'
+        parameters += 'density_radius: ' + str(self.density_radius) + ' \n'
         return parameters
 
     #region Neighbor Search
-    '''
-    A new searching method based on sklearn NerestNeighbor radius_neighbors.
-    The method is similarly used in COMBS by Nick Polizzi.
-    One difference is that, we need to consider the overlap of metal coords from >3 aa sidechains. 
-    While for general ligand, one chemical group of aa bind one chemical group of ligand. 
-    '''
-    def run_neighbor_search(self):
-        '''
-        All functions need to run the neighbor search.
-        '''
-        print('run_neighbor_search')
-
-        #TO DO: where should I apply filters: win filter, query_metal filter, phipsi, etc.
-        self.neighbor_generate_query_dict()
-
-        self.neighbor_generate_pair_dict()
-
-        if self.parallel:
-            self.neighbor_search_wins_pool()
-        else:
-            self.neighbor_search_wins()
-
-        self.neighbor_write_represents()
-
-        self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict)
-
-        self.neighbor_write_log()
-
-        return
-
 
     def neighbor_generate_query_dict(self):
         '''
@@ -222,349 +275,6 @@ class Search_vdM:
             if x:
                 self.neighbor_query_dict[w] = _vdm
         return
-
-
-
-    def neighbor_generate_pair_dict(self):
-        '''
-        To generate pair win dict, we will first filter out the impossible win pair by distance.
-        Apply utils.check_pair_distance_satisfy()
-        '''
-
-        print('neighbor_generate_pair_dict')
-        
-        wins = sorted(list(self.neighbor_query_dict.keys()))
-        print(wins)
-        for inx in range(len(wins)):
-            for iny in range(inx + 1, len(wins)):
-                wx = wins[inx]
-                wy = wins[iny]  
-                dist_ok, ws = utils.check_pair_distance_satisfy(wx, wy, self.dists)
-                if not dist_ok:
-                    continue
-                # if self.query_all_metal and not check_hull_satisfy(self.target, wx, wy, self.query_all_metal_x, self.query_all_metal_y):
-                #     continue
-                n_x = self.neighbor_query_dict[wx].get_metal_mem_coords()
-                n_y = self.neighbor_query_dict[wy].get_metal_mem_coords()
-                # print('-------------------')
-                # print(wx)
-                # print(wy)
-                x_in_y, x_has_y = self.calc_pairwise_neighbor(n_x, n_y, self.rmsd)
-                #y_in_x, y_has_x = self.calc_pairwise_neighbor(n_y, n_x, self.rmsd)
-
-                # print(x_has_y)
-                # print(y_has_x)
-
-                x_in_y, x_has_y = self.neighbor_filter_new(wx, wy, x_in_y)
-                #y_in_x, y_has_x = self.neighbor_filter_new(wy, wx, y_in_x)
-
-                # print(x_has_y)
-                # print(y_has_x)
-
-                #if x_has_y and y_has_x:
-                if x_has_y:
-                    self.neighbor_pair_dict[(wx, wy)] = x_in_y
-                    #self.neighbor_pair_dict[(wy, wx)] = y_in_x
-        return
-
-
-    def calc_pairwise_neighbor(self, n_x, n_y, rmsd = 0.25):
-        '''
-        Use sklean NearestNeighbors. find every x point has how many neighbors from y.
-        '''
-
-        neigh_y = NearestNeighbors(radius= rmsd) 
-        neigh_y.fit(n_y)
-
-        x_in_y = neigh_y.radius_neighbors(n_x)
-        x_has_y = any([True if len(a) >0 else False for a in x_in_y[1]])
-
-        return x_in_y[1], x_has_y
-
-    
-    def neighbor_filter_new(self, wx, wy, x_in_y):
-        '''
-        filter impossible pairwise connect.
-        1. validateOriginStruct
-        2. ABPLE filter. 
-        3. phipsi angle filter. 
-        '''
-
-        x_in_y_mask = [[True for j in range(len(x_in_y[i]))] for i in range(len(x_in_y))]
-
-        for i in range(len(x_in_y)):
-            if len(x_in_y[i]) <= 0:
-                continue
-
-            if self.validateOriginStruct:
-                resx = self.target.select('name CA and resindex ' + str(wx)).getResnames()[0]
-                resy = self.target.select('name CA and resindex ' + str(wy)).getResnames()[0]
-
-                if not self.vdms[i].aa_type == resx:
-                    x_in_y_mask[i] = [False for j in range(len(x_in_y[i]))] 
-                    continue
-
-            if self.search_filter.filter_abple:
-                apx = self.target_abple[wx]
-                apy = self.target_abple[wy]
-       
-                if not self.vdms[i].abple == apx:
-                    x_in_y_mask[i] = [False for j in range(len(x_in_y[i]))] 
-                    continue
-
-            
-            if self.search_filter.filter_phipsi:
-                phix, psix = self.phipsi[wx]
-                phiy, psiy = self.phipsi[wy]
-
-                if (not utils.filter_phipsi(phix, self.vdms[i].phi, self.search_filter.max_phipsi_val)) or (not utils.filter_phipsi(psix, self.vdms[i].psi, self.search_filter.max_phipsi_val)):
-                    x_in_y_mask[i] = [False for j in range(len(x_in_y[i]))]
-                    continue
-           
-
-            if self.search_filter.filter_vdm_score:
-                if self.vdms[i].score < self.search_filter.min_vdm_score:
-                    x_in_y_mask[i] = [False for j in range(len(x_in_y[i]))]
-                    continue
-            
-
-            if self.search_filter.filter_vdm_count:
-                if self.vdms[i].clu_num < self.search_filter.min_vdm_clu_num:
-                    x_in_y_mask[i] = [False for j in range(len(x_in_y[i]))]
-                    continue
-                           
-
-            for j in range(len(x_in_y[i])):
-                j_ind = x_in_y[i][j]
-
-                if self.validateOriginStruct:
-                    resy = self.target.select('name CA and resindex ' + str(wy)).getResnames()[0]
-                    if not self.vdms[j_ind].aa_type == resy:
-                        x_in_y_mask[i][j] = False
-                        continue
-
-                if self.search_filter.filter_abple:
-                    apy = self.target_abple[wy]
-                    if not self.querys[j_ind].abple == apy:
-                        x_in_y_mask[i][j] = False
-                        continue
-
-                if self.search_filter.filter_phipsi:
-                    phiy, psiy = self.phipsi[wy]
-                    if (not utils.filter_phipsi(phiy, self.vdms[j_ind].phi, self.search_filter.max_phipsi_val)) or (not utils.filter_phipsi(psiy, self.vdms[j_ind].psi, self.search_filter.max_phipsi_val)) :
-                        x_in_y_mask[i][j] = False
-                        continue
-
-                if self.search_filter.filter_vdm_score:
-                    if self.vdms[j_ind].score < self.search_filter.min_vdm_score:
-                        x_in_y_mask[i][j] = False 
-                        continue
-            
-
-                if self.search_filter.filter_vdm_count:
-                    if self.vdms[j_ind].clu_num < self.search_filter.min_vdm_clu_num:
-                        x_in_y_mask[i][j] = False 
-                        continue
-        
-        x_in_y_filter = [[x_in_y[i][j] for j in range(len(x_in_y[i])) if x_in_y_mask[i][j]] for i in range(len(x_in_y))]
-
-        x_has_y = any([True if len(a) >0 else False for a in x_in_y_filter])
-
-        return x_in_y_filter, x_has_y
-
-
-    def neighbor_get_win_combs(self):
-        '''
-        The combinations of positions are extracted from all possible positions with pairs.
-        '''
-        print('pair_dict_keys: {}'.format(self.neighbor_pair_dict.keys()))
-        wins = sorted(set(self.neighbor_query_dict.keys()))
-        print('All wins with overlap {}'.format(wins))
-
-        win_ind_dict = {}
-        for i in range(len(wins)):
-            win_ind_dict[wins[i]] = i
-
-        pair_set = set()
-
-        for x, y in self.neighbor_pair_dict.keys():
-            i = win_ind_dict[x]
-            j = win_ind_dict[y]
-            pair_set.add((i, j))
-
-        paths = []
-        for n in self.num_iters: 
-            paths.extend(utils.combination_calc(list(range(len(wins))), pair_set, n))
-
-        win_combs = []
-        for path in paths:
-            win_comb = [wins[p] for p in path]
-            win_combs.append(win_comb)
-        return win_combs
-
-    
-    def neighbor_search_wins(self):
-        '''
-        The combinations of positions are extracted from all possible positions with pairs.
-        '''
-        win_combs = self.neighbor_get_win_combs()
-
-        for win_comb in win_combs:
-            print(win_comb)      
-            comb_dict = self.neighbor_run_comb(win_comb)
-            self.neighbor_comb_dict.update(comb_dict)
-        return
-
-
-    def neighbor_search_wins_pool(self):
-        '''
-        multithread.
-        '''
-        win_combs = self.neighbor_get_win_combs()
-        print('multithread search win_combs: {}'.format(len(win_combs)))
-        if len(win_combs) <= 0:
-            return
-        num_cores = int(mp.cpu_count() - 1)
-        print('pool: {}'.format(num_cores))
-        # pool = mp.Pool(num_cores)
-        # results = [pool.apply_async(self.neighbor_construct_comb, args=win_comb) for win_comb in win_combs]
-        # results = [p.get() for p in results]
-        pool = ThreadPool(num_cores)
-        results = pool.map(self.neighbor_run_comb, win_combs)
-        pool.close()
-        pool.join()
-        for r in results: 
-            self.neighbor_comb_dict.update(r)
-        return
-
-
-    def neighbor_run_comb(self, win_comb):
-        #try:
-        comb_dict = self.neighbor_construct_comb(win_comb)
-        if len([comb_dict.keys()]) <= 0:
-            return comb_dict
-        _target = self.target.copy()
-        self.neighbor_extract_query(_target, comb_dict)
-        self.neighbor_calc_comb_score(comb_dict)
-        self.neighbor_calc_geometry(comb_dict)
-        self.neighbor_aftersearch_filt(_target, comb_dict)
-        self.neighbor_write_win(comb_dict)
-        return comb_dict
-        # except:
-        #     self.log += 'Error in win_comb: ' + '-'.join([str(w) for w in win_comb]) + '\n'
-        #     return {}
-
-    def neighbor_construct_comb(self, win_comb):
-        '''
-        win_comb: [0, 1, 2, 3]
-
-        cluster_dict: {(0, 0, 0, 0): {0:[1, 3, 4], 1:[2, 3, 4], 2: [2, 6, 7], 3:[1, 2, 3]}}
-        The key is win, the value is list of index, each represent one metal coord exist in all other wins' metal.
-        
-        self.neighbor_comb_dict
-        # { (wins, ids), (comb, combinfo)}
-        # {((0, 1, 2, 3)(0, 0, 0, 0)): {(0:[1, 3, 4], 1:[2, 3, 4], 2: [2, 6, 7], 3:[1, 2, 3]), combinfo}}
-
-
-        As we calculate all metals at the same time. 
-        We need to extract vdm representations.
-        '''
-        print('neighbor_construct comb: {}'.format(win_comb))
-
-        comb_dict = dict()
-
-        for x, y in itertools.permutations(win_comb, 2):
-            if (x, y) not in self.neighbor_pair_dict.keys():
-                return comb_dict
-        
-        graph = Graph(win_comb,len(self.vdms))
-
-        graph.calc_pair_connectivity(self.neighbor_pair_dict)
-
-        graph.get_paths()
-
-        print('graph.paths len {}'.format(len(graph.all_paths)))
-
-        #TO DO: Here is a temp method to solve extream solutions. Mostly happened in 4 CYS binding cores.
-        if len(graph.all_paths) > 15000:
-            print('Too many paths to be considered so far.')
-            graph.all_paths = graph.all_paths[0:15001]
-
-        clu_dict = {}
-
-        # path represent the id of each metal vdM.
-        for path in graph.all_paths:
-            
-            clu_key = tuple([self.vdms[p].get_cluster_key() for p in path])
-            
-            if clu_key in clu_dict:
-                for i in range(len(win_comb)):
-                    clu_dict[clu_key][win_comb[i]].add(path[i])
-            else:
-                clu_dict[clu_key] = {}
-                for i in range(len(win_comb)):
-                    clu_dict[clu_key][win_comb[i]] = set()
-                    clu_dict[clu_key][win_comb[i]].add(path[i])
-
-        if len(clu_dict) > 0:
-            for clu_key in clu_dict.keys():
-                combinfo = CombInfo() 
-                combinfo.comb = clu_dict[clu_key]
-                comb_dict[(tuple(win_comb), clu_key)] = combinfo
-
-        return comb_dict
-
-    def neighbor_construct_comb2(self, win_comb):
-        '''
-        win_comb: [0, 1, 2, 3]
-
-        cluster_dict: {(0, 0, 0, 0): {0:[1, 3, 4], 1:[2, 3, 4], 2: [2, 6, 7], 3:[1, 2, 3]}}
-        The key is win, the value is list of index, each represent one metal coord exist in all other wins' metal.
-        
-        self.neighbor_comb_dict
-        # { (wins, ids), (comb, combinfo)}
-        # {((0, 1, 2, 3)(0, 0, 0, 0)): {(0:[1, 3, 4], 1:[2, 3, 4], 2: [2, 6, 7], 3:[1, 2, 3]), combinfo}}
-
-
-        As we calculate all metals at the same time. 
-        We need to extract vdm representations.
-        '''
-        print('neighbor_construct comb: {}'.format(win_comb))
-
-        comb_dict = dict()
-
-        for x, y in itertools.permutations(win_comb, 2):
-            if (x, y) not in self.neighbor_pair_dict.keys():
-                return comb_dict
-        
-        graph = Graph(win_comb, len(self.vdms))
-
-        graph.calc_pair_connectivity(self.neighbor_pair_dict)
-
-        graph.get_paths()
-
-        print('graph.paths len {}'.format(len(graph.all_paths)))
-
-        #TO DO: Here is a temp method to solve extream solutions. Mostly happened in 4 CYS binding cores.
-        if len(graph.all_paths) > 15000:
-            print('Too many paths to be considered so far.')
-            graph.all_paths = graph.all_paths[0:15001]
-
-        # path represent the id of each metal vdM.
-        count = 0
-        for path in graph.all_paths:
-            clu_key = tuple([self.vdms[p].get_cluster_key() for p in path])
-
-            comb = dict()
-            for i in range(len(win_comb)):
-                comb[win_comb[i]] = [path[i]]
-
-            combinfo = CombInfo()
-            combinfo.comb = comb 
-            comb_dict[(tuple(win_comb), clu_key, count)] = combinfo           
-            count += 1
-
-        return comb_dict
 
 
     def neighbor_extract_query(self, _target, comb_dict):
@@ -607,37 +317,32 @@ class Search_vdM:
         for key in comb_dict.keys():       
             wins = key[0]
             clu_key = key[1]
-            
+
+            info = comb_dict[key]
             # From here we will calculate the score for each comb. 
-            totals = [len(comb_dict[key].query_dict[w]) for w in wins]
+            overlaps = [len(info.query_dict[w]) for w in wins]
             try:
                 #This is for the Search_selfcenter.
-                if comb_dict[key].overlap_query_id_dict:
-                    totals = [len(comb_dict[key].overlap_query_id_dict[w]) for w in wins]
+                if info.overlap_query_id_dict:
+                    overlaps = [len(info.overlap_query_id_dict[w]) for w in wins]
             except:
-                print('totals: ' + str(totals)) 
-            #total_clu = sum([self.cluster_centroid_dict[clu_key[i]].total_clu for i in range(len(wins))])
-            scores = [self.vdms[self.cluster_centroid_dict[clu_key[i]]].score for i in range(len(wins))]
-            comb_dict[key].totals = totals
-            comb_dict[key].scores = scores
-
-            '''
-            #Calc fraction score
-            fracScore = sum([self.vdms[self.cluster_centroid_dict[clu_key[i]]].clu_num for i in range(len(wins))])/sum([self.vdms[self.cluster_centroid_dict[clu_key[i]]].clu_total_num for i in range(len(wins))])
-            weight = 0
-            for i in range(len(wins)):
-                c = self.vdms[self.cluster_centroid_dict[clu_key[i]]]
-                weight += sum(totals)/c.clu_total_num
-            comb_dict[key].fracScore = fracScore*weight
-
-            #Calc multiScore (By Bill: -ln(Na/SumNa * Nb/SumNb * Nc/SumNc))
-            aa_numbs = [self.aa_num_dict[c[0]] for c in clu_key]
-            comb_dict[key].multiScore = -log(np.prod(totals)/np.prod(aa_numbs))
-            '''
-            comb_dict[key].fracScore = sum([self.vdms[self.cluster_centroid_dict[clu_key[i]]].clu_num/self.vdms[self.cluster_centroid_dict[clu_key[i]]].max_clu_num for i in range(len(wins))])
+                print('totals: ' + str(overlaps)) 
             
-            comb_dict[key].multiScore =1000*np.prod([self.vdms[self.cluster_centroid_dict[clu_key[i]]].clu_num/self.vdms[self.cluster_centroid_dict[clu_key[i]]].max_clu_num for i in range(len(wins))])
+            scores = [self.vdms[self.cluster_centroid_dict[clu_key[i]]].score for i in range(len(wins))]
 
+            core_types = [clu[0] for clu in clu_key]
+            clu_medians = [self.aa_vdm_info_dict[c][3] for c in core_types]
+            clu_totals = [self.aa_vdm_info_dict[c][0] for c in core_types]
+            #cluters = [self.cluster_centroid_dict[clu_key[i]].total_clu for i in range(len(wins))]
+            clu_nums = [c.clu_num for c in info.centroid_dict.values()]
+
+            info.volume = 4.0/3.0 * math.pi * (self.density_radius**3)
+
+            comb_dict[key].overlaps = overlaps
+            comb_dict[key].scores = scores
+            comb_dict[key].cluScore = sum([math.log(clu_nums[i]/clu_medians[i]) for i in range(len(wins))])
+            comb_dict[key].overlapScore = np.prod([overlaps[i]*clu_totals[i]/clu_medians[i] for i in range(len(wins))])**(1/(len(wins)))/info.volume
+            
         return
     
 
@@ -676,102 +381,17 @@ class Search_vdM:
         return
 
 
-    def neighbor_write_represents(self):
-        print('neighbor_write_represents')
-        for key in self.neighbor_comb_dict.keys():  
-
-            outdir = self.workdir + 'represents/'
-            if not os.path.exists(outdir):
-                os.mkdir(outdir)        
-
-            tag = 'win_' + '-'.join([str(k) for k in key[0]]) + '_clu_' + '-'.join(k[0] + '-' + str(k[1]) for k in key[1]) 
-            for w in key[0]:
-                c = self.neighbor_comb_dict[key].query_dict[w][0]
-                pdb_path = outdir + tag + '_w_' + str(w) + '_apble_' + c.abple + '_' + c.query.getTitle() + '.pdb'
-                pr.writePDB(pdb_path, c.query)                  
-
-        return
-
-    def neighbor_write_win(self, comb_dict):
-        '''
-        Write output.
-        Too many output, May need optimization. 
-        '''
-        print('neighbor_write')
-        for key in comb_dict.keys():  
-            info = comb_dict[key]
-            if not self.search_filter.write_filtered_result and info.after_search_filtered:
-                continue
-
-            outpath = 'win_' + '-'.join([str(k) for k in key[0]]) + '/'
-            outdir = self.workdir + outpath
-            if not os.path.exists(outdir):
-                os.mkdir(outdir)
-            tag = 'win_' + '-'.join([str(k) for k in key[0]]) + '_clu_' + '-'.join(k[0] + '-' + str(k[1]) for k in key[1]) 
-
-            # Write geometry       
-            pr.writePDB(outdir + tag +'_geometry.pdb', comb_dict[key].geometry) 
-            
-            #Write 
-            all_overlap_metal_coords = []
-            for w in key[0]:
-                candidates = comb_dict[key].query_dict[w]
-                metal_coords = []
-
-                max_out = 100 #To reduce number of output.
-                for c in candidates:
-                    if max_out >0:
-                        pdb_path = outdir + tag + '_w_' + str(w) + '_apble_' + c.abple + '_' + c.query.getTitle() + '.pdb'
-                        pr.writePDB(pdb_path, c.query)                  
-                        max_out-=1
-                        metal_coords.append(c.get_metal_coord())
-                        all_overlap_metal_coords.extend(metal_coords)
-                    else:
-                        break
-
-                hull.write2pymol(metal_coords, outdir, tag + '_w_' + str(w) +'_overlap_points.pdb')
-
-            # if len(all_overlap_metal_coords) > 3:
-            #     vol = scipy.spatial.ConvexHull(all_overlap_metal_coords)
-            #     volume = vol.volume
-            # else:
-            #     volume = 0
-            # self.neighbor_comb_dict[key].volume = volume
-            # self.neighbor_comb_dict[key].volPerMetal = volume/len(all_overlap_metal_coords)
-            # hdist = cdist(all_overlap_metal_coords, all_overlap_metal_coords, metric='euclidean')
-            # self.neighbor_comb_dict[key].diameter = hdist.argmax()
-            
-            #Write Centroid and all metal coords in the cluster
-            for w in key[0]:
-                centroid = comb_dict[key].centroid_dict[w]
-                pdb_path = outdir + tag + '_centroid_' + centroid.query.getTitle() + '.pdb'
-                pr.writePDB(pdb_path, centroid.query)
-                clu_allmetal_coords = centroid.get_metal_mem_coords()
-                hull.write2pymol(clu_allmetal_coords, outdir, tag + '_w_' + str(w) +'_points.pdb')  
-        return   
-
-    def neighbor_write(self):
-        '''
-        Write output all comb_dict results together.
-        '''
-        print('neighbor_write')
-        for key in self.neighbor_comb_dict.keys():  
-            comb_dict = self.neighbor_comb_dict[key]
-            self.neighbor_write_win(comb_dict)
-        return    
-
-
     def neighbor_write_summary(self, outdir, comb_dict, name = '_summary.tsv', eval = False):
         '''
         Write a tab dilimited file.
         '''
-        print('neighbor-write-summary')
+        #print('write summary file.')
 
         os.makedirs(outdir, exist_ok=True)
 
         with open(outdir + name, 'w') as f:
-            f.write('Wins\tClusterIDs\tproteinABPLEs\tCentroidABPLEs\tproteinPhiPsi\tCentroidPhiPsi\tvolume\tvol2metal\tdiameter\tTotalVdMScore\tFracScore\tMultiScore\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tvdm_scores\ttotal_clu#\tclu_nums\tmax_clu_nums')
-            f.write('\tpair_aa_aa_dist_ok\tpair_angle_ok\tpair_metal_aa_dist_ok\tvdm_no_clash')
+            f.write('Wins\tClusterIDs\tDensityRadius\tCluScore\tOverlapScore\tOverlapScoreLn\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tclu_nums')
+            f.write('\tpair_aa_aa_dist_ok\tpair_angle_ok\tpair_metal_aa_dist_ok\tvdm_no_clash\tproteinABPLEs\tCentroidABPLEs\tproteinPhiPsi\tCentroidPhiPsi')
             if eval:
                 f.write('\teval_min_rmsd\teval_min_vdMs\teval_phi\teval_psi\teval_abple\teval_is_origin')
             f.write('\n')
@@ -781,26 +401,17 @@ class Search_vdM:
                     continue
                 #centroids = [c.query.getTitle() for c in info.centroid_dict.values()]
                 vdm_scores = [c for c in info.scores]
-                overlaps = [c for c in info.totals]
+                overlaps = [c for c in info.overlaps]
                 clu_nums = [c.clu_num for c in info.centroid_dict.values()]
                 max_clu_nums = [c.max_clu_num for c in info.centroid_dict.values()]
                 
-                f.write('_'.join([str(x) for x in key[0]]) + '\t')
+                f.write('_'.join([self.target_index_dict[x] for x in key[0]]) + '\t')
                 f.write('_'.join([x[0] + '-' + str(x[1]) for x in key[1]]) + '\t')
 
-                f.write('_'.join([self.target_abple[x] for x in key[0]]) + '\t')
-                f.write('_'.join([c.abple for c in info.centroid_dict.values()]) + '\t')
-                f.write('_'.join([str((round(self.phipsi[x][0],2), round(self.phipsi[x][1],2))) for x in key[0]]) + '\t')
-                f.write('_'.join([str((round(c.phi, 2), round(c.psi, 2))) for c in info.centroid_dict.values()]) + '\t')
-
                 f.write(str(round(info.volume,2))+ '\t')
-                f.write(str(round(info.volPerMetal,2))+ '\t')
-                f.write(str(round(info.diameter,2))+ '\t')
-
-                f.write(str(round(sum(info.scores), 2)) + '\t')
-                f.write(str(round(info.fracScore, 2)) + '\t')
-                f.write(str(round(info.multiScore, 2)) + '\t')
-
+                f.write(str(round(info.cluScore, 2)) + '\t')
+                f.write(str(round(info.overlapScore, 2)) + '\t')
+                f.write(str(round(math.log(info.overlapScore), 2)) + '\t')
                 
                 f.write('||'.join([str(round(d, 2)) for d in info.aa_aa_pair])  + '\t')
                 f.write('||'.join([str(round(d, 2)) for d in info.metal_aa_pair])  + '\t')
@@ -808,16 +419,17 @@ class Search_vdM:
 
                 f.write(str(sum(overlaps)) + '\t')
                 f.write('||'.join([str(s) for s in overlaps]) + '\t')
-
-                f.write('||'.join([str(round(s, 2)) for s in vdm_scores]) + '\t')
-                f.write(str(sum(clu_nums)) + '\t')
                 f.write('||'.join([str(c) for c in clu_nums]) + '\t')
-                f.write('||'.join([str(c) for c in max_clu_nums]) + '\t')
 
                 f.write(str(info.pair_aa_aa_dist_ok) + '\t')
                 f.write(str(info.pair_angle_ok) + '\t')
                 f.write(str(info.pair_metal_aa_dist_ok) + '\t')
                 f.write(str(info.vdm_no_clash) + '\t')
+
+                f.write('_'.join([self.target_abple[x] for x in key[0]]) + '\t')
+                f.write('_'.join([c.abple for c in info.centroid_dict.values()]) + '\t')
+                f.write('_'.join([str((round(self.phipsi[x][0],2), round(self.phipsi[x][1],2))) for x in key[0]]) + '\t')
+                f.write('_'.join([str((round(c.phi, 2), round(c.psi, 2))) for c in info.centroid_dict.values()]) + '\t')
 
                 if eval:
                     f.write('||'.join([str(round(m, 2)) for m in info.eval_mins]) + '\t')
@@ -835,10 +447,6 @@ class Search_vdM:
         if len(self.log) > 0:
             with open(self.workdir + '_log.txt', 'w') as f:
                 f.write(self.log)
-
-        with open(self.workdir + '_parameters.txt', 'w') as f:
-            f.write(self.para2string())
-            f.write(self.search_filter.para2string())
 
 
 

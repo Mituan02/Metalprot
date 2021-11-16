@@ -1,9 +1,9 @@
-#You can either add the python package path.
-#sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
 from metalprot.search import search_selfcenter
 from metalprot.basic import filter
+import metalprot.basic.constant as constant
 import pickle
 import time
+import prody as pr
 
 
 '''
@@ -38,14 +38,6 @@ target_path = workdir + '5od1_zn.pdb'
 win_filter = [35,  61,  65]
 
 
-# workdir = '/mnt/e/DesignData/ligands/LigandBB/6dwv/'
-
-# outdir = workdir + 'output_selfcenter/'
-
-# target_path = workdir + '6dwv_core.pdb'
-
-# win_filter = []
-
 
 metal_metal_dist = 0.45
 
@@ -62,8 +54,42 @@ ss =  search_selfcenter.Search_selfcenter(target_path, outdir, all_querys, clust
     num_contact_vdms, metal_metal_dist, win_filter, validateOriginStruct = True, search_filter= _filter, density_radius = 0.6,
     allowed_aa_combinations = allowed_aa_combinations)
 
-#ss.run_selfcenter_search()
 search_selfcenter.run_search_selfcenter(ss)
 
 end_time = time.time()
 print(end_time - start_time, "seconds")
+
+
+#ligand positioning.
+
+lig_path = workdir + 'Zn_Phenol.pdb'
+
+lig = pr.parsePDB(lig_path)
+
+lig_connects = ['OH', 'ZN']
+
+ro1 = ['ZN', 'OH']
+ro2 = ['OH', 'CZ']
+
+rotation_degree = 5
+
+key = list(ss.best_aa_comb_dict.keys())[0]
+
+
+ideal_geo = ss.best_aa_comb_dict[key].ideal_geo
+
+ideal_geo_o = constant.tetrahydra_geo_o
+pr.calcTransformation(ideal_geo_o.select('not oxygen'), ideal_geo).apply(ideal_geo_o)
+pr.writePDB(workdir + ideal_geo_o.getTitle(), ideal_geo_o)
+
+all_ligs = generate_rotated_ligs(lig, ro1, ro2, rotation_degree = 45)
+# for l in all_ligs: 
+#     pr.writePDB(workdir + 'ligand_rotation/' +  l.getTitle(), l)
+
+tf = calc_lig2ideageo_transformation(all_ligs[0], lig_connects, ideal_geo_o)
+
+
+for lg in all_ligs:
+    tf.apply(lg)
+
+pr.writePDB(workdir + lg.getTitle(), lg)

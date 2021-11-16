@@ -35,6 +35,7 @@ class CombInfo:
 
         #Geometry
         self.geometry = None
+        self.ideal_geo = None
         self.geo_rmsd = -10.00
         self.aa_aa_pair = None
         self.metal_aa_pair = None
@@ -100,7 +101,6 @@ class CombInfo:
         all_coords.append(pr.calcCenter(hull.transfer2pdb(metal_coords)))
 
         self.geometry = hull.transfer2pdb(all_coords, ['NI' if i == len(all_coords)-1 else 'N' for i in range(len(all_coords))])      
-        self.ideal_geometry = self.geometry
         
         self.aa_aa_pair, self.metal_aa_pair, self.angle_pair  = vdmer.pair_wise_geometry(self.geometry)
         return     

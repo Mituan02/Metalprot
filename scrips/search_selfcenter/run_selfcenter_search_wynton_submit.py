@@ -49,13 +49,16 @@ def run(target_path, win_filter, outdir):
 
     num_contact_vdms = [3]
 
+    allowed_aa_combinations = [['H', 'H', 'H']]
+
     _filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_phipsi_val = 25, 
         filter_vdm_score = False, min_vdm_score = 0, filter_vdm_count = False, min_vdm_clu_num = 20,
         after_search_filter = True, pair_angle_range = [92, 116], pair_aa_aa_dist_range = [3.0, 3.5], pair_metal_aa_dist_range = None,
         filter_qt_clash = True, write_filtered_result = False, selfcenter_filter_member_phipsi=True)
 
     ss =  search_selfcenter.Search_selfcenter(target_path, outdir, all_querys, cluster_centroid_dict, query_all_metal, 
-        num_contact_vdms, metal_metal_dist, win_filter, validateOriginStruct = True, search_filter= _filter, density_radius= 0.6, parallel = False)
+        num_contact_vdms, metal_metal_dist, win_filter, validateOriginStruct = True, search_filter= _filter, density_radius= 0.6, 
+        allowed_aa_combinations = allowed_aa_combinations)
 
     search_selfcenter.run_search_selfcenter(ss)
 

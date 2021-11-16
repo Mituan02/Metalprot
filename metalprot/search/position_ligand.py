@@ -1,7 +1,7 @@
 import prody as pr
 import numpy as np
 from scipy.spatial.transform import Rotation
-
+from sklearn.neighbors import NearestNeighbors, radius_neighbors_graph
 
 
 def rotate_ligs_first(lig, rot, rotation_degree = 5, metal = 'ZN'):
@@ -61,7 +61,7 @@ def rotate_ligs_second(lig, rot, base_rot, rotation_degree = 5, metal = 'ZN'):
     return all_ligs
 
 
-def generate_rotated_ligs(lig, ro1, ro2, rotation_degree = 5, metal = 'ZN'):
+def generate_rotated_ligs(lig, ro1, ro2, rotation_degree = 10, metal = 'ZN'):
 
     all_ligs = []
     
@@ -73,18 +73,55 @@ def generate_rotated_ligs(lig, ro1, ro2, rotation_degree = 5, metal = 'ZN'):
     return all_ligs
 
 
-def calc_lig2ideageo_transformation(_lig, lig_connects, ideal_geo_o = None, geo_sel = 'name OE2 ZN'):
+def lig_2_ideageo(ligs, lig_connects, ideal_geo_o = None, geo_sel = 'name OE2 ZN'):
     '''
     supperimpose the ligand to the ideal metal binding geometry.
     '''
+    _lig = ligs[0]
+
     lig_sel = _lig.select('name ' + ' '.join(lig_connects))
 
     ideal_geo_sel = ideal_geo_o.select(geo_sel)
 
     transformation = pr.calcTransformation(lig_sel, ideal_geo_sel)
 
-    return transformation
+    for lg in ligs:
+        transformation.apply(lg)
+
+    return 
 
 
+def ligand_clashing_filter(ligs, target, dist = 3):
+    '''
+    The ligand clashing: the ligs cannot have any heavy atom within 3 A of a target bb.
+    Nearest neighbor is used to calc the distances. 
+    '''
+    all_coords = []
+    labels = []
+
+    for i in range(len(ligs)):
+        coords = ligs[i].select('heavy').getCoords()
+        all_coords.extend(coords)
+        labels.extend([i for j in range(len(coords))])
+
+    
+    target_coords = target.select('name N C CA O CB').getCoords()
+
+    nbrs = NearestNeighbors(radius= dist).fit(target_coords)
+    adj_matrix = nbrs.radius_neighbors_graph(all_coords).astype(bool)
+
+    failed = set()
+    for i in range(adj_matrix.shape[0]):
+        if adj_matrix.getrow(i).toarray().any():
+            failed.add(labels[i])
+    
+    filtered_ligs = []
+    for i in range(len(ligs)):
+        if i in failed:
+            continue
+        filtered_ligs.append(ligs[i])
+
+    return filtered_ligs
+    
 
 

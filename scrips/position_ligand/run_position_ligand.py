@@ -1,10 +1,11 @@
 from metalprot.search import search_selfcenter
 from metalprot.basic import filter
 import metalprot.basic.constant as constant
+from metalprot.search import position_ligand
 import pickle
 import time
 import prody as pr
-
+import os
 
 '''
 python /mnt/e/GitHub_Design/Metalprot/scrips/search_selfcenter/run_selfcenter_search.py
@@ -60,7 +61,7 @@ end_time = time.time()
 print(end_time - start_time, "seconds")
 
 
-#ligand positioning.
+#ligand positioning for the first represents.
 
 lig_path = workdir + 'Zn_Phenol.pdb'
 
@@ -80,16 +81,19 @@ ideal_geo = ss.best_aa_comb_dict[key].ideal_geo
 
 ideal_geo_o = constant.tetrahydra_geo_o
 pr.calcTransformation(ideal_geo_o.select('not oxygen'), ideal_geo).apply(ideal_geo_o)
-pr.writePDB(workdir + ideal_geo_o.getTitle(), ideal_geo_o)
+pr.writePDB(ss.workdir + ideal_geo_o.getTitle(), ideal_geo_o)
 
-all_ligs = generate_rotated_ligs(lig, ro1, ro2, rotation_degree = 45)
-# for l in all_ligs: 
-#     pr.writePDB(workdir + 'ligand_rotation/' +  l.getTitle(), l)
+all_ligs = position_ligand.generate_rotated_ligs(lig, ro1, ro2, rotation_degree = 30)
 
-tf = calc_lig2ideageo_transformation(all_ligs[0], lig_connects, ideal_geo_o)
+position_ligand.lig_2_ideageo(all_ligs, lig_connects, ideal_geo_o)
 
+# for lg in all_ligs:
+#     os.makedirs(ss.workdir + 'all_ligs/', exist_ok=True)
+#     pr.writePDB(ss.workdir + 'all_ligs/' +  lg.getTitle(), lg)
+    
 
-for lg in all_ligs:
-    tf.apply(lg)
+filtered_ligs = position_ligand.ligand_clashing_filter(all_ligs, ss.target)
 
-pr.writePDB(workdir + lg.getTitle(), lg)
+for lg in filtered_ligs:
+    os.makedirs(ss.workdir + 'filtered_ligs/', exist_ok=True)
+    pr.writePDB(ss.workdir + 'filtered_ligs/' +  lg.getTitle(), lg)

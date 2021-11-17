@@ -131,3 +131,5 @@ with open(Path(__file__).parent.parent / 'constants/abple_dict.pkl', 'rb') as in
     abple_dict = pickle.load(infile)                
 
 tetrahydra_geo = pr.parsePDB(Path(__file__).parent.parent / 'constants/tetrahydral_geo.pdb')
+
+tetrahydra_geo_o = pr.parsePDB(Path(__file__).parent.parent / 'constants/Zn_Tet_O.pdb')

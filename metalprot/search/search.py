@@ -12,7 +12,7 @@ from ..basic import utils
 from ..basic.filter import Search_filter
 from .graph import Graph
 from .comb_info import CombInfo
-
+from ..basic import constant
 
 from sklearn.neighbors import NearestNeighbors
 import multiprocessing as mp
@@ -124,8 +124,8 @@ class Search_vdM:
     '''
     def __init__(self, target_pdb, workdir, vdms, cluster_centroid_dict, all_metal_vdm, 
     num_contact_vdms = [3], metal_metal_dist = 0.45, win_filtered = [], 
-    validateOriginStruct = False, search_filter = None, parallel = False, density_radius = 0.45,
-    secondshell_vdms = None, rmsd_2ndshell = 0.5, 
+    validateOriginStruct = False, search_filter = None, geometry_path= None, parallel = False, density_radius = 0.45,
+    secondshell_vdms = None, rmsd_2ndshell = 0.5, allowed_aa_combinations = [],
     output_wincomb_overlap = False):
         self.time_tag = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') 
         if workdir:
@@ -152,8 +152,13 @@ class Search_vdM:
 
         #neighbor in search filter-------------
         self.validateOriginStruct = validateOriginStruct
+        self.allowed_aa_combinations = allowed_aa_combinations
 
         self.search_filter = search_filter
+        if geometry_path:
+            self.geo_struct = pr.parsePDB(geometry_path)
+        else:
+            self.geo_struct = constant.tetrahydra_geo
 
         #neighbor parallel mechanism-----------
         self.parallel = parallel
@@ -179,9 +184,9 @@ class Search_vdM:
         #For multi scoring----------------------
         self.aa_num_dict = None
         self.aa_vdm_info_dict = {
-            'HIS':[2662, 285, 92.08, 60],
-            'GLU':[829, 50, 16.32, 11],
-            'ASP':[896, 90, 26.12, 22]
+            'H':[2662, 285, 92.08, 60],
+            'E':[829, 50, 16.32, 11],
+            'D':[896, 90, 26.12, 22]
         }
 
 
@@ -191,7 +196,7 @@ class Search_vdM:
         #Output control--------------------------
         self.log = '' #For developing output purpose
         self.best_aa_comb_dict = {} # To store&Write the best comb for each combinations of wins. 
-        self.output_wincomb_overlap = False
+        self.output_wincomb_overlap = output_wincomb_overlap
 
         #----------------------------------------
         self.setup()
@@ -221,6 +226,16 @@ class Search_vdM:
 
         self.win_filtered = [resnum2ind[str(rn)] for rn in self._resnum_filtered]
 
+        #allowed_aa_types example: [[H,H,H], [H,H,E], [H,H,D]]
+        self.allowed_aas = set()
+        self.allowed_aa_combinations_sorted = set()
+        if len(self.allowed_aa_combinations) >0:
+            for aas in self.allowed_aa_combinations:
+                self.allowed_aa_combinations_sorted.add(tuple(sorted(aas)))
+                for aa in aas:
+                    self.allowed_aas.add(aa)
+        print(self.allowed_aas)
+        print(self.allowed_aa_combinations_sorted)
         # The contact map is used for the pair-wise neighbor method used before.
         # self.dist_array, self.id_array, self.dists = utils.get_contact_map(self.target, self.win_filtered)
 
@@ -365,11 +380,17 @@ class Search_vdM:
         '''
         for key in comb_dict.keys():  
             info = comb_dict[key]
-            if self.search_filter.after_search_filter:
-                if not info.after_search_condition_satisfied(self.search_filter.pair_angle_range, self.search_filter.pair_aa_aa_dist_range, self.search_filter.pair_metal_aa_dist_range):
-                    comb_dict[key].after_search_filtered = True
+            if self.search_filter.after_search_filter_geometry:
+                if self.search_filter.filter_based_geometry_structure:
+                    #TO DO: geometry structure based filter.
+                    ideal_geometry, rmsd = Search_filter.get_min_geo(info.geometry, self.geo_struct)                    
+                    if not Search_filter.after_search_geo_strcut_satisfied(info, ideal_geometry, self.search_filter.angle_tol, self.search_filter.aa_aa_tol, self.search_filter.aa_metal_tol):
+                        comb_dict[key].after_search_filtered = True
+                else:
+                    if not Search_filter.after_search_geo_pairwise_satisfied(info, self.search_filter.pair_angle_range, self.search_filter.pair_aa_aa_dist_range, self.search_filter.pair_metal_aa_dist_range):
+                        comb_dict[key].after_search_filtered = True
                     
-            if self.search_filter.filter_qt_clash:
+            if self.search_filter.after_search_filter_qt_clash:
                 wins = [w for w in info.query_dict.keys()]
                 vdms = [info.query_dict[w][0] for w in wins]
 
@@ -390,7 +411,7 @@ class Search_vdM:
         os.makedirs(outdir, exist_ok=True)
 
         with open(outdir + name, 'w') as f:
-            f.write('Wins\tClusterIDs\tDensityRadius\tCluScore\tOverlapScore\tOverlapScoreLn\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tclu_nums')
+            f.write('Wins\tClusterIDs\tDensityRadius\tCluScore\tOverlapScore\tOverlapScoreLn\tGeoRmsd\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tclu_nums')
             f.write('\tpair_aa_aa_dist_ok\tpair_angle_ok\tpair_metal_aa_dist_ok\tvdm_no_clash\tproteinABPLEs\tCentroidABPLEs\tproteinPhiPsi\tCentroidPhiPsi')
             if eval:
                 f.write('\teval_min_rmsd\teval_min_vdMs\teval_phi\teval_psi\teval_abple\teval_is_origin')
@@ -412,6 +433,7 @@ class Search_vdM:
                 f.write(str(round(info.cluScore, 2)) + '\t')
                 f.write(str(round(info.overlapScore, 2)) + '\t')
                 f.write(str(round(math.log(info.overlapScore), 2)) + '\t')
+                f.write(str(round(info.geo_rmsd, 3)) + '\t')
                 
                 f.write('||'.join([str(round(d, 2)) for d in info.aa_aa_pair])  + '\t')
                 f.write('||'.join([str(round(d, 2)) for d in info.metal_aa_pair])  + '\t')

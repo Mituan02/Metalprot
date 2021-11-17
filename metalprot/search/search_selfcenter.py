@@ -17,9 +17,9 @@ from multiprocessing.dummy import Pool as ThreadPool
 
 from .search import Search_vdM, supperimpose_target_bb, calc_pairwise_neighbor, combine_vdm_into_ag
 from .graph import Graph
-from .comb_info import CombInfo, supperimpose_ideal_geo
+from .comb_info import CombInfo
 from .find_path_by_matrix import neighbor_generate_nngraph, calc_adj_matrix_paths
-from ..basic import constant
+from ..basic.filter import Search_filter
 
 class Search_selfcenter(Search_vdM):
     '''
@@ -150,7 +150,7 @@ class Search_selfcenter(Search_vdM):
         outdir = self.workdir + outpath
         if not os.path.exists(outdir):
             os.mkdir(outdir)
-        tag = 'W_' + '-'.join([self.target_index_dict[k] for k in key[0]]) + '_C_' + '-'.join([constant.one_letter_code[k[0]] + '-' + str(k[1]) for k in key[1]]) 
+        tag = 'W_' + '-'.join([self.target_index_dict[k] for k in key[0]]) + '_C_' + '-'.join([k[0] + '-' + str(k[1]) for k in key[1]]) 
 
         # Write geometry       
         pr.writePDB(outdir + tag +'_geo.pdb', info.geometry) 
@@ -247,13 +247,14 @@ class Search_selfcenter(Search_vdM):
         for key in self.best_aa_comb_dict.keys():
             if 'BestOPscore' not in self.best_aa_comb_dict[key].tag:
                 continue
-            tag = 'W_' + '-'.join([self.target_index_dict[k] for k in key[0]]) + '_C_' + '-'.join([constant.one_letter_code[k[0]] + '-' + str(k[1]) for k in key[1]]) 
+            tag = 'W_' + '-'.join([self.target_index_dict[k] for k in key[0]]) + '_C_' + '-'.join([k[0] + '-' + str(k[1]) for k in key[1]]) 
             ag = combine_vdm_into_ag(self.best_aa_comb_dict[key].centroid_dict, key, tag, self.best_aa_comb_dict[key].geometry)
             pdb_path = self.outdir_represent + tag + '.pdb'
             pr.writePDB(pdb_path, ag)    
             
-            ideal_geometry, rmsd = supperimpose_ideal_geo(self.best_aa_comb_dict[key].geometry)
+            ideal_geometry, rmsd = Search_filter.get_min_geo(self.best_aa_comb_dict[key].geometry, self.geo_struct)
             self.best_aa_comb_dict[key].geo_rmsd = rmsd
+            self.best_aa_comb_dict[key].ideal_geo = ideal_geometry
             pdb_path_idealgeo = self.outdir_represent + tag + '_idealgeo_' + str(round(rmsd, 2)) + '.pdb'
             pr.writePDB(pdb_path_idealgeo, ideal_geometry)                     
 
@@ -397,13 +398,13 @@ class Search_selfcenter(Search_vdM):
             info = comb_dict_sorted[key]
 
             if len(best_keys) <= 0:
-                if self.search_filter.after_search_filter and info.after_search_filtered:
+                if (self.search_filter.after_search_filter_geometry or self.search_filter.after_search_filter_qt_clash) and info.after_search_filtered:
                     continue
                 else:
                     best_keys.append(key)
                     continue
 
-            if self.search_filter.after_search_filter and info.after_search_filtered:
+            if (self.search_filter.after_search_filter_geometry or self.search_filter.after_search_filter_qt_clash) and info.after_search_filtered:
                 continue
 
             if key in best_keys:
@@ -760,15 +761,22 @@ def run_search_selfcenter(ss):
 
     paths = []
     for _num_contact in ss.num_contact_vdms:
-        paths.extend(calc_adj_matrix_paths(m_adj_matrix.toarray(), _num_contact))
+        _paths = calc_adj_matrix_paths(m_adj_matrix.toarray(), _num_contact)
+        if not ss.validateOriginStruct and len(ss.allowed_aa_combinations_sorted) > 0:
+            for _path in _paths:
+                aas = tuple(sorted([ss.vdms[vdm_inds[p]].aa_type for p in _path]))
+                if aas in ss.allowed_aa_combinations_sorted:
+                    paths.append(_path)
+        else:
+            paths.extend(_paths)
     print('Find {} possible solutions before aftersearch filter'.format(len(paths)))
 
     if len(paths) <= 0:
         ss.neighbor_write_log()
         return
-        
-    # TO DO: The geometry is not working for geo other than tetrahydral.
 
+
+    # TO DO: The geometry is not working for geo other than tetrahydral.
     win_comb_dict = {}
     for path in paths:
         win_comb = tuple([win_labels[p] for p in path])

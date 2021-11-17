@@ -8,10 +8,11 @@ import datetime
 from ..basic import hull
 from ..basic import utils
 from ..basic.filter import Search_filter
+from ..basic.constant import one_letter_code
 from .graph import Graph
 from .comb_info import CombInfo
 
-from sklearn.neighbors import NearestNeighbors
+from sklearn.neighbors import NearestNeighbors, radius_neighbors_graph
 import multiprocessing as mp
 from multiprocessing.dummy import Pool as ThreadPool
 
@@ -101,11 +102,17 @@ def neighbor_generate_nngraph(ss):
         all_coords.extend(n_x)
         vdm_inds.extend(range(metal_vdm_size))
 
-    nbrs = NearestNeighbors(radius= ss.metal_metal_dist).fit(all_coords)
-    adj_matrix = nbrs.radius_neighbors_graph(all_coords).astype(bool)
-
+    #nbrs = NearestNeighbors(radius= ss.metal_metal_dist).fit(all_coords)
+    #adj_matrix = nbrs.radius_neighbors_graph(all_coords).astype(bool)
+    adj_matrix = radius_neighbors_graph(all_coords, radius= ss.metal_metal_dist).astype(bool)
+    #print(adj_matrix.shape)
+    #metal_clashing with bb
+    bb_coords = ss.target.select('name N C CA O').getCoords()
+    nbrs_bb = NearestNeighbors(radius= 3.5).fit(all_coords)
+    adj_matrix_bb = nbrs_bb.radius_neighbors_graph(bb_coords).astype(bool)
+    #print(adj_matrix_bb.shape)
     #create mask
-    mask = generate_filter_mask(ss, wins, win_labels, metal_vdm_size, adj_matrix)
+    mask = generate_filter_mask(ss, wins, win_labels, metal_vdm_size, adj_matrix_bb)
 
     #calc modified adj matrix
     m_adj_matrix = adj_matrix.multiply(mask)
@@ -113,13 +120,12 @@ def neighbor_generate_nngraph(ss):
     return m_adj_matrix, win_labels, vdm_inds
 
 
-def generate_filter_mask(ss, wins, win_labels, metal_vdm_size, adj_matrix):
+def generate_filter_mask(ss, wins, win_labels, metal_vdm_size, adj_matrix_bb):
     '''
     One issue for the mask method is that the matrix is sparse, there will be a lot of unnecessary calculation.
     For example, filter phi psi, if a vdm is never be in any neighbor, there is no need to calc it.
     '''
         
-
     wins = sorted(list(ss.neighbor_query_dict.keys()))
     metal_vdm_size = len(ss.all_metal_vdm.get_metal_mem_coords())    
     
@@ -130,10 +136,19 @@ def generate_filter_mask(ss, wins, win_labels, metal_vdm_size, adj_matrix):
     for inx in range(len(wins)):
         win_mask[inx*metal_vdm_size:(inx+1)*metal_vdm_size, inx*metal_vdm_size:(inx+1)*metal_vdm_size] = 0
 
+    # Metal bb Clashing filter.
+    metal_clashing_vec = np.ones(len(win_labels), dtype=bool)
+    for i in range(adj_matrix_bb.shape[0]):
+        metal_clashing_vec *= ~(adj_matrix_bb[i].toarray().reshape(len(win_labels),))
+    labels_m = np.broadcast_to(metal_clashing_vec, (len(wins)*metal_vdm_size, len(wins)*metal_vdm_size))
+    win_mask *= labels_m.T
+    win_mask *= labels_m
+    
+
     # Modify mask with aa filter. 
     if ss.validateOriginStruct:
         v_aa = np.array([v.aa_type for v in ss.vdms])
-        ress = [ss.target.select('name CA and resindex ' + str(wx)).getResnames()[0] for wx in wins]
+        ress = [one_letter_code[ss.target.select('name CA and resindex ' + str(wx)).getResnames()[0]] for wx in wins]
         labels = np.zeros(len(wins)*metal_vdm_size, dtype=bool)
         for inx in range(len(wins)):
             labels[inx*metal_vdm_size:(inx+1)*metal_vdm_size] = v_aa == ress[inx]
@@ -149,7 +164,17 @@ def generate_filter_mask(ss, wins, win_labels, metal_vdm_size, adj_matrix):
             labels[inx*metal_vdm_size:(inx+1)*metal_vdm_size] = v_abples == apxs[inx]
         labels_m = np.broadcast_to(labels, (len(wins)*metal_vdm_size, len(wins)*metal_vdm_size))
         win_mask *= labels_m.T
-        win_mask *= labels_m       
+        win_mask *= labels_m      
+
+    #Filter unwanted amino acids. if ss.allowed_aas = {'H', 'D'}, then {'E', 'S'} will be eliminated.
+    if not ss.validateOriginStruct and len(ss.allowed_aas) > 0 and len(ss.allowed_aas) < 4:
+        v_aa = np.array([v.aa_type for v in ss.vdms])
+        labels = np.zeros(len(wins)*metal_vdm_size, dtype=bool)
+        for inx in range(len(wins)):
+            labels[inx*metal_vdm_size:(inx+1)*metal_vdm_size] = np.array([v in ss.allowed_aas for v in v_aa])
+        labels_m = np.broadcast_to(labels, (len(wins)*metal_vdm_size, len(wins)*metal_vdm_size))
+        win_mask *= labels_m.T
+        win_mask *= labels_m 
 
     if ss.search_filter.filter_phipsi:
         #TO DO: filter phi psi need to be changed to be able to broadcast.

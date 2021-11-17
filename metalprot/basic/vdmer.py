@@ -57,12 +57,12 @@ def get_contact_atom(pdb):
     return contact_aa
 
 
-def pair_wise_geometry(geometry_ag):
+def pair_wise_geometry(geometry_ag, metal_sel = 'name NI MN ZN CO CU MG FE'):
     '''
     cts: contact atoms
     '''
-    metal = geometry_ag.select('name NI')[0]
-    cts = geometry_ag.select('name N')
+    metal = geometry_ag.select(metal_sel)[0]
+    cts = geometry_ag.select('not ' + metal_sel)
     ct_len = len(cts)
     #print(cts.getNames())
     aa_aa_pair = []
@@ -75,6 +75,30 @@ def pair_wise_geometry(geometry_ag):
         angle_pair.append(angle)
     for i in range(ct_len):
         metal_aa_pair.append(pr.calcDistance(cts[i], metal))
+        
+    return aa_aa_pair, metal_aa_pair, angle_pair  
+
+
+def pair_wise_geometry_matrix(geometry_ag, metal_sel = 'name NI MN ZN CO CU MG FE'):
+    '''
+    cts: contact atoms
+    '''
+    metal = geometry_ag.select(metal_sel)[0]
+    cts = geometry_ag.select('not ' + metal_sel)
+    ct_len = len(cts)
+    #print(cts.getNames())
+    aa_aa_pair = np.zeros((ct_len, ct_len), dtype=float)
+    angle_pair = np.zeros((ct_len, ct_len), dtype=float)
+
+    metal_aa_pair = np.zeros(ct_len, dtype=float)
+
+    for i, j in itertools.combinations(range(ct_len), 2):   
+        dist = pr.calcDistance(cts[i], cts[j])
+        aa_aa_pair[i, j] = dist
+        angle = pr.calcAngle(cts[i], metal, cts[j])
+        angle_pair[i, j] = angle
+    for i in range(ct_len):
+        metal_aa_pair[i] = pr.calcDistance(cts[i], metal)
         
     return aa_aa_pair, metal_aa_pair, angle_pair  
 

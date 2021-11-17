@@ -17,9 +17,9 @@ from multiprocessing.dummy import Pool as ThreadPool
 
 from .search import Search_vdM, supperimpose_target_bb, calc_pairwise_neighbor, combine_vdm_into_ag
 from .graph import Graph
-from .comb_info import CombInfo, supperimpose_ideal_geo
+from .comb_info import CombInfo
 from .find_path_by_matrix import neighbor_generate_nngraph, calc_adj_matrix_paths
-from ..basic import constant
+from ..basic.filter import Search_filter
 
 class Search_selfcenter(Search_vdM):
     '''
@@ -252,7 +252,7 @@ class Search_selfcenter(Search_vdM):
             pdb_path = self.outdir_represent + tag + '.pdb'
             pr.writePDB(pdb_path, ag)    
             
-            ideal_geometry, rmsd = supperimpose_ideal_geo(self.best_aa_comb_dict[key].geometry)
+            ideal_geometry, rmsd = Search_filter.get_min_geo(self.best_aa_comb_dict[key].geometry, self.geo_struct)
             self.best_aa_comb_dict[key].geo_rmsd = rmsd
             self.best_aa_comb_dict[key].ideal_geo = ideal_geometry
             pdb_path_idealgeo = self.outdir_represent + tag + '_idealgeo_' + str(round(rmsd, 2)) + '.pdb'
@@ -398,13 +398,13 @@ class Search_selfcenter(Search_vdM):
             info = comb_dict_sorted[key]
 
             if len(best_keys) <= 0:
-                if self.search_filter.after_search_filter and info.after_search_filtered:
+                if (self.search_filter.after_search_filter_geometry or self.search_filter.after_search_filter_qt_clash) and info.after_search_filtered:
                     continue
                 else:
                     best_keys.append(key)
                     continue
 
-            if self.search_filter.after_search_filter and info.after_search_filtered:
+            if (self.search_filter.after_search_filter_geometry or self.search_filter.after_search_filter_qt_clash) and info.after_search_filtered:
                 continue
 
             if key in best_keys:
@@ -762,7 +762,7 @@ def run_search_selfcenter(ss):
     paths = []
     for _num_contact in ss.num_contact_vdms:
         _paths = calc_adj_matrix_paths(m_adj_matrix.toarray(), _num_contact)
-        if len(ss.allowed_aa_combinations_sorted) > 0:
+        if not ss.validateOriginStruct and len(ss.allowed_aa_combinations_sorted) > 0:
             for _path in _paths:
                 aas = tuple(sorted([ss.vdms[vdm_inds[p]].aa_type for p in _path]))
                 if aas in ss.allowed_aa_combinations_sorted:

@@ -72,7 +72,6 @@ lig_connects = ['OH', 'ZN']
 ro1 = ['ZN', 'OH']
 ro2 = ['OH', 'CZ']
 
-rotation_degree = 5
 
 key = list(ss.best_aa_comb_dict.keys())[0]
 

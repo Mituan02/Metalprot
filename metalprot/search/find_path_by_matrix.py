@@ -167,7 +167,7 @@ def generate_filter_mask(ss, wins, win_labels, metal_vdm_size, adj_matrix_bb):
         win_mask *= labels_m      
 
     #Filter unwanted amino acids. if ss.allowed_aas = {'H', 'D'}, then {'E', 'S'} will be eliminated.
-    if len(ss.allowed_aas) > 0 and len(ss.allowed_aas) < 4:
+    if not ss.validateOriginStruct and len(ss.allowed_aas) > 0 and len(ss.allowed_aas) < 4:
         v_aa = np.array([v.aa_type for v in ss.vdms])
         labels = np.zeros(len(wins)*metal_vdm_size, dtype=bool)
         for inx in range(len(wins)):

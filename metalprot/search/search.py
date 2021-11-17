@@ -12,7 +12,7 @@ from ..basic import utils
 from ..basic.filter import Search_filter
 from .graph import Graph
 from .comb_info import CombInfo
-
+from ..basic import constant
 
 from sklearn.neighbors import NearestNeighbors
 import multiprocessing as mp
@@ -124,7 +124,7 @@ class Search_vdM:
     '''
     def __init__(self, target_pdb, workdir, vdms, cluster_centroid_dict, all_metal_vdm, 
     num_contact_vdms = [3], metal_metal_dist = 0.45, win_filtered = [], 
-    validateOriginStruct = False, search_filter = None, parallel = False, density_radius = 0.45,
+    validateOriginStruct = False, search_filter = None, geometry_path= None, parallel = False, density_radius = 0.45,
     secondshell_vdms = None, rmsd_2ndshell = 0.5, allowed_aa_combinations = [],
     output_wincomb_overlap = False):
         self.time_tag = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') 
@@ -155,6 +155,10 @@ class Search_vdM:
         self.allowed_aa_combinations = allowed_aa_combinations
 
         self.search_filter = search_filter
+        if geometry_path:
+            self.geo_struct = pr.parsePDB(geometry_path)
+        else:
+            self.geo_struct = constant.tetrahydra_geo
 
         #neighbor parallel mechanism-----------
         self.parallel = parallel
@@ -376,11 +380,17 @@ class Search_vdM:
         '''
         for key in comb_dict.keys():  
             info = comb_dict[key]
-            if self.search_filter.after_search_filter:
-                if not info.after_search_condition_satisfied(self.search_filter.pair_angle_range, self.search_filter.pair_aa_aa_dist_range, self.search_filter.pair_metal_aa_dist_range):
-                    comb_dict[key].after_search_filtered = True
+            if self.search_filter.after_search_filter_geometry:
+                if self.search_filter.filter_based_geometry_structure:
+                    #TO DO: geometry structure based filter.
+                    ideal_geometry, rmsd = Search_filter.get_min_geo(info.geometry, self.geo_struct)                    
+                    if not Search_filter.after_search_geo_strcut_satisfied(info, ideal_geometry, self.search_filter.angle_tol, self.search_filter.aa_aa_tol, self.search_filter.aa_metal_tol):
+                        comb_dict[key].after_search_filtered = True
+                else:
+                    if not Search_filter.after_search_geo_pairwise_satisfied(info, self.search_filter.pair_angle_range, self.search_filter.pair_aa_aa_dist_range, self.search_filter.pair_metal_aa_dist_range):
+                        comb_dict[key].after_search_filtered = True
                     
-            if self.search_filter.filter_qt_clash:
+            if self.search_filter.after_search_filter_qt_clash:
                 wins = [w for w in info.query_dict.keys()]
                 vdms = [info.query_dict[w][0] for w in wins]
 

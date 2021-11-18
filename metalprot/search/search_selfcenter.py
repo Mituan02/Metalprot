@@ -761,7 +761,7 @@ def run_search_selfcenter(ss):
 
     paths = []
     for _num_contact in ss.num_contact_vdms:
-        _paths = calc_adj_matrix_paths(m_adj_matrix.toarray(), _num_contact)
+        _paths = calc_adj_matrix_paths(m_adj_matrix, _num_contact)
         if not ss.validateOriginStruct and len(ss.allowed_aa_combinations_sorted) > 0:
             for _path in _paths:
                 aas = tuple(sorted([ss.vdms[vdm_inds[p]].aa_type for p in _path]))

@@ -1,7 +1,10 @@
+2021/11/17
+Done: Geometry can now be evaluated with a geometry structure. 
+Done: aa_types of a combination can be filtered now.
+Done: ligand clashing filtered added.
+
 2021/11/12
 DONE: Fix a few bugs related to the previous update. 
-TO DO: need to fix ideal geometry supperimposition other than tetrahydral or num_contact_vdms other than 3.
-TO DO: change the workflow of eval_search with matrix method.
 It is possible to parallel the program for geometry calculation etc after paths are found. 
 
 2021/11/11

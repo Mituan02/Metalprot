@@ -210,8 +210,6 @@ class Search_selfcenter(Search_vdM):
         print('selfcenter-write-represents.')
         win_clu_2_win_aas = {}
 
-        best_aa_comb_dict = {}
-
         for key in comb_dict.keys():  
             info = comb_dict[key]
             if not self.search_filter.write_filtered_result and info.after_search_filtered:
@@ -249,14 +247,15 @@ class Search_selfcenter(Search_vdM):
                 continue
             tag = 'W_' + '-'.join([self.target_index_dict[k] for k in key[0]]) + '_C_' + '-'.join([k[0] + '-' + str(k[1]) for k in key[1]]) 
             ag = combine_vdm_into_ag(self.best_aa_comb_dict[key].centroid_dict, key, tag, self.best_aa_comb_dict[key].geometry)
-            pdb_path = self.outdir_represent + tag + '.pdb'
+            pdb_path = self.outdir_represent + tag + '.pdb' 
             pr.writePDB(pdb_path, ag)    
-            
-            ideal_geometry, rmsd = Search_filter.get_min_geo(self.best_aa_comb_dict[key].geometry, self.geo_struct)
-            self.best_aa_comb_dict[key].geo_rmsd = rmsd
-            self.best_aa_comb_dict[key].ideal_geo = ideal_geometry
-            pdb_path_idealgeo = self.outdir_represent + tag + '_idealgeo_' + str(round(rmsd, 2)) + '.pdb'
-            pr.writePDB(pdb_path_idealgeo, ideal_geometry)                     
+            # # If the ideal geometry is not used as a filter before. 
+            # if self.best_aa_comb_dict[key].geo_rmsd < 0: 
+            #     ideal_geometry, rmsd = Search_filter.get_min_geo(self.best_aa_comb_dict[key].geometry, self.geo_struct)
+            #     self.best_aa_comb_dict[key].geo_rmsd = rmsd
+            #     self.best_aa_comb_dict[key].ideal_geo = ideal_geometry
+            pdb_path_idealgeo = self.outdir_represent + tag + '_idealgeo_' + str(round(self.best_aa_comb_dict[key].geo_rmsd, 2)) + '.pdb'
+            pr.writePDB(pdb_path_idealgeo, self.best_aa_comb_dict[key].ideal_geo)                     
 
         return
 

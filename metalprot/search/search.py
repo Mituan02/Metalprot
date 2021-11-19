@@ -382,9 +382,11 @@ class Search_vdM:
         for key in comb_dict.keys():  
             info = comb_dict[key]
             if self.search_filter.after_search_filter_geometry:
+                ideal_geometry, rmsd = Search_filter.get_min_geo(info.geometry, self.geo_struct)  
+                comb_dict[key].geo_rmsd = rmsd
+                comb_dict[key].ideal_geo = ideal_geometry 
                 if self.search_filter.filter_based_geometry_structure:
-                    #TO DO: geometry structure based filter.
-                    ideal_geometry, rmsd = Search_filter.get_min_geo(info.geometry, self.geo_struct)                    
+                    #TO DO: geometry structure based filter.                    
                     if not Search_filter.after_search_geo_strcut_satisfied(info, ideal_geometry, self.search_filter.angle_tol, self.search_filter.aa_aa_tol, self.search_filter.aa_metal_tol):
                         comb_dict[key].after_search_filtered = True
                 else:
@@ -415,7 +417,7 @@ class Search_vdM:
             f.write('Wins\tClusterIDs\tDensityRadius\tCluScore\tOverlapScore\tOverlapScoreLn\tGeoRmsd\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tclu_nums')
             f.write('\tpair_aa_aa_dist_ok\tpair_angle_ok\tpair_metal_aa_dist_ok\tvdm_no_clash\tproteinABPLEs\tCentroidABPLEs\tproteinPhiPsi\tCentroidPhiPsi')
             if eval:
-                f.write('\teval_min_rmsd\teval_min_vdMs\teval_phi\teval_psi\teval_abple\teval_is_origin')
+                f.write('\teval_min_rmsd\teval_min_vdMs\teval_phi\teval_psi\teval_abple\teval_is_origin\teval_contain_origin')
             f.write('\n')
             for key in comb_dict.keys(): 
                 info = comb_dict[key]
@@ -461,7 +463,7 @@ class Search_vdM:
                     f.write('||'.join([str(round(v.psi,2)) for v in info.eval_min_vdMs]) + '\t')
                     f.write('||'.join([v.abple for v in info.eval_min_vdMs]) + '\t')
                     f.write(str(info.eval_is_origin) + '\t')
-
+                    f.write(str(info.eval_contain_origin) + '\t')
                 f.write('\n')          
         return 
 

@@ -305,6 +305,61 @@ class Search_selfcenter(Search_vdM):
         return comb_dict
 
 
+    def run_search_selfcenter(self):
+        '''
+        ss: Search_selfcenter.
+        First, Find paths with the matrix method in 'find_path_by_matrix'.
+
+        Then calc the geometry and clashing.
+        
+        For any pass the filters, calc the density etc.
+        '''
+        self.neighbor_generate_query_dict()
+        m_adj_matrix, win_labels, vdm_inds = neighbor_generate_nngraph(self)
+
+        paths = []
+        for _num_contact in self.num_contact_vdms:
+            _paths = calc_adj_matrix_paths(m_adj_matrix, _num_contact)
+            if not self.validateOriginStruct and len(self.allowed_aa_combinations_sorted) > 0:
+                for _path in _paths:
+                    aas = tuple(sorted([self.vdms[vdm_inds[p]].aa_type for p in _path]))
+                    if aas in self.allowed_aa_combinations_sorted:
+                        paths.append(_path)
+            else:
+                paths.extend(_paths)
+        print('Find {} possible solutions before aftersearch filter'.format(len(paths)))
+
+        if len(paths) <= 0:
+            self.neighbor_write_log()
+            return
+
+
+        # TO DO: The geometry is not working for geo other than tetrahydral.
+        win_comb_dict = {}
+        for path in paths:
+            win_comb = tuple([win_labels[p] for p in path])
+            clu_key = tuple([self.vdms[vdm_inds[p]].get_cluster_key() for p in path])
+            comb = dict()
+            for i in range(len(win_comb)):
+                comb[win_comb[i]] = [vdm_inds[path[i]]]
+
+            combinfo = CombInfo()
+            combinfo.comb = comb 
+            if win_comb not in win_comb_dict.keys():
+                win_comb_dict[win_comb] = {}
+            win_comb_dict[win_comb][(win_comb, clu_key)] = combinfo
+
+        for win_comb in win_comb_dict.keys():
+            comb_dict = win_comb_dict[win_comb]
+            _comb_dict = self.selfcenter_analysis_comb(win_comb, comb_dict)
+            self.neighbor_comb_dict.update(_comb_dict)
+
+        #self.neighbor_write_summary(self.workdir, self.best_aa_comb_dict, name = '_summary_' + self.target.getTitle() + '_' + self.time_tag + '.tsv')
+
+        #self.neighbor_write_log()
+
+        return
+
     #region functions plan to be deprecated
 
     def comb_overlap(self, comb_dict):

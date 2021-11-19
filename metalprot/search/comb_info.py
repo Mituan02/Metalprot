@@ -40,6 +40,7 @@ class CombInfo:
         self.eval_mins = None
         self.eval_min_vdMs = None
         self.eval_is_origin = False
+        self.eval_contain_origin = False
 
         #After search filter property
         self.pair_aa_aa_dist_ok = 0 #0: unchecked. -1: condition unsatisfied; 1: condition satisfied.

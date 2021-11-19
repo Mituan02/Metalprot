@@ -55,14 +55,14 @@ allowed_aa_combinations = []
 
 _filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_phipsi_val = 25, 
     filter_vdm_score = False, min_vdm_score = 0, filter_vdm_count = False, min_vdm_clu_num = 20,
-    after_search_filter_geometry = True, filter_based_geometry_structure = True, angle_tol = 15, aa_aa_tol = 0.35, aa_metal_tol = 0.25,
+    after_search_filter_geometry = True, filter_based_geometry_structure = True, angle_tol = 12, aa_aa_tol = 0.3, aa_metal_tol = 0.2,
     pair_angle_range = [85, 130], pair_aa_aa_dist_range = [2.8, 4], pair_metal_aa_dist_range = None,
     after_search_filter_qt_clash = True, vdm_vdm_clash_dist = 2.7, vdm_bb_clash_dist = 2.2, 
     write_filtered_result = False, selfcenter_filter_member_phipsi=True)
 
 ss = search_eval.Search_eval(target_path,  outdir, all_querys, cluster_centroid_dict, query_all_metal, 
     num_contact_vdms, metal_metal_dist, win_filter, validateOriginStruct = True, search_filter= _filter, geometry_path = None,
-    density_radius = 0.6, allowed_aa_combinations = allowed_aa_combinations)
+    density_radius = 0.65, allowed_aa_combinations = allowed_aa_combinations)
 
 ss.run_eval_selfcenter_search()
 

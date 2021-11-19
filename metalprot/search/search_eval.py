@@ -50,7 +50,7 @@ class Search_eval(Search_selfcenter):
             return 
         
         # Test metal-metal-dist
-        for mmd in range(15, 135, 10):
+        for mmd in range(15, 50, 10):
             self.metal_metal_dist = mmd/100
             self.neighbor_comb_dict.clear()
             self.best_aa_comb_dict.clear()
@@ -58,16 +58,17 @@ class Search_eval(Search_selfcenter):
             
             ### Evaluate search result.
             self.eval_search_results(wins, combs)
+            self.find_best_for_nature_sel()
             self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, name = '_summary_' + str(mmd)  + '_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
+            self.neighbor_write_summary(self.workdir, self.best_aa_comb_dict, name = '_best_summary_' + str(mmd)  + '_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
+        
 
         # self.run_search_selfcenter()
         # ### Evaluate search result.
         # self.eval_search_results(wins, combs)
+        #self.find_best_for_nature_sel()
         # self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, name = '_summary_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
             
-        # comb_dict_filtered = self.find_best_for_nature_sel()
-        # self.neighbor_write_summary(self.workdir, comb_dict_filtered, name = '_summary_nature_sel.tsv', eval=True)
-
         self.neighbor_write_log()
         return 
 
@@ -280,13 +281,15 @@ class Search_eval(Search_selfcenter):
         After the nearest neighbor search, find the closest one from each neighbor_comb_dict.
         '''
         for i in range(len(wins)):
-            #evaldir = self.workdir + 'eval_win_' + '_'.join([str(w) for w in wins[i]])
-            #os.makedirs(evaldir, exist_ok=True)
-            
+
             for key in self.neighbor_comb_dict.keys():
                 if not key[0] == tuple([w for w in wins[i]]): 
                     continue
-                
+
+                info = self.neighbor_comb_dict[key]
+                if not self.search_filter.write_filtered_result and info.after_search_filtered:
+                    continue
+
                 clu_id = key[1]
                 combinfo = self.neighbor_comb_dict[key]
 
@@ -302,10 +305,7 @@ class Search_eval(Search_selfcenter):
 
                     if not v:
                         continue
-                    # pr.writePDB(evaldir + '/win_' + str(w) + '_' + v.getTitle(), v)
-                    # if best_v:
-                    #     tag = '/clu_' + '_'.join([str(ci) for cid in clu_id for ci in cid]) + '_rmsd_' + str(round(min_rmsd, 3)) + '_win_' + str(w) + '_clu_' + '_'.join([str(ci) for ci in clu_id[j]]) + '_'                   
-                    #     pr.writePDB(evaldir + tag + best_v.query.getTitle(), best_v.query)   
+  
                 self.neighbor_comb_dict[key].eval_mins = min_rmsds
                 self.neighbor_comb_dict[key].eval_min_vdMs = best_vs
                 if all([m < 0.05 for m in min_rmsds]):
@@ -318,21 +318,14 @@ class Search_eval(Search_selfcenter):
         In the eval search, we can find the nature's selected vdm if the protein is included in the database. 
         The nature's selected vdms may be low overlap vdms, but they may be the member of a better vdm combinations.
         '''
-        comb_dict_filter = {}
 
         nature_key = [key for key in self.neighbor_comb_dict.keys() if self.neighbor_comb_dict[key].eval_is_origin == True][0]
         nature_info = self.neighbor_comb_dict[nature_key]
 
         for key in self.neighbor_comb_dict.keys():
             info = self.neighbor_comb_dict[key]
-
-            # if not info.pair_angle_ok == nature_info.pair_angle_ok:
-            #     continue
-            # if not info.pair_aa_aa_dist_ok == nature_info.pair_aa_aa_dist_ok:
-            #     continue            
-            # if not info.vdm_no_clash == nature_info.vdm_no_clash:
-            #     continue
-
+            if not self.search_filter.write_filtered_result and info.after_search_filtered:
+                continue
             seen_here = []
             for w in key[0]:
                 id = nature_info.centroid_dict[w].id
@@ -342,6 +335,6 @@ class Search_eval(Search_selfcenter):
                     seen_here.append(True)
                 
             if all(seen_here):
-                comb_dict_filter[key] = self.neighbor_comb_dict[key]
+                self.neighbor_comb_dict[key].eval_contain_origin = True
 
-        return comb_dict_filter
+        return

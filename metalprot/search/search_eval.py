@@ -14,7 +14,7 @@ from sklearn.neighbors import NearestNeighbors
 import multiprocessing as mp
 from multiprocessing.dummy import Pool as ThreadPool
 
-from .search import Search_vdM, supperimpose_target_bb
+from .search import Search_vdM, supperimpose_target_bb, calc_pairwise_neighbor
 from .search_selfcenter import Search_selfcenter
 from .graph import Graph
 from .comb_info import CombInfo
@@ -40,27 +40,31 @@ class Search_eval(Search_selfcenter):
 
         ### No search but summary the result
         nature_comb_dict = self.eval_selfcenter_construct(win_combs[0], vdM_combs[0])
-        # if len(list(nature_comb_dict)) > 0:
-        #     nature_sel_key = list(nature_comb_dict.keys())[0]
-        #     nature_comb_dict[nature_sel_key].after_search_filtered = False
-        #     self.neighbor_write_summary(self.workdir, nature_comb_dict, name = '_summary_nature.tsv')
-        #     if nature_sel_key not in self.neighbor_comb_dict.keys():
-        #         self.neighbor_comb_dict.update(nature_comb_dict)
+
+        #Specify the geometry for selfcenter search.
+        nature_key = list(nature_comb_dict.keys())[0]
+        self.geo_struct = nature_comb_dict[nature_key].geometry.copy()
+        self.allowed_aa_combinations = [[v.aa_type for v in nature_comb_dict[nature_key].centroid_dict.values()]]
+
         if len(list(nature_comb_dict)) <= 0:
             return 
-            
-        ### The normal search process focus on the current wins.
-        self.neighbor_generate_pair_dict()
-        for win_comb in wins:
-            comb_dict = self.eval_selfcenter_run_comb(win_comb, nature_comb_dict)
-            if not comb_dict:
-                continue
-            self.neighbor_comb_dict.update(comb_dict)
-        print('neighbor_comb_dict: '.format(self.neighbor_comb_dict))
-        ### Evaluate search result.
-        self.eval_search_results(wins, combs)
-        self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, name = '_summary_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
         
+        # Test metal-metal-dist
+        for mmd in range(15, 135, 10):
+            self.metal_metal_dist = mmd/100
+            self.neighbor_comb_dict.clear()
+            self.best_aa_comb_dict.clear()
+            self.run_search_selfcenter()
+            
+            ### Evaluate search result.
+            self.eval_search_results(wins, combs)
+            self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, name = '_summary_' + str(mmd)  + '_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
+
+        # self.run_search_selfcenter()
+        # ### Evaluate search result.
+        # self.eval_search_results(wins, combs)
+        # self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, name = '_summary_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
+            
         # comb_dict_filtered = self.find_best_for_nature_sel()
         # self.neighbor_write_summary(self.workdir, comb_dict_filtered, name = '_summary_nature_sel.tsv', eval=True)
 
@@ -88,11 +92,14 @@ class Search_eval(Search_selfcenter):
 
         self.neighbor_calc_geometry(comb_dict)
         
+        '''
+        #TO test different density radius.
         self.log += 'key\tradius\toverlap\tvolume\tdensity\tov1\tov2\tov3\ttotal_clu\tclu1\tclu2\tclu3\tf_total\tf_max\tf_avg\tf_median\n'
         for radius in range(20, 105, 5):
-            self.selfcenter_calc_density(comb_dict, radius/100)
-            
-        #self.selfcenter_calc_density(comb_dict, self.selfcenter_rmsd)
+            self.selfcenter_calc_density(comb_dict, radius/100) 
+        '''
+        
+        self.selfcenter_calc_density(comb_dict, self.density_radius)
 
         #self.comb_overlap(comb_dict)
         self.neighbor_calc_comb_score(comb_dict)
@@ -102,61 +109,11 @@ class Search_eval(Search_selfcenter):
         #     return comb_dict
 
         self.selfcenter_write_win(comb_dict)
-        outpath = 'win_' + '-'.join([str(w) for w in win_comb]) + '/'
+        outpath = 'closest_win_' + '_'.join([str(w) for w in win_comb]) + '/'
         outdir = self.workdir + outpath  
-        self.neighbor_write_summary(outdir, comb_dict, name = '_summary_' + self.target.getTitle() + '_' + self.time_tag + '.tsv')
+        self.neighbor_write_summary(outdir, comb_dict, name = '_closest_summary_' + self.target.getTitle() + '.tsv')
 
         return comb_dict
-
-                
-    def eval_selfcenter_run_comb(self, win_comb, nature_comb_dict):
-        # try:
-        print('selfcenter-run at: ' + ','.join([str(w) for w in win_comb]))
-        comb_dict = self.selfcenter_construct_comb(win_comb)
-        if len([comb_dict.keys()]) <= 0:
-            return comb_dict
-            
-        _target = self.target.copy()
-        
-        self.neighbor_extract_query(_target, comb_dict)
-        
-        nature_key = list(nature_comb_dict.keys())[0]
-        print('nature key')
-        print(nature_key)
-        nature_info = nature_comb_dict[nature_key]
-        comb_dict_filter = {}
-
-        for key in comb_dict.keys():
-            # if len(list(comb_dict_filter.keys()))>=1000:
-            #     break
-            # if not key[0] == nature_key[0]: 
-            #     continue
-            combinfo = comb_dict[key]
-            exists = []
-            for w in win_comb:
-                _id = combinfo.centroid_dict[w].id
-                if _id in nature_info.centroid_dict[w].clu_member_ids:
-                    exists.append(True)
-                else:
-                    exists.append(False)
-            if all(exists):
-                comb_dict_filter[key]=comb_dict[key]
-
-        if len([comb_dict_filter.keys()]) <= 0:
-            return comb_dict_filter
-        self.neighbor_calc_geometry(comb_dict_filter)
-        self.neighbor_aftersearch_filt(_target, comb_dict_filter) 
-
-        #self.comb_overlap(comb_dict_filter)
-        self.neighbor_calc_comb_score(comb_dict_filter)
-        #self.selfcenter_write_win(comb_dict_filter)
-
-        # outpath = 'win_' + '-'.join([str(w) for w in win_comb]) + '/'
-        # outdir = self.workdir + outpath  
-        
-        # self.neighbor_write_summary(outdir, comb_dict_filter, name = '_summary_' + '_'.join([str(w) for w in win_comb]) + '.tsv')
-
-        return comb_dict_filter
 
 
     def eval_get_comb(self):
@@ -207,7 +164,7 @@ class Search_eval(Search_selfcenter):
 
         ns = self.neighbor_query_dict[w].get_metal_mem_coords()
 
-        x_in_y, x_has_y = self.calc_pairwise_neighbor(coord, ns, 1.5)
+        x_in_y, x_has_y = calc_pairwise_neighbor(coord, ns, 1.5)
 
 
         for ind in x_in_y[0]:
@@ -388,41 +345,3 @@ class Search_eval(Search_selfcenter):
                 comb_dict_filter[key] = self.neighbor_comb_dict[key]
 
         return comb_dict_filter
-
-    #region functions plan to be deprecated
-
-    def run_eval_search(self):
-        '''
-        Given a metal binding protein, extract the binding core. For each contact aa, find the original or best vdM as target. 
-        For all the 'target' vdMs, use nearest neighbor search to check overlap and combinfo.
-        '''
-        wins, combs = self.eval_get_comb()
-
-        uni_wins = set()
-        [uni_wins.add(w) for win in wins for w in win]
-        self.win_filtered = sorted(uni_wins)
-
-        self.neighbor_generate_query_dict()
-
-        #Extract closest vdMs and the cluster infomation. 
-        self.eval_extract_closest_vdMs(wins, combs)
-
-        #The normal search process focus on the current wins.
-        self.neighbor_generate_pair_dict()
-
-        for win_comb in wins:
-            print(win_comb)      
-            comb_dict = self.neighbor_run_comb(win_comb)
-            if not comb_dict: continue
-            self.neighbor_comb_dict.update(comb_dict)     
-
-        #Evaluate search result.
-        self.eval_search_results(wins, combs)
-
-        self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, name = '_summary_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
-
-        self.neighbor_write_log()
-
-        return 
-
-    #endregion

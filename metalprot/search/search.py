@@ -124,7 +124,7 @@ class Search_vdM:
     '''
     def __init__(self, target_pdb, workdir, vdms, cluster_centroid_dict, all_metal_vdm, 
     num_contact_vdms = [3], metal_metal_dist = 0.45, win_filtered = [], 
-    validateOriginStruct = False, search_filter = None, geometry_path= None, parallel = False, density_radius = 0.45,
+    validateOriginStruct = False, search_filter = None, geometry_path= None, parallel = False, density_radius = 0.6,
     secondshell_vdms = None, rmsd_2ndshell = 0.5, allowed_aa_combinations = [],
     output_wincomb_overlap = False):
         self.time_tag = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') 
@@ -430,7 +430,7 @@ class Search_vdM:
                 f.write('_'.join([self.target_index_dict[x] for x in key[0]]) + '\t')
                 f.write('_'.join([x[0] + '-' + str(x[1]) for x in key[1]]) + '\t')
 
-                f.write(str(round(info.volume,2))+ '\t')
+                f.write(str(round(self.density_radius, 2))+ '\t')
                 f.write(str(round(info.cluScore, 2)) + '\t')
                 f.write(str(round(info.overlapScore, 2)) + '\t')
                 f.write(str(round(math.log(info.overlapScore), 2)) + '\t')

@@ -14,11 +14,11 @@ import shutil
 python /mnt/e/GitHub_Design/Metalprot/scrips/benchmark/benchmark_core_selection.py
 '''
 
-root_dir = '/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/'
+root_dir = '/mnt/e/DesignData/ligands/Zn_rcsb_new/20211119/'
 
-workdir = root_dir + '_Seq_core_date_reps/'
+workdir = root_dir + '_Seq_core_B45/'
 
-outdir = root_dir + '_Seq_core_date_3contact/'
+outdir = root_dir + '_Seq_core_3contact/'
 
 os.makedirs(outdir, exist_ok=True)
 
@@ -34,7 +34,7 @@ with open(core_info_file, 'r') as f:
         cs = info[1].split('\n')[0]
         sati = True
         for c in cs.split('-'):
-            if not c in ['HIS', 'ASP', 'GLU']:
+            if not c in ['HIS', 'ASP', 'GLU', 'CYS']:
                 sati = False
         if sati:      
             pdb_dict[info[0]] = cs

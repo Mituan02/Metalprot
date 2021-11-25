@@ -1,3 +1,4 @@
+from typing import Tuple
 from metalprot.search import search_selfcenter
 from metalprot.basic import filter
 import metalprot.basic.constant as constant
@@ -62,15 +63,25 @@ print(end_time - start_time, "seconds")
 
 
 #ligand positioning for the first represents.
+# lig_path = workdir + 'Zn_Phenol.pdb'
+# lig = pr.parsePDB(lig_path)
+# lig_connects = ['OH', 'ZN']
+# ro1 = ['ZN', 'OH']
+# ro2 = ['OH', 'CZ']
 
-lig_path = workdir + 'Zn_Phenol.pdb'
 
+# lig_path = workdir + 'ff3_zn_120.pdb'
+# lig = pr.parsePDB(lig_path)
+# lig_connects = ['N3', 'ZN']
+# ro1 = ['ZN', 'N3']
+# ro2 = ['N3', 'S2']
+
+
+lig_path = workdir + 'AG4_ZN.pdb'
 lig = pr.parsePDB(lig_path)
-
-lig_connects = ['OH', 'ZN']
-
-ro1 = ['ZN', 'OH']
-ro2 = ['OH', 'CZ']
+lig_connects = ['N9', 'ZN']
+ro1 = ['ZN', 'N9']
+ro2 = ['N9', 'S8']
 
 
 key = list(ss.best_aa_comb_dict.keys())[0]
@@ -79,19 +90,37 @@ key = list(ss.best_aa_comb_dict.keys())[0]
 ideal_geo = ss.best_aa_comb_dict[key].ideal_geo
 
 ideal_geo_o = constant.tetrahydra_geo_o
-pr.calcTransformation(ideal_geo_o.select('not oxygen'), ideal_geo).apply(ideal_geo_o)
-pr.writePDB(ss.workdir + ideal_geo_o.getTitle(), ideal_geo_o)
+min_geo_struct, min_rmsd = filter.Search_filter.get_min_geo(ideal_geo, ideal_geo_o) 
+pr.writePDB(ss.workdir + min_geo_struct.getTitle(), min_geo_struct)
 
-all_ligs = position_ligand.generate_rotated_ligs(lig, ro1, ro2, rotation_degree = 30)
+all_ligs = position_ligand.generate_rotated_ligs(lig, ro1, ro2, rotation_degree = 5)
 
-position_ligand.lig_2_ideageo(all_ligs, lig_connects, ideal_geo_o)
+position_ligand.lig_2_ideageo(all_ligs, lig_connects, min_geo_struct)
 
-# for lg in all_ligs:
-#     os.makedirs(ss.workdir + 'all_ligs/', exist_ok=True)
-#     pr.writePDB(ss.workdir + 'all_ligs/' +  lg.getTitle(), lg)
-    
+for lg in all_ligs:
+    os.makedirs(ss.workdir + 'all_ligs/', exist_ok=True)
+    pr.writePDB(ss.workdir + 'all_ligs/' +  lg.getTitle(), lg)
 
-filtered_ligs = position_ligand.ligand_clashing_filter(all_ligs, ss.target)
+'''
+nature_lig = pr.parsePDB(workdir + 'AG4_ZN.pdb')
+min_RMSD = 100
+min_lg = None
+for lg in all_ligs:
+    rmsd = pr.calcRMSD(lg, nature_lig)
+    if rmsd < min_RMSD:
+        min_RMSD = rmsd
+        min_lg = lg
+print(min_RMSD)
+print(min_lg.getTitle())
+#3.065111315604363
+#ff3_zn_120_ZN-N3_50_N3-S2_340
+
+pr.writePDB(workdir + '_min_' + min_lg.getTitle(), min_lg)
+'''
+
+filtered_ligs = position_ligand.ligand_clashing_filter(all_ligs, ss.target, dist = 2.5)
+
+len(filtered_ligs)
 
 for lg in filtered_ligs:
     os.makedirs(ss.workdir + 'filtered_ligs/', exist_ok=True)

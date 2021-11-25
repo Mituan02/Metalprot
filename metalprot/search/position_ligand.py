@@ -73,7 +73,7 @@ def generate_rotated_ligs(lig, ro1, ro2, rotation_degree = 10, metal = 'ZN'):
     return all_ligs
 
 
-def lig_2_ideageo(ligs, lig_connects, ideal_geo_o = None, geo_sel = 'name OE2 ZN'):
+def lig_2_ideageo(ligs, lig_connects, ideal_geo_o = None, geo_sel = 'name OE2 ZN', metal_sel = 'name NI MN ZN CO CU MG FE'):
     '''
     supperimpose the ligand to the ideal metal binding geometry.
     '''

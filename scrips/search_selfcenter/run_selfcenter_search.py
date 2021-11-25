@@ -46,13 +46,22 @@ print(len(all_querys))
 
 # win_filter = []
 
-workdir = '/mnt/e/DesignData/ligands/LigandBB/8adh/'
+
+# workdir = '/mnt/e/DesignData/ligands/LigandBB/8adh/'
+
+# outdir = workdir + 'output_selfcenter/'
+
+# target_path = workdir + '1989_8adh_ZN_1.pdb'
+
+# win_filter = []
+
+workdir = '/mnt/e/DesignData/ligands/LigandBB/3f7u_lig/'
 
 outdir = workdir + 'output_selfcenter/'
 
-target_path = workdir + '1989_8adh_ZN_1.pdb'
+target_path = workdir + '3f7u1aa.pdb'
 
-win_filter = []
+win_filter = [94, 96, 119]
 
 geometry_path = None
 #geometry_path = workdir + 'tetrahydral_geo.pdb'

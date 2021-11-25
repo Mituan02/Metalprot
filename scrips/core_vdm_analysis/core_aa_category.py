@@ -13,9 +13,9 @@ from metalprot.database import database_extract as ldb
 python /mnt/e/GitHub_Design/Metalprot/scrips/core_vdm_analysis/core_aa_category.py
 '''
 
-workdir = "/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/"
+workdir = "/mnt/e/DesignData/ligands/Zn_rcsb_new/20211119/"
 
-cores = ldb.load_cores(workdir + '_Seq_core_date_reps/')
+cores = ldb.load_cores(workdir + '_Seq_core_B45/')
 
 res_num_dict = dict()
 

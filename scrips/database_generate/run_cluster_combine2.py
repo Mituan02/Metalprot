@@ -2,7 +2,7 @@ import os
 import sys
 import prody as pr
 #sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
-from metalprot import ligand_database as ldb
+from metalprot.database import database_extract as ldb
 import itertools
 
 ### set up parameters

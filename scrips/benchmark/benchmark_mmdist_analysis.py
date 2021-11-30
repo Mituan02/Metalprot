@@ -16,9 +16,9 @@ import re
 import pandas as pd
 import numpy as np
 
-workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/_Seq_core_date_3contact/20211119_eval_mmdist/'
+workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/_Seq_core_3contact_CYS/20211129_eval_mmdist/'
 
-outfile = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/_Seq_core_date_3contact/20211119_eval_mmdist/_all_log_info.tsv'
+outfile = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/_Seq_core_3contact_CYS/20211129_eval_mmdist/_all_log_info.tsv'
 
 
 df_all = pd.DataFrame()
@@ -83,7 +83,7 @@ df_all.to_csv(outfile, sep='\t')
 '''
 #Filter out the ones are not finished for all the metal_metal_dists.
 
-workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/reason/mm_dist/'
+workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/reason_CYS/mm_dist/'
 file_path = workdir + '_all_log_info.tsv'
 
 df = pd.read_csv(file_path, sep='\t', lineterminator='\n', index_col=False)
@@ -91,10 +91,10 @@ df = pd.read_csv(file_path, sep='\t', lineterminator='\n', index_col=False)
 
 
 for t in np.unique(df['title']):
-    if sum(df['title'] == t) < 10:
+    if sum(df['title'] == t) < 8:
         df = df[df['title'] != t]
 
-outfile = workdir + '_all_log_info_filtered.tsv'
+outfile = workdir + '_all_log_info_filtered8.tsv'
 
 df.to_csv(outfile, sep='\t')
 

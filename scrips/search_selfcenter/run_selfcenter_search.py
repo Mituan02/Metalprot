@@ -55,13 +55,24 @@ print(len(all_querys))
 
 # win_filter = []
 
-workdir = '/mnt/e/DesignData/ligands/LigandBB/3f7u_lig/'
+
+# workdir = '/mnt/e/DesignData/ligands/LigandBB/3f7u_lig/'
+
+# outdir = workdir + 'output_selfcenter/'
+
+# target_path = workdir + '3f7u1aa.pdb'
+
+# win_filter = [94, 96, 119]
+
+
+workdir = '/mnt/e/DesignData/ligands/LigandBB/2afw_lig/'
 
 outdir = workdir + 'output_selfcenter/'
 
-target_path = workdir + '3f7u1aa.pdb'
+target_path = workdir + '2afw_aa.pdb'
 
-win_filter = [94, 96, 119]
+win_filter = [159, 202, 330]
+
 
 geometry_path = None
 #geometry_path = workdir + 'tetrahydral_geo.pdb'
@@ -70,7 +81,7 @@ metal_metal_dist = 0.45
 
 num_contact_vdms = [3]
 
-#allowed_aa_combinations = [['H', 'H', 'H']]
+allowed_aa_combinations = [['H', 'H', 'H']]
 allowed_aa_combinations = []
 
 _filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_phipsi_val = 25, 

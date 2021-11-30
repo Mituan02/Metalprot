@@ -41,34 +41,38 @@ class Search_eval(Search_selfcenter):
         ### No search but summary the result
         nature_comb_dict = self.eval_selfcenter_construct(win_combs[0], vdM_combs[0])
 
+        if len(list(nature_comb_dict)) <= 0:
+            return 
+
         #Specify the geometry for selfcenter search.
         nature_key = list(nature_comb_dict.keys())[0]
         self.geo_struct = nature_comb_dict[nature_key].geometry.copy()
         self.allowed_aa_combinations = [[v.aa_type for v in nature_comb_dict[nature_key].centroid_dict.values()]]
 
-        if len(list(nature_comb_dict)) <= 0:
-            return 
-        
-        # Test metal-metal-dist
-        for mmd in range(15, 50, 10):
-            self.metal_metal_dist = mmd/100
-            self.neighbor_comb_dict.clear()
-            self.best_aa_comb_dict.clear()
+
+        test_mm_dist = False
+        if test_mm_dist:
+            # Test metal-metal-dist
+            for mmd in range(15, 50, 10):
+                self.metal_metal_dist = mmd/100
+                self.neighbor_comb_dict.clear()
+                self.best_aa_comb_dict.clear()
+                self.run_search_selfcenter()
+                
+                ### Evaluate search result.
+                self.eval_search_results(wins, combs)
+                self.find_best_for_nature_sel()
+                self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, name = '_summary_' + str(mmd)  + '_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
+                self.neighbor_write_summary(self.workdir, self.best_aa_comb_dict, name = '_best_summary_' + str(mmd)  + '_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
+
+        test_density = True 
+        if not test_density:
             self.run_search_selfcenter()
-            
             ### Evaluate search result.
             self.eval_search_results(wins, combs)
             self.find_best_for_nature_sel()
-            self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, name = '_summary_' + str(mmd)  + '_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
-            self.neighbor_write_summary(self.workdir, self.best_aa_comb_dict, name = '_best_summary_' + str(mmd)  + '_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
-        
-
-        # self.run_search_selfcenter()
-        # ### Evaluate search result.
-        # self.eval_search_results(wins, combs)
-        #self.find_best_for_nature_sel()
-        # self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, name = '_summary_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
-            
+            self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, name = '_summary_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
+                
         self.neighbor_write_log()
         return 
 
@@ -93,12 +97,13 @@ class Search_eval(Search_selfcenter):
 
         self.neighbor_calc_geometry(comb_dict)
         
-        '''
-        #TO test different density radius.
-        self.log += 'key\tradius\toverlap\tvolume\tdensity\tov1\tov2\tov3\ttotal_clu\tclu1\tclu2\tclu3\tf_total\tf_max\tf_avg\tf_median\n'
-        for radius in range(20, 105, 5):
-            self.selfcenter_calc_density(comb_dict, radius/100) 
-        '''
+        test_density = True
+        if test_density:
+            #TO test different density radius.
+            self.log += 'key\tradius\toverlap\tvolume\tdensity\tov1\tov2\tov3\ttotal_clu\tclu1\tclu2\tclu3\tf_total\tf_max\tf_avg\tf_median\n'
+            for radius in range(20, 105, 5):
+                self.selfcenter_calc_density(comb_dict, radius/100) 
+
         
         self.selfcenter_calc_density(comb_dict, self.density_radius)
 

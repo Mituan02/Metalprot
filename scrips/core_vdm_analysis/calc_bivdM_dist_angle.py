@@ -10,7 +10,7 @@ from metalprot.database import database_extract
 Extract binary metal binding dists and angles from bivalence vdMs. 
 '''
 
-workdir = "/mnt/e/DesignData/ligands/ZN_rcsb/20210608/AAdAAMetal_aa_aa_reps/"
+workdir = "/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/AAdAAMetal_aa_aa_reps/"
 
 pdbs = database_extract.get_all_pbd_prody(workdir)
 

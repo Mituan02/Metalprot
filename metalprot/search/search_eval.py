@@ -70,7 +70,8 @@ class Search_eval(Search_selfcenter):
             self.eval_search_results(wins, combs)
             self.find_best_for_nature_sel()
             self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, name = '_summary_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
-                
+            self.neighbor_write_summary(self.workdir, self.best_aa_comb_dict, name = '_best_summary_'  + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
+              
         self.neighbor_write_log()
         return 
 
@@ -321,7 +322,10 @@ class Search_eval(Search_selfcenter):
         The nature's selected vdms may be low overlap vdms, but they may be the member of a better vdm combinations.
         '''
 
-        nature_key = [key for key in self.neighbor_comb_dict.keys() if self.neighbor_comb_dict[key].eval_is_origin == True][0]
+        nature_keys = [key for key in self.neighbor_comb_dict.keys() if self.neighbor_comb_dict[key].eval_is_origin == True]
+        if len(nature_keys) <= 0:
+            return
+        nature_key = nature_keys[0]
         nature_info = self.neighbor_comb_dict[nature_key]
 
         for key in self.neighbor_comb_dict.keys():

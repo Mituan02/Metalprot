@@ -29,13 +29,13 @@ print(len(all_querys))
 ### run Search_struct
 
 
-workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
+# workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
 
-outdir = workdir + 'output_eval_selfcenter_/'
+# outdir = workdir + 'output_eval_selfcenter_/'
 
-target_path = workdir + '5od1_zn.pdb'
+# target_path = workdir + '5od1_zn.pdb'
 
-win_filter = [34,  60,  64]
+# win_filter = [34,  60,  64]
 
 
 # workdir = '/mnt/e/DesignData/ligands/LigandBB/6dwv/'
@@ -45,6 +45,16 @@ win_filter = [34,  60,  64]
 # target_path = workdir + '6dwv_core.pdb'
 
 # win_filter = [4, 6, 15]
+
+
+workdir = '/mnt/e/DesignData/ligands/LigandBB/6zw1/'
+
+outdir = workdir + 'output_eval_selfcenter_/'
+
+target_path = workdir + '6zw1_ZN_1.pdb'
+
+win_filter = []
+
 
 metal_metal_dist = 0.45
 
@@ -62,7 +72,7 @@ _filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_p
 
 ss = search_eval.Search_eval(target_path,  outdir, all_querys, cluster_centroid_dict, query_all_metal, 
     num_contact_vdms, metal_metal_dist, win_filter, validateOriginStruct = True, search_filter= _filter, geometry_path = None,
-    density_radius = 0.65, allowed_aa_combinations = allowed_aa_combinations, eval_mmdist=False, eval_density=True)
+    density_radius = 0.65, allowed_aa_combinations = allowed_aa_combinations, eval_mmdist=False, eval_density=False)
 
 ss.run_eval_selfcenter_search()
 

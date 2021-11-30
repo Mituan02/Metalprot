@@ -103,8 +103,7 @@ class Search_selfcenter(Search_vdM):
             comb_dict[key].overlap_query_id_dict = overlap_query_id_dict 
 
 
-        test_density = True
-        if test_density:         
+        if self.eval_density:         
             #write into log
             x = str(key) + '\t'
             x += str(radius) + '\t'

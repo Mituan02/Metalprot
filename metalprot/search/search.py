@@ -126,7 +126,7 @@ class Search_vdM:
     num_contact_vdms = [3], metal_metal_dist = 0.45, win_filtered = [], 
     validateOriginStruct = False, search_filter = None, geometry_path= None, parallel = False, density_radius = 0.6,
     secondshell_vdms = None, rmsd_2ndshell = 0.5, allowed_aa_combinations = [],
-    output_wincomb_overlap = False):
+    output_wincomb_overlap = False, eval_density = False, eval_mmdist = False):
         self.time_tag = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') 
         if workdir:
             _workdir = os.path.realpath(workdir) + '_' +  self.time_tag          
@@ -198,6 +198,11 @@ class Search_vdM:
         self.log = '' #For developing output purpose
         self.best_aa_comb_dict = {} # To store&Write the best comb for each combinations of wins. 
         self.output_wincomb_overlap = output_wincomb_overlap
+
+        #Eval search control---------------------
+        self.eval_density = eval_density
+        self.eval_mmdist = eval_mmdist
+
 
         #----------------------------------------
         self.setup()

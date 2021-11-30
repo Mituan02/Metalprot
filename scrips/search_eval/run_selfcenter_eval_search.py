@@ -62,7 +62,7 @@ _filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_p
 
 ss = search_eval.Search_eval(target_path,  outdir, all_querys, cluster_centroid_dict, query_all_metal, 
     num_contact_vdms, metal_metal_dist, win_filter, validateOriginStruct = True, search_filter= _filter, geometry_path = None,
-    density_radius = 0.65, allowed_aa_combinations = allowed_aa_combinations)
+    density_radius = 0.65, allowed_aa_combinations = allowed_aa_combinations, eval_mmdist=False, eval_density=True)
 
 ss.run_eval_selfcenter_search()
 

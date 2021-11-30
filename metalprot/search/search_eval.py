@@ -50,8 +50,7 @@ class Search_eval(Search_selfcenter):
         self.allowed_aa_combinations = [[v.aa_type for v in nature_comb_dict[nature_key].centroid_dict.values()]]
 
 
-        test_mm_dist = False
-        if test_mm_dist:
+        if self.eval_mmdist:
             # Test metal-metal-dist
             for mmd in range(15, 50, 10):
                 self.metal_metal_dist = mmd/100
@@ -65,8 +64,7 @@ class Search_eval(Search_selfcenter):
                 self.neighbor_write_summary(self.workdir, self.neighbor_comb_dict, name = '_summary_' + str(mmd)  + '_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
                 self.neighbor_write_summary(self.workdir, self.best_aa_comb_dict, name = '_best_summary_' + str(mmd)  + '_' + self.target.getTitle() + '_' + self.time_tag + '.tsv', eval=True)
 
-        test_density = True 
-        if not test_density:
+        if not self.eval_density:
             self.run_search_selfcenter()
             ### Evaluate search result.
             self.eval_search_results(wins, combs)
@@ -97,8 +95,7 @@ class Search_eval(Search_selfcenter):
 
         self.neighbor_calc_geometry(comb_dict)
         
-        test_density = True
-        if test_density:
+        if self.eval_density:
             #TO test different density radius.
             self.log += 'key\tradius\toverlap\tvolume\tdensity\tov1\tov2\tov3\ttotal_clu\tclu1\tclu2\tclu3\tf_total\tf_max\tf_avg\tf_median\n'
             for radius in range(20, 105, 5):

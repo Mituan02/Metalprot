@@ -18,7 +18,7 @@ root_dir = '/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/'
 
 workdir = root_dir + '_Seq_core_date_reps/'
 
-outdir = root_dir + '_Seq_core_date_3contact/'
+outdir = root_dir + '_Seq_core_3contact_CYS/'
 
 os.makedirs(outdir, exist_ok=True)
 
@@ -33,10 +33,13 @@ with open(core_info_file, 'r') as f:
             continue
         cs = info[1].split('\n')[0]
         sati = True
+        containCYS = False
         for c in cs.split('-'):
-            if not c in ['HIS', 'ASP', 'GLU']:
+            if not c in ['HIS', 'ASP', 'GLU', 'CYS']:
                 sati = False
-        if sati:      
+            if c == 'CYS':
+                containCYS = True
+        if sati and containCYS:      
             pdb_dict[info[0]] = cs
 
 for p in os.listdir(workdir):

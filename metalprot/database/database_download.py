@@ -1,11 +1,5 @@
 import os
 import prody as pr
-from scipy.spatial.distance import cdist
-from dataclasses import dataclass
-import shutil
-import sys
-import numpy as np
-import matplotlib.pyplot as plt
 
 
 # Manipulate rcsb file

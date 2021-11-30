@@ -1,4 +1,6 @@
 '''
+The function here is to combine info from all benchmark cores for scoring method analysis.
+
 After search the ~500 benchmark protein, the next step is to check the different score methods.
 
 The f_median = np.prod([overlaps])/np.prod([median clu of each aa_type])*total_clu/volume.
@@ -7,7 +9,6 @@ Two things need to be checked:
 1. Distribution of f_median for all protein in different radius.
 2. Type of binding core. HIS-HIS-HIS vs HIS-HIS-GLU ... etc
 
-The function here just combine info from all benchmark cores.
 '''
 
 import os

@@ -10,15 +10,16 @@ import prody as pr
 #sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
 from metalprot.database import database_extract
 from metalprot.database import database_evaluate
-from metalprot.basic import get_metal_contact_atoms
-import itertools
-import numpy as np
-from numpy.core.fromnumeric import argmin
+from metalprot.basic.vdmer import get_metal_contact_atoms
 
 
-root_dir = '/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20210624/'
+'''
+python /mnt/e/GitHub_Design/Metalprot/scrips/benchmark/database_clean_analysis.py
+'''
 
-workdir = root_dir + '_Seq_core_date_3HIScontact/'
+root_dir = '/mnt/e/DesignData/ligands/Zn_rcsb_new/20211119/'
+
+workdir = root_dir + '_Seq_cores/'
 
 pdbs = database_extract.get_all_pbd_prody(workdir)
 
@@ -39,7 +40,7 @@ for pdb in pdbs:
 
 
 ### copy the filter pdb into a new folder.
-outdir = root_dir + '_Seq_core_date_3HIScontact_B45/'
+outdir = root_dir + '_Seq_core_B45/'
 os.makedirs(outdir, exist_ok=True)
 filtered_pdbs_dict = set([pdb.getTitle() for pdb in filtered_pdbs])
 for p in os.listdir(workdir):

@@ -116,9 +116,9 @@ class Search_filter:
                 coords.append(aa_coords[x])
             coords.append(metal_coord) 
             _geo_struct.setCoords(np.array(coords))
-            pr.calcTransformation(_geo_struct, geometry).apply(_geo_struct)
+            pr.calcTransformation(_geo_struct.select('not oxygen'), geometry).apply(_geo_struct)
             
-            rmsd = calcRMSD(_geo_struct, geometry)
+            rmsd = pr.calcRMSD(_geo_struct.select('not oxygen'), geometry)
             if not min_geo_struct:
                 min_geo_struct = _geo_struct
                 min_rmsd = rmsd

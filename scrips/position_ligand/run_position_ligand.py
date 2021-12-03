@@ -1,3 +1,8 @@
+'''
+Design metal + ligand bindin protein.
+Need to run search_selfcenter function first. 
+'''
+
 from metalprot.search import search_selfcenter
 from metalprot.basic import filter
 import metalprot.basic.constant as constant

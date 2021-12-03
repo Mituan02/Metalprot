@@ -11,7 +11,9 @@ class Search_filter:
     filter_vdm_score = False, min_vdm_score = 0, filter_vdm_count = False, min_vdm_clu_num = 20,
     after_search_filter_geometry = False, filter_based_geometry_structure = False, angle_tol = 5, aa_aa_tol = 0.5, aa_metal_tol = 0.2,
     pair_angle_range = None, pair_aa_aa_dist_range = None, pair_metal_aa_dist_range = None,
-    after_search_filter_qt_clash = False, vdm_vdm_clash_dist = 2.7, vdm_bb_clash_dist = 2.2, write_filtered_result = False, selfcenter_filter_member_phipsi = True):
+    after_search_filter_qt_clash = False, vdm_vdm_clash_dist = 2.7, vdm_bb_clash_dist = 2.2, 
+    after_search_open_site_clash = True, open_site_dist = 3.0, write_filtered_result = False, 
+    selfcenter_filter_member_phipsi = True):
 
         self.filter_abple = filter_abple
         self.filter_phipsi = filter_phipsi
@@ -36,6 +38,8 @@ class Search_filter:
         self.after_search_filter_qt_clash = after_search_filter_qt_clash 
         self.vdm_vdm_clash_dist = vdm_vdm_clash_dist
         self.vdm_bb_clash_dist = vdm_bb_clash_dist
+        self.after_search_open_site_clash = after_search_open_site_clash
+        self.open_site_dist = open_site_dist
         self.write_filtered_result = write_filtered_result
 
         self.selfcenter_filter_member_phipsi = selfcenter_filter_member_phipsi
@@ -59,6 +63,8 @@ class Search_filter:
         parameters += 'filter_qt_clash: ' + str(self.after_search_filter_qt_clash) + ' \n'
         parameters += 'vdm_vdm_clash_dist: ' + str(self.vdm_vdm_clash_dist) + ' \n'
         parameters += 'vdm_bb_clash_dist: ' + str(self.vdm_bb_clash_dist) + ' \n'
+        parameters += 'after_search_open_site_clash: ' + str(self.after_search_open_site_clash) + ' \n'
+        parameters += 'open_site_dist: ' + str(self.open_site_dist) + ' \n'
         parameters += 'write_filtered_result: ' + str(self.write_filtered_result) + ' \n'
         
         parameters += 'selfcenter_filter_member_phipsi: ' + str(self.selfcenter_filter_member_phipsi) + ' \n'
@@ -210,6 +216,31 @@ class Search_filter:
         return False
 
 
+    @staticmethod
+    def open_site_clashing(vdms, target, ideal_geo, open_site_dist = 3.0):
+        '''
+        The open site of ideal_geo must be Oxygen, the other atom could not be Oxygen.
+
+        If clash detected, return True.
+        '''
+        ideal_geo_coord = [ideal_geo.select('oxygen')[0].getCoords()]
+
+        coords = []
+        for i in range(len(vdms)):
+            vdm = vdms[i]
+            vdm_sel = 'protein and heavy and sc and not name CB'
+            coord = vdm.query.select(vdm_sel).getCoords()
+            coords.extend(coord)
+        bb_coord = target.select('protein and heavy and bb').getCoords()
+        coords.extend(bb_coord)
+
+        neigh_y = NearestNeighbors(radius= open_site_dist)
+        neigh_y.fit(coords)
+        x_in_y = neigh_y.radius_neighbors(ideal_geo_coord)
+        x_has_y = any([True if len(a) >0 else False for a in x_in_y[1]])
+        if x_has_y:
+            return True
+        return False
 
 
 

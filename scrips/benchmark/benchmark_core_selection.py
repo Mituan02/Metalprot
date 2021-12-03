@@ -1,10 +1,11 @@
 '''
+select 3 contact binding core for benchmark.
+
 To run this, please check ..\core_vdm_analysis/core_aa_category.py 
 Based 'E:\DesignData\ligands\ZN_rcsb_datesplit\20210624\reason\core_aa_info.tsv'
 In folder 'E:\DesignData\ligands\ZN_rcsb_datesplit\20210624\_Seq_core_date_reps\'
 Extract the 3-contact binding (HIS, ASP, GLU) core pdbs from and copy it into a new folder.
 
-Then calculate the pairwise infomation or use for search evaluation (search_eval). 
 '''
 
 import os

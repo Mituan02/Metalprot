@@ -72,16 +72,19 @@ def calc_pairwise_neighbor(n_x, n_y, r = 0.25):
     return x_in_y[1], x_has_y
 
 
-def combine_vdm_into_ag(centroid_dict, key, tag, geometry = None, ideal_geometry = None):
+def combine_vdm_into_ag(comb, key, tag, geometry = None, ideal_geometry = None):
     '''
     Merge all vdms from one CombInfo.centroid_dict in to an AtomGroup.
     '''
+    centroid_dict = comb.centroid_dict
     ag = pr.AtomGroup(tag)
     coords = []
     chids = []
     names = []
     resnames = []
     resnums = []
+    betas = []
+    occu = []
     chain_num = 0
     for w in key[0]:
         c = centroid_dict[w].query.select('not name NI MN ZN CO CU MG FE' )
@@ -91,6 +94,8 @@ def combine_vdm_into_ag(centroid_dict, key, tag, geometry = None, ideal_geometry
         names.extend(c.getNames())
         resnames.extend(c.getResnames())
         resnums.extend(c.getResnums())
+        betas.extend([0 for i in range(len(c))])
+        occu.extend([0 for i in range(len(c))])
         chain_num += 1
 
     geometry.setChids(string.ascii_uppercase[chain_num])
@@ -100,6 +105,8 @@ def combine_vdm_into_ag(centroid_dict, key, tag, geometry = None, ideal_geometry
     names.extend(_geo.getNames())
     resnames.extend(_geo.getResnames())
     resnums.extend(_geo.getResnums())
+    betas.append(comb.overlapScore)
+    occu.append(comb.cluScore)
     chain_num += 1
 
     if ideal_geometry:     
@@ -109,12 +116,16 @@ def combine_vdm_into_ag(centroid_dict, key, tag, geometry = None, ideal_geometry
         names.extend(ideal_geometry.getNames())
         resnames.extend(ideal_geometry.getResnames())
         resnums.extend(ideal_geometry.getResnums())
+        betas.extend([0 for i in range(len(ideal_geometry))])
+        occu.extend([0 for i in range(len(ideal_geometry))])
 
     ag.setCoords(np.array(coords))
     ag.setChids(chids)
     ag.setNames(names)
     ag.setResnames(resnames)
     ag.setResnums(resnums)
+    ag.setBetas(betas)
+    ag.setOccupancies(occu)
     return ag
 
 
@@ -402,11 +413,24 @@ class Search_vdM:
                 wins = [w for w in info.query_dict.keys()]
                 vdms = [info.query_dict[w][0] for w in wins]
 
-                if Search_filter.vdm_clash(vdms, _target, unsupperimposed=False, wins=wins):
+                if Search_filter.vdm_clash(vdms, _target, unsupperimposed=False):
                     comb_dict[key].vdm_no_clash = -1
                     comb_dict[key].after_search_filtered = True  
                 else:
-                    comb_dict[key].vdm_no_clash = 1       
+                    comb_dict[key].vdm_no_clash = 1    
+            if self.search_filter.after_search_open_site_clash:
+                if not comb_dict[key].ideal_geo:
+                    ideal_geometry, rmsd = Search_filter.get_min_geo(info.geometry, self.geo_struct)  
+                    comb_dict[key].geo_rmsd = rmsd
+                    comb_dict[key].ideal_geo = ideal_geometry
+
+                ideal_geo_o = constant.tetrahydra_geo_o
+                min_geo_struct, min_rmsd = Search_filter.get_min_geo(comb_dict[key].ideal_geo, ideal_geo_o) 
+                if Search_filter.open_site_clashing(vdms, _target, min_geo_struct, self.search_filter.open_site_dist):
+                    comb_dict[key].open_site_clash = -1
+                    comb_dict[key].after_search_filtered = True 
+                else:
+                    comb_dict[key].open_site_clash = 1 
         return
 
 
@@ -420,7 +444,7 @@ class Search_vdM:
 
         with open(outdir + name, 'w') as f:
             f.write('Wins\tClusterIDs\tDensityRadius\tCluScore\tOverlapScore\tOverlapScoreLn\tGeoRmsd\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tclu_nums')
-            f.write('\tpair_aa_aa_dist_ok\tpair_angle_ok\tpair_metal_aa_dist_ok\tvdm_no_clash\tproteinABPLEs\tCentroidABPLEs\tproteinPhiPsi\tCentroidPhiPsi')
+            f.write('\tpair_aa_aa_dist_ok\tpair_angle_ok\tpair_metal_aa_dist_ok\tvdm_no_clash\topen_site_clash\tproteinABPLEs\tCentroidABPLEs\tproteinPhiPsi\tCentroidPhiPsi')
             if eval:
                 f.write('\teval_min_rmsd\teval_min_vdMs\teval_phi\teval_psi\teval_abple\teval_is_origin\teval_contain_origin')
             f.write('\n')
@@ -455,6 +479,7 @@ class Search_vdM:
                 f.write(str(info.pair_angle_ok) + '\t')
                 f.write(str(info.pair_metal_aa_dist_ok) + '\t')
                 f.write(str(info.vdm_no_clash) + '\t')
+                f.write(str(info.open_site_clash) + '\t')
 
                 f.write('_'.join([self.target_abple[x] for x in key[0]]) + '\t')
                 f.write('_'.join([c.abple for c in info.centroid_dict.values()]) + '\t')

@@ -57,8 +57,8 @@ win_mask[7252, 10966]
 
 paths = calc_adj_matrix_paths(m_adj_matrix)
 
-
 '''
+
 def calc_adj_matrix_paths(m_adj_matrix, num_iter =3):
     paths = []
     for r in range(m_adj_matrix.shape[0]):
@@ -74,6 +74,7 @@ def calc_adj_matrix_paths(m_adj_matrix, num_iter =3):
                 paths.append(comb)
 
     return paths
+
 
 def calc_adj_matrix_paths_helper( m_adj_matrix, comb, num_iter, iter):
     if iter >= num_iter -1:
@@ -229,6 +230,21 @@ def filter_adj_matrix(ss, wins, metal_vdm_size, adj_matrix, adj_matrix_bb):
         for inx in range(len(wins)):
             aa_labels[inx*metal_vdm_size:(inx+1)*metal_vdm_size] = v_aa == ress[inx]
         mask_labels *= aa_labels
+
+    # filter vdM by score or count:
+    if ss.search_filter.filter_vdm_score:
+        v_scores = np.array([v.score for v in ss.vdms])
+        vdm_score_labels = np.zeros(len(wins)*metal_vdm_size, dtype=bool)
+        for inx in range(len(wins)):
+            vdm_score_labels[inx*metal_vdm_size:(inx+1)*metal_vdm_size] = v_scores >= ss.search_filter.min_vdm_score
+        mask_labels *= vdm_score_labels
+
+    if ss.search_filter.filter_vdm_score:
+        v_count = np.array([v.score for v in ss.vdms])
+        vdm_count_labels = np.zeros(len(wins)*metal_vdm_size, dtype=bool)
+        for inx in range(len(wins)):
+            vdm_count_labels[inx*metal_vdm_size:(inx+1)*metal_vdm_size] = v_count >= ss.search_filter.min_vdm_clu_num
+        mask_labels *= vdm_count_labels
 
     # abple filter
     if ss.search_filter.filter_abple:

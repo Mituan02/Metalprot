@@ -47,6 +47,7 @@ class CombInfo:
         self.pair_angle_ok = 0
         self.pair_metal_aa_dist_ok = 0
         self.vdm_no_clash = 0
+        self.open_site_clash = 0
         
         #For Search_selfcenter
         self.overlap_query_id_dict = None

@@ -1,7 +1,7 @@
 import prody as pr
 import numpy as np
 from scipy.spatial.transform import Rotation
-from sklearn.neighbors import NearestNeighbors, radius_neighbors_graph
+from sklearn.neighbors import NearestNeighbors
 
 
 def rotate_ligs_first(lig, rot, rotation_degree = 5, metal = 'ZN'):

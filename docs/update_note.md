@@ -1,3 +1,11 @@
+2021/11/30
+Done: Set Beta Factor to overlapscore, set Occupancy to cluscore
+Done: Add filter open site clashing
+Done: Add Eval search control.
+
+2021/11/20
+Done: Ligand position added.
+
 2021/11/17
 Done: Geometry can now be evaluated with a geometry structure. 
 Done: aa_types of a combination can be filtered now.

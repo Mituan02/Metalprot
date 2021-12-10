@@ -151,8 +151,7 @@ class Search_selfcenter(Search_vdM):
         outdir = self.workdir + outpath
         if not os.path.exists(outdir):
             os.mkdir(outdir)
-        tag = 'W_' + '-'.join([self.target_index_dict[k] for k in key[0]]) + '_C_' + '-'.join([k[0] + '-' + str(k[1]) for k in key[1]]) 
-
+        tag = 'W_' + '-'.join([self.target_index_dict[k] for k in key[0]]) + '_' + '-'.join([k[0] for k in key[1]]) + '_' + '-'.join([str(k[1]) for k in key[1]])
         # Write geometry       
         pr.writePDB(outdir + tag +'_geo.pdb', info.geometry) 
 
@@ -246,7 +245,7 @@ class Search_selfcenter(Search_vdM):
         for key in self.best_aa_comb_dict.keys():
             if 'BestOPscore' not in self.best_aa_comb_dict[key].tag:
                 continue
-            tag = 'W_' + '-'.join([self.target_index_dict[k] for k in key[0]]) + '_C_' + '-'.join([k[0] + '-' + str(k[1]) for k in key[1]]) 
+            tag = 'W_' + '-'.join([self.target_index_dict[k] for k in key[0]]) + '_' + '-'.join([k[0] for k in key[1]]) + '_' + '-'.join([str(k[1]) for k in key[1]])
             ag = combine_vdm_into_ag(self.best_aa_comb_dict[key], key, tag, self.best_aa_comb_dict[key].geometry)
             pdb_path = self.outdir_represent + tag + '.pdb' 
             pr.writePDB(pdb_path, ag)    

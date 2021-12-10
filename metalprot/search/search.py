@@ -443,7 +443,7 @@ class Search_vdM:
         os.makedirs(outdir, exist_ok=True)
 
         with open(outdir + name, 'w') as f:
-            f.write('Wins\tClusterIDs\tDensityRadius\tCluScore\tOverlapScore\tOverlapScoreLn\tGeoRmsd\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tclu_nums')
+            f.write('Wins\tAAs\tvdMIDs\tDensityRadius\tCluScore\tOverlapScore\tOverlapScoreLn\tGeoRmsd\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tclu_nums')
             f.write('\tpair_aa_aa_dist_ok\tpair_angle_ok\tpair_metal_aa_dist_ok\tvdm_no_clash\topen_site_clash\tproteinABPLEs\tCentroidABPLEs\tproteinPhiPsi\tCentroidPhiPsi')
             if eval:
                 f.write('\teval_min_rmsd\teval_min_vdMs\teval_phi\teval_psi\teval_abple\teval_is_origin\teval_contain_origin')
@@ -453,13 +453,14 @@ class Search_vdM:
                 if not self.search_filter.write_filtered_result and info.after_search_filtered:
                     continue
                 #centroids = [c.query.getTitle() for c in info.centroid_dict.values()]
-                vdm_scores = [c for c in info.scores]
+                #vdm_scores = [c for c in info.scores]
                 overlaps = [c for c in info.overlaps]
                 clu_nums = [c.clu_num for c in info.centroid_dict.values()]
-                max_clu_nums = [c.max_clu_num for c in info.centroid_dict.values()]
+                #max_clu_nums = [c.max_clu_num for c in info.centroid_dict.values()]
                 
                 f.write('_'.join([self.target_index_dict[x] for x in key[0]]) + '\t')
-                f.write('_'.join([x[0] + '-' + str(x[1]) for x in key[1]]) + '\t')
+                f.write('_'.join([x[0] for x in key[1]]) + '\t')
+                f.write('_'.join([str(x[1]) for x in key[1]]) + '\t')
 
                 f.write(str(round(self.density_radius, 2))+ '\t')
                 f.write(str(round(info.cluScore, 2)) + '\t')

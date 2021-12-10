@@ -10,12 +10,7 @@ centroid_query_dict = [clu_key:vdm id] for example '(HIS, 1234): 4567'
 '''
 
 import os
-import sys
-from numpy.lib.shape_base import split
 import prody as pr
-import numpy as np
-#You can either add the python package path.
-#sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
 from metalprot.search import extract_vdm
 from metalprot.basic import hull
 import pickle

@@ -28,14 +28,13 @@ print(len(all_querys))
 
 ### run Search_struct
 
-# workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
+workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
 
-# outdir = workdir + 'output_selfcenter/'
+outdir = workdir + 'output_selfcenter/'
 
-# target_path = workdir + '5od1_zn.pdb'
+target_path = workdir + '5od1_zn.pdb'
 
-# #win_filter = []
-# win_filter = [35,  61,  65]
+win_filter = [35,  61,  65]
 
 
 # workdir = '/mnt/e/DesignData/ligands/LigandBB/6dwv/'
@@ -74,19 +73,19 @@ print(len(all_querys))
 # win_filter = [159, 202, 330]
 
 
-workdir = '/mnt/e/DesignData/ligands/LigandBB/huong/'
+# workdir = '/mnt/e/DesignData/ligands/LigandBB/huong/'
 
-outdir = workdir + 'output_selfcenter/'
+# outdir = workdir + 'output_selfcenter/'
 
-target_path = workdir + 'aQ4x_aa.pdb'
+# target_path = workdir + 'aQ4x_aa.pdb'
 
-win_filter = ['I-3', 'I-6', 'I-10', 'I-13', 'I-17', 'I-20',
-              'J-3', 'J-6', 'J-7', 'J-10', 'J-13', 'J-14', 'J-17', 'J-20', 'J-21',
-              'K-6', 'K-10', 'K-13', 'K-17', 'K-20',
-              'L-3', 'L-6', 'L-7', 'L-10', 'L-13', 'L-14', 'L-17', 'L-20', 'L-21', 'L-24',
-              'M-3', 'M-6', 'M-10', 'M-13', 'M-17', 'M-20',
-              'N-3', 'N-6', 'N-7', 'N-10', 'N-13', 'N-14', 'N-17', 'N-20', 'N-21'
-            ]
+# win_filter = ['I-3', 'I-6', 'I-10', 'I-13', 'I-17', 'I-20',
+#               'J-3', 'J-6', 'J-7', 'J-10', 'J-13', 'J-14', 'J-17', 'J-20', 'J-21',
+#               'K-6', 'K-10', 'K-13', 'K-17', 'K-20',
+#               'L-3', 'L-6', 'L-7', 'L-10', 'L-13', 'L-14', 'L-17', 'L-20', 'L-21', 'L-24',
+#               'M-3', 'M-6', 'M-10', 'M-13', 'M-17', 'M-20',
+#               'N-3', 'N-6', 'N-7', 'N-10', 'N-13', 'N-14', 'N-17', 'N-20', 'N-21'
+#             ]
 
 geometry_path = None
 #geometry_path = workdir + 'tetrahydral_geo.pdb'
@@ -108,7 +107,7 @@ _filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_p
 
 
 ss =  search_selfcenter.Search_selfcenter(target_path,  outdir, all_querys, cluster_centroid_dict, query_all_metal, 
-    num_contact_vdms, metal_metal_dist, win_filter, validateOriginStruct = False, search_filter= _filter, geometry_path = None,
+    num_contact_vdms, metal_metal_dist, win_filter, validateOriginStruct = True, search_filter= _filter, geometry_path = None,
     density_radius = 0.6, allowed_aa_combinations = allowed_aa_combinations)
 
 #ss.run_selfcenter_search()

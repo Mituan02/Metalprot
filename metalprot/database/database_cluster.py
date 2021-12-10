@@ -175,7 +175,9 @@ def run_cluster(_pdbs, workdir, outdir, rmsd, metal_sel, len_sel, align_sel, min
     else:
         clu = cluster_selfcenter(_pdbs, rmsd = rmsd, len_sel = len_sel, align_sel = align_sel, min_cluster_size = min_cluster_size)
     
-    if not clu or len(clu.mems) == 0: return
+    if not clu or len(clu.mems) == 0: 
+        print('clu is None')
+        return
     
     print_cluster_pdbs(clu, workdir + outdir, rmsd, tag)
 

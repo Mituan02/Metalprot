@@ -10,10 +10,8 @@ from scipy.sparse import lil_matrix
 
 class CgCombInfo:
     def __init__(self):
-
-        ligand_id = None
-
-        vdm_cgs = {}
+        self.ligand_id = None
+        self.vdm_cgs = {}
 
 
 def get_ligand_coords(filtered_ligands, lgd_sel):
@@ -90,7 +88,7 @@ def write_vdms(outdir, all_inds, labels, dfa, prefix):
     return
 
 
-def get_nearest_vdms_rmsd(vdm_coords, ligand_coords, radius = 2):
+def get_nearest_vdms_rmsd(vdm_coords, ligand_coords, radius = 1):
     # Nearest Neighbor
     nbr = NearestNeighbors(radius=radius).fit(vdm_coords)
     dists, inds = nbr.radius_neighbors(ligand_coords)
@@ -98,13 +96,14 @@ def get_nearest_vdms_rmsd(vdm_coords, ligand_coords, radius = 2):
     return dists, inds
 
 
-def vdm_ligand_clash(vdm, ligand, clash_radius = 3):
+def vdm_ligand_clash(vdm, ligand, clash_radius = 2.7):
     '''
     The vdm X sidechain may clash with the ligand.
     return True if clash.
     '''
     vdm_coords =[]
-    for k in vdm[(vdm['chain'] == 'X')]:
+    for i in range(vdm[(vdm['chain'] == 'X')].shape[0]):
+        k = vdm[(vdm['chain'] == 'X')].iloc[i]
         if k['name'][0] == 'H':
             continue
         vdm_coords.append(k[['c_x', 'c_y', 'c_z']].values)
@@ -119,7 +118,7 @@ def vdm_ligand_clash(vdm, ligand, clash_radius = 3):
     return False
 
 
-def search_vdm(s, ligands, cg_id, input_dict, labels_cgs, df_cgs, dist_ind_cgs):
+def search_vdm(cg_dict, ligands, cg_id, input_dict, labels_cgs, df_cgs, dist_ind_cgs, rmsd = 0.5):
     '''
     s: combs2.design._sample.Sample
 
@@ -139,13 +138,19 @@ def search_vdm(s, ligands, cg_id, input_dict, labels_cgs, df_cgs, dist_ind_cgs):
     }
     '''
 
-    dfa = s.cg_dict[input_dict[cg]]
+    dfa = cg_dict[input_dict[cg_id]['cg']]
 
-    ligand_coords = get_ligand_coords(ligands, input_dict[lgd_sel])
+    ligand_coords = get_ligand_coords(ligands, input_dict[cg_id]['lgd_sel'])
 
-    labels, vdm_coords = get_vdm_labels_coords(dfa, input_dict[represent_name], input_dict[correspond_resname], input_dict[correspond_names])
+    labels, vdm_coords = get_vdm_labels_coords(dfa, input_dict[cg_id]['represent_name'], input_dict[cg_id]['correspond_resname'], input_dict[cg_id]['correspond_names'])
 
-    dists, inds = get_nearest_vdms_rmsd(vdm_coords, ligand_coords, radius = 2)
+    if vdm_coords.shape[0] <=0:
+        return
+    
+    num_cg_atoms = len(input_dict[cg_id]['lgd_sel'])
+    radius = np.sqrt(num_cg_atoms) * rmsd
+
+    dists, inds = get_nearest_vdms_rmsd(vdm_coords, ligand_coords, radius = radius)
 
     labels_cgs[cg_id] = labels
     df_cgs[cg_id] = dfa
@@ -156,7 +161,7 @@ def search_vdm(s, ligands, cg_id, input_dict, labels_cgs, df_cgs, dist_ind_cgs):
 
 
 
-def construct_vdm_write(outdir, ligands, labels_cgs, df_cgs, dist_ind_cgs):
+def construct_vdm_write(outdir, ligands, labels_cgs, df_cgs, dist_ind_cgs, clash_radius = 2.7):
     '''
     dist_ind_cgs: dict. {cg: (dists, inds)}, where dists in shape: (len(ligands), )
     df_cgs: {cg: df}
@@ -167,11 +172,12 @@ def construct_vdm_write(outdir, ligands, labels_cgs, df_cgs, dist_ind_cgs):
         cgCombInfo = CgCombInfo()
         cgCombInfo.ligand_id = i
 
-        pr.writePDB(outdir + str(i) + '_ligand_' + ligand.getTitle(), ligands[i])
+        pr.writePDB(outdir + str(i) + '_ligand_' + ligands[i].getTitle(), ligands[i])
 
         for cg in dist_ind_cgs.keys():
             info = []
 
+            num_cg_atoms = len(input_dict[cg_id]['lgd_sel'])
             labels = labels_cgs[cg]
             dfa = df_cgs[cg]
 
@@ -180,26 +186,30 @@ def construct_vdm_write(outdir, ligands, labels_cgs, df_cgs, dist_ind_cgs):
 
             for j in range(len(inds)):
                 ind = inds[j]
-                dist = dists[j]
+                rmsd = dists[j]/np.sqrt(num_cg_atoms)
+                if ind > labels.shape[0]:
+                    print(cg)
+                    print(labels.shape)
+                    print(inds)
                 x = labels.iloc[ind]
-                prefix = str(i) + '_' + '-'.join(str(z) for z in cg) + '_' + str(dist) + '_' + str(x['score']) + '_'              
+                prefix = str(i) + '_' + '-'.join(str(z) for z in cg) + '_' + str(round(rmsd, 2)) + '_' # + str(x['C_score_bb_ind']) + '_'              
                 v = dfa[(dfa['CG'] == x['CG']) & (dfa['rota'] == x['rota']) & (dfa['probe_name'] == x['probe_name']) & (dfa['seg_chain_resnum'] == x['seg_chain_resnum'])]
-                if vdm_ligand_clash(v, ligand):
+                if vdm_ligand_clash(v, ligands[i], clash_radius):
                     continue
-                info.append((dist, v)) 
+                info.append((rmsd, v)) 
                 combs2.design.functions.print_dataframe(v, outpath=outdir, tag = '_' + str(ind), prefix = prefix)
-            cgCombInfo[cg] = info
+            cgCombInfo.vdm_cgs[cg] = info
         CgCombInfoDict[i] = cgCombInfo
     return CgCombInfoDict
 
             
 def write_summary(outdir, CgCombInfoDict, name = '_summary.tsv'):
     with open(outdir + name, 'w') as f:
-        f.write('')
+        f.write('ligand_id\tcg_id\trmsd\n')
         for k in CgCombInfoDict.keys():          
             cgInfo = CgCombInfoDict[k]
-            for cg in cgInfo.keys():
-                info = cgInfo[cg]
+            for cg in cgInfo.vdm_cgs.keys():
+                info = cgInfo.vdm_cgs[cg]
                 for o in info:
                     f.write(str(cgInfo.ligand_id) + '\t')
                     f.write(str(cg) + '\t')

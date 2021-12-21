@@ -22,6 +22,7 @@ class Search_ligand:
         self.ideal_geo = pr.parsePDB(self.workdir + ideal_geo_path)
         self.ideal_geo_o = ideal_geo_o
         self.common_title = common_title
+        self.outdir = self.workdir + self.common_title + '/'
 
         self.min_geo_struct = None
         self.all_ligands = None
@@ -51,7 +52,7 @@ class Search_ligand:
 
     def write_ligands(self):
 
-        self.outdir = self.workdir + self.common_title
+        
         os.makedirs(self.outdir, exist_ok= True)
 
         pr.writePDB(self.workdir + self.min_geo_struct.getTitle(), self.min_geo_struct)

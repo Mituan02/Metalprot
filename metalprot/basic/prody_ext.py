@@ -86,7 +86,7 @@ def combine_vdm_into_ag(vdms, tag, geometry, overlapScore = 0, cluScore = 0, ide
     return ag
 
 
-def combine_vdm_target_into_ag(target, resind_vdm_dict, geometry, title, aa = 'ALA'):
+def combine_vdm_target_into_ag(target, resind_vdm_dict, write_geo, geometry, title, aa = 'ALA'):
     '''
     combine vdms into target and mutate all other aa 2 ala or gly for ligand position.
     '''
@@ -132,17 +132,17 @@ def combine_vdm_target_into_ag(target, resind_vdm_dict, geometry, title, aa = 'A
         resnames.extend(c.getResnames())
         resnums.extend(c.getResnums())
 
-
-    if not geometry:
-        metal_center = pr.calcCenter([v.select('name NI MN ZN CO CU MG FE')[0].getCoords() for v in resind_vdm_dict.values()])
-        geometry = transfer2pdb(metal_center, ['NI'])
-    geometry.setChids(string.ascii_uppercase[len(np.unique(target.select('protein').getChids()))])
-    _geo = geometry.select('name NI')
-    coords.extend(_geo.getCoords())
-    chids.extend(_geo.getChids())
-    names.extend(_geo.getNames())
-    resnames.extend(_geo.getResnames())
-    resnums.extend(_geo.getResnums())
+    if write_geo:
+        if not geometry:
+            metal_center = pr.calcCenter([v.select('name NI MN ZN CO CU MG FE')[0].getCoords() for v in resind_vdm_dict.values()])
+            geometry = transfer2pdb(metal_center, ['NI'])
+        geometry.setChids(string.ascii_uppercase[len(np.unique(target.select('protein').getChids()))])
+        _geo = geometry.select('name NI')
+        coords.extend(_geo.getCoords())
+        chids.extend(_geo.getChids())
+        names.extend(_geo.getNames())
+        resnames.extend(_geo.getResnames())
+        resnums.extend(_geo.getResnums())
 
     ag.setCoords(np.array(coords))
     ag.setChids(chids)

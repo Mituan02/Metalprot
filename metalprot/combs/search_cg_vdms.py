@@ -161,7 +161,7 @@ def search_vdm(cg_dict, ligands, cg_id, input_dict, labels_cgs, df_cgs, dist_ind
 
 
 
-def construct_vdm_write(outdir, ligands, labels_cgs, df_cgs, dist_ind_cgs, clash_radius = 2.7):
+def construct_vdm_write(outdir, ligands, labels_cgs, input_dict, df_cgs, dist_ind_cgs, clash_radius = 2.7):
     '''
     dist_ind_cgs: dict. {cg: (dists, inds)}, where dists in shape: (len(ligands), )
     df_cgs: {cg: df}
@@ -177,7 +177,7 @@ def construct_vdm_write(outdir, ligands, labels_cgs, df_cgs, dist_ind_cgs, clash
         for cg in dist_ind_cgs.keys():
             info = []
 
-            num_cg_atoms = len(input_dict[cg_id]['lgd_sel'])
+            num_cg_atoms = len(input_dict[cg]['lgd_sel'])
             labels = labels_cgs[cg]
             dfa = df_cgs[cg]
 

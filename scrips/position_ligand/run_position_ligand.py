@@ -6,7 +6,7 @@ Need to run search_selfcenter function first.
 from metalprot.search import search_selfcenter
 from metalprot.basic import filter
 import metalprot.basic.constant as constant
-from metalprot.search import position_ligand
+from metalprot.combs import position_ligand
 import pickle
 import time
 import prody as pr

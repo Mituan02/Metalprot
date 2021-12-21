@@ -1,3 +1,8 @@
+'''
+Combs searching via a distance based method.
+'''
+
+
 import pandas as pd
 import numpy as np
 import prody as pr

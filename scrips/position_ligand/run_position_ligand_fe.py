@@ -6,14 +6,24 @@ Need to run search_selfcenter function first.
 from metalprot.search import search_selfcenter
 from metalprot.basic import filter
 import metalprot.basic.constant as constant
-from metalprot.search import position_ligand
+from metalprot.combs import position_ligand, search_ligand
 import pickle
 import time
 import prody as pr
 import os
 
+import sys
+sys.path.append(r'/wynton/home/degradolab/lonelu/GitHub_Design/Combs2')
+import combs2
+
+from metalprot.combs import search_cg_vdms as metalprot_scv
+import pandas as pd
+import os
+pd.set_option("display.max_columns", None)
 
 start_time = time.time()
+
+########################################################################################
 
 query_dir = '/mnt/e/DesignData/ligands/FE_rcsb/20211206/20211206_selfcenter/pickle_all/'
 
@@ -39,10 +49,6 @@ target_path = workdir + '1cqs.pdb'
 
 win_filter = [16, 17, 84]
 
-metal_metal_dist = 0.6
-
-num_contact_vdms = [3]
-
 allowed_aa_combinations = [['H', 'H', 'D'], ['H', 'H', 'E']] 
 #allowed_aa_combinations = []
 
@@ -57,17 +63,19 @@ _filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_p
     write_filtered_result = False, selfcenter_filter_member_phipsi=True)
 
 ss =  search_selfcenter.Search_selfcenter(target_path,  outdir, all_querys, cluster_centroid_dict, query_all_metal, 
-    num_contact_vdms, metal_metal_dist, win_filter, validateOriginStruct = False, search_filter= _filter, geometry_path = geometry_path,
+    num_contact_vdms = [3], metal_metal_dist = 0.6, win_filtered = win_filter, validateOriginStruct = False, search_filter= _filter, geometry_path = geometry_path,
     density_radius = 0.6, allowed_aa_combinations = allowed_aa_combinations)
 
 
 search_selfcenter.run_search_selfcenter(ss)
+ss.write_for_combs()
 
 ########################################################################################
 
-dbdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/'
-lig_path = dbdir + 'tts_fe.pdb'
+
+lig_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/tts_fe.pdb'
 lig = pr.parsePDB(lig_path)
+
 lig_connects = ['O1','O3', 'FE1']
 ro1 = ['C8', 'C7']
 rest1 = ['C9', 'O1', 'O3', 'O4', 'FE1']
@@ -77,41 +85,144 @@ rest2 = ['H6', 'H7', 'C8', 'C9', 'O1', 'O3', 'O4', 'FE1']
 
 all_ligs = position_ligand.generate_rotated_ligs(lig, [ro1, ro2], [rest1, rest2], [20, 20])
 
+ideal_geo_o_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/fe_geo_o.pdb'
+search_ligands = search_ligand.prepare_search_ligand(ss.workdir + 'represents_combs/', ideal_geo_o_path)
 
-key = list(ss.best_aa_comb_dict.keys())[0]
-ideal_geo = ss.best_aa_comb_dict[key].ideal_geo
-#ideal_geo = pr.parsePDB(dbdir + 'fe_geo.pdb')
-ideal_geo_o = pr.parsePDB(dbdir + 'fe_geo_o.pdb')
-
-min_geo_struct, min_rmsd = filter.Search_filter.get_min_geo(ideal_geo, ideal_geo_o) 
-pr.writePDB(ss.workdir + min_geo_struct.getTitle(), min_geo_struct)
-
-position_ligand.lig_2_ideageo(all_ligs, lig_connects, min_geo_struct, geo_sel = 'name OE2 OK1 FE')
-
-os.makedirs(ss.workdir + 'all_ligs/', exist_ok=True)
-for lg in all_ligs:
-    pr.writePDB(ss.workdir + 'all_ligs/' +  lg.getTitle(), lg)
-
-'''
-nature_lig = pr.parsePDB(lig_path)
-min_RMSD = 100
-min_lg = None
-for lg in all_ligs:
-    rmsd = pr.calcRMSD(lg, nature_lig)
-    if rmsd < min_RMSD:
-        min_RMSD = rmsd
-        min_lg = lg
-print(min_RMSD)
-print(min_lg.getTitle())
+for sl in search_ligands:
+    sl.generate_ligands(all_ligs, lig_connects, ss.target, clash_dist = 2.5)
 
 
-pr.writePDB(workdir + '_min_' + min_lg.getTitle(), min_lg)
-'''
+########################################################################################
 
-filtered_ligs = position_ligand.ligand_clashing_filter(all_ligs, ss.target, dist = 2.5)
+input_dict = {
+    (0, 0):{
+        'cg' : 'coo',
+        'lgd_sel' : ['C9', 'O3', 'O4'],
+        'represent_name' : 'OD2',
+        'correspond_resname' : 'ASP',
+        'correspond_names' : ['CG', 'OD1', 'OD2']
+    },
+    (0, 1):{
+        'cg' : 'coo',
+        'lgd_sel' : ['C9', 'O3', 'O4'],
+        'represent_name' : 'OD2',
+        'correspond_resname' : 'ASP',
+        'correspond_names' : ['CG', 'OD2', 'OD1']
+    },    
+    (0, 2):{
+        'cg' : 'coo',
+        'lgd_sel' : ['C9', 'O3', 'O4'],
+        'represent_name' : 'OE2',
+        'correspond_resname' : 'GLU',
+        'correspond_names' : ['CG', 'OE1', 'OE2']
+    },
+    (0, 3):{
+        'cg' : 'coo',
+        'lgd_sel' : ['C9', 'O3', 'O4'],
+        'represent_name' : 'OE2',
+        'correspond_resname' : 'GLU',
+        'correspond_names' : ['CG', 'OE2', 'OE1']
+    },
+    (1, 0):{
+        'cg' : 'phenol',
+        'lgd_sel' : ['C2', 'C3', 'O2'],
+        'represent_name' : 'OH',
+        'correspond_resname' : 'TYR',
+        'correspond_names' : ['CE1', 'CZ', 'OH']
+    },
+    (1, 1):{
+        'cg' : 'phenol',
+        'lgd_sel' : ['C2', 'C3', 'O2'],
+        'represent_name' : 'OH',
+        'correspond_resname' : 'TYR',
+        'correspond_names' : ['CE2', 'CZ', 'OH']
+    },
+    (2, 0):{
+        'cg' : 'bb_cco',
+        'lgd_sel' : ['C7', 'C8', 'O1'],
+        'represent_name' : 'O',
+        'correspond_resname' : 'GLY',
+        'correspond_names' : ['CA', 'C', 'O']
+    },
+    (2, 1):{
+        'cg' : 'bb_cco',
+        'lgd_sel' : ['C7', 'C8', 'O1'],
+        'represent_name' : 'O',
+        'correspond_resname' : 'ALA',
+        'correspond_names' : ['CA', 'C', 'O']
+    }
+}
 
-len(filtered_ligs)
 
-os.makedirs(ss.workdir + 'filtered_ligs/', exist_ok=True)
-for lg in filtered_ligs:
-    pr.writePDB(ss.workdir + 'filtered_ligs/' +  lg.getTitle(), lg)
+for sl in search_ligands:
+    sl.generate_ligands(all_ligs, lig_connects, ss.target, clash_dist = 2.7)
+
+    if sl.filter_ligands is None:
+        continue
+
+    ### Load vdMs.
+    input_dir = sl.outdir
+
+    pdb_gly = sl.all_gly
+    pdb_ala = sl.all_ala
+
+    template = combs2.design.template.Template(pdb_gly)
+    template.set_alpha_hull(pdb_ala, alpha=9)
+
+    getResnums = pdb_ala.ca.getResnums() #grabs all residue numbers contained in the allALA backbone.
+    resnums = getResnums.tolist() #converts all residue numbers to a list format that can be read
+    resnums = [20, 28, 31, 32, 36, 38, 40, 47, 53, 56, 57, 60, 61, 66, 68, 86, 88, 99, 101, 103, 105, 113, 116, 118, 120]
+    chains = ['A'] * len(resnums)
+    segs = [''] * len(resnums)
+    segs_chains_resnums = zip(segs, chains, resnums)
+
+    # for x in segs_chains_resnums:
+    #     print(x)
+
+    cgs = ['coo', 'bb_cco', 'phenol']
+    cg_max_dists = dict(ph=0.9)
+    outpath = input_dir
+
+    combs2.design.functions.write_resfile(template, CGs=cgs,
+                                            outpath=outpath,
+                                            filename='resfile', tag='',
+                                            resindices=None, segs_chains_resnums=segs_chains_resnums,
+                                            pikaa_dict=None, bb_dep=1,
+                                            use_enriched_vdMs=False, CA_burial_distance=None, exclude_exposed=False,
+                                            exclude_intermed=False,
+                                            exclude_buried=False, top_exposed=None, top_intermed=None, top_buried=None,
+                                            alpha_hull_radius=10,
+                                            use_propensities=True,
+                                            propensity_threshold=0.9, use_abple=True, use_dssp=False,
+                                            path_to_pdb_for_dssp=None,
+                                            allowed_exposed='ACDEFGHIKLMNPQRSTVWY', allowed_intermed='ACDEFGHIKLMNPQRSTVWY',
+                                            allowed_buried='ACDEFGHIKLMNPQRSTVWY',
+                                            hb_only_residues='', all_contact_residues='')
+
+
+    path_to_resfile= input_dir + 'resfile.txt'
+    path_to_database='/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/vdMs/'
+    sc = combs2.design._sample.Sample(**dict(path_to_resfile=outpath + 'resfile.txt',
+                                            path_to_database=path_to_database))
+    sc.read_resfile()
+
+    sc.load_vdms(template, filter_by_phi_psi=False, run_parallel=True)
+
+    ##################################################################################################
+
+    ligands = sl.filtered_ligands
+
+    labels_cgs = {}
+    df_cgs = {}
+    dist_ind_cgs = {}
+
+    cg_ids = input_dict.keys()
+    for cg_id in cg_ids:
+        metalprot_scv.search_vdm(sc.cg_dict, ligands, cg_id, input_dict, labels_cgs, df_cgs, dist_ind_cgs, rmsd = 0.7)
+
+    outdir = input_dir + 'combs_out/'
+    os.makedirs(outdir, exist_ok= True)
+    CgCombInfoDict = metalprot_scv.construct_vdm_write(outdir, ligands, labels_cgs, df_cgs, dist_ind_cgs, clash_radius = 2.7)
+
+    metalprot_scv.write_summary(outdir, CgCombInfoDict, name = '_summary.tsv')
+

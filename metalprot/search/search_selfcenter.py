@@ -10,13 +10,13 @@ import prody as pr
 import math
 import numpy as np
 
-from ..basic import hull
 from ..basic import utils
+from ..basic import prody_ext
 
 import multiprocessing as mp
 from multiprocessing.dummy import Pool as ThreadPool
 
-from .search import Search_vdM, supperimpose_target_bb, calc_pairwise_neighbor, combine_vdm_into_ag
+from .search import Search_vdM, supperimpose_target_bb, calc_pairwise_neighbor
 from .graph import Graph
 from .comb_info import CombInfo
 from .find_path_by_matrix import neighbor_generate_nngraph, calc_adj_matrix_paths
@@ -65,8 +65,8 @@ class Search_selfcenter(Search_vdM):
             metal_coords = []  
             for _query in comb_dict[key].centroid_dict.values():                                
                 metal_coords.append(_query.get_metal_coord())   
-            center = [pr.calcCenter(hull.transfer2pdb(metal_coords))]
-            # center = [pr.calcCenter(hull.transfer2pdb(coords))]
+            center = [pr.calcCenter(prody_ext.transfer2pdb(metal_coords))]
+            # center = [pr.calcCenter(prody_ext.transfer2pdb(coords))]
 
 
             ### get the overlap. 
@@ -163,7 +163,7 @@ class Search_selfcenter(Search_vdM):
 
             if self.output_wincomb_overlap:
                 clu_allmetal_coords = centroid.get_metal_mem_coords()
-                hull.write2pymol(clu_allmetal_coords, outdir, tag + '_w_' + self.target_index_dict[w] +'_points.pdb')  
+                prody_ext.write2pymol(clu_allmetal_coords, outdir, tag + '_w_' + self.target_index_dict[w] +'_points.pdb')  
         
         #Write overlap
         if not info.overlap_ind_dict:
@@ -181,7 +181,7 @@ class Search_selfcenter(Search_vdM):
                     #print(len(clu_allmetal_coords[cid]))
                     metal_coords.append(clu_allmetal_coords[cid])
 
-                hull.write2pymol(metal_coords, outdir, tag + '_w_' + str(w) +'_overlaps.pdb')  
+                prody_ext.write2pymol(metal_coords, outdir, tag + '_w_' + str(w) +'_overlaps.pdb')  
                 
         volume = 4.0/3.0 * math.pi * (self.density_radius**3)
         total = sum([len(info.overlap_ind_dict[w]) for w in key[0]])
@@ -231,7 +231,6 @@ class Search_selfcenter(Search_vdM):
                 win_clu_2_win_aas[(wins, aas)]['BestGeo'] = key
                 win_clu_2_win_aas[(wins, aas)]['BestCluscore'] = key
 
-
         for key in win_clu_2_win_aas.keys():
             for k in win_clu_2_win_aas[key].keys():
                 win_clu_key = win_clu_2_win_aas[key][k]
@@ -246,9 +245,9 @@ class Search_selfcenter(Search_vdM):
             if 'BestOPscore' not in self.best_aa_comb_dict[key].tag:
                 continue
             tag = 'W_' + '-'.join([self.target_index_dict[k] for k in key[0]]) + '_' + '-'.join([k[0] for k in key[1]]) + '_' + '-'.join([str(k[1]) for k in key[1]])
-            ag = combine_vdm_into_ag(self.best_aa_comb_dict[key], key, tag, self.best_aa_comb_dict[key].geometry)
-            pdb_path = self.outdir_represent + tag + '.pdb' 
-            pr.writePDB(pdb_path, ag)    
+            ag = prody_ext.combine_vdm_into_ag(self.best_aa_comb_dict[key].centroid_dict.values(), tag, self.best_aa_comb_dict[key].geometry)
+            pdb_path = self.outdir_represent + tag 
+            pr.writePDB(pdb_path + '.pdb', ag)    
             # # If the ideal geometry is not used as a filter before. 
             # if self.best_aa_comb_dict[key].geo_rmsd < 0: 
             #     ideal_geometry, rmsd = Search_filter.get_min_geo(self.best_aa_comb_dict[key].geometry, self.geo_struct)
@@ -259,6 +258,23 @@ class Search_selfcenter(Search_vdM):
                 pr.writePDB(pdb_path_idealgeo, self.best_aa_comb_dict[key].ideal_geo)                     
 
         return
+
+    def write_for_combs(self):
+        for key in self.best_aa_comb_dict.keys():
+            if 'BestOPscore' not in self.best_aa_comb_dict[key].tag:
+                continue
+            tag = 'W_' + '-'.join([self.target_index_dict[k] for k in key[0]]) + '_' + '-'.join([k[0] for k in key[1]]) + '_' + '-'.join([str(k[1]) for k in key[1]])
+
+            pdb_path = self.workdir + 'represents_combs/' + tag 
+            os.makedirs(self.workdir + 'represents_combs/')
+            if self.best_aa_comb_dict[key].ideal_geo:
+                pdb_path_idealgeo = pdb_path + '_idealgeo_' + str(round(self.best_aa_comb_dict[key].geo_rmsd, 2)) + '.pdb'
+                pr.writePDB(pdb_path_idealgeo, self.best_aa_comb_dict[key].ideal_geo)                     
+            
+            ag_ala = prody_ext.combine_vdm_target_into_ag(self.target, self.best_aa_comb_dict[key].centroid_dict, self.best_aa_comb_dict[key].geometry, tag, aa = 'ALA')
+            pr.writePDB(pdb_path + '_allala.pdb', ag_ala)
+            ag_gly = prody_ext.combine_vdm_target_into_ag(self.target, self.best_aa_comb_dict[key].centroid_dict, self.best_aa_comb_dict[key].geometry, tag, aa = 'ALA')
+            pr.writePDB(pdb_path + '_allgly.pdb', ag_gly)
 
 
     def selfcenter_analysis_comb(self, win_comb, comb_dict):

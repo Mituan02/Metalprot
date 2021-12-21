@@ -1,7 +1,7 @@
 import prody as pr
 import numpy as np
 from ..basic import vdmer
-from ..basic import hull
+from ..basic import prody_ext
 from ..basic import constant
 
 
@@ -69,10 +69,10 @@ class CombInfo:
             for _query in self.query_dict[key]:                                  
                 coords.append(_query.get_contact_coord())
                 metal_coords.append(_query.get_metal_coord())
-            all_coords.append(pr.calcCenter(hull.transfer2pdb(coords)))         
-        all_coords.append(pr.calcCenter(hull.transfer2pdb(metal_coords)))
+            all_coords.append(pr.calcCenter(prody_ext.transfer2pdb(coords)))         
+        all_coords.append(pr.calcCenter(prody_ext.transfer2pdb(metal_coords)))
 
-        self.geometry = hull.transfer2pdb(all_coords, ['NI' if i == len(all_coords)-1 else 'N' for i in range(len(all_coords))])
+        self.geometry = prody_ext.transfer2pdb(all_coords, ['NI' if i == len(all_coords)-1 else 'N' for i in range(len(all_coords))])
         self.aa_aa_pair, self.metal_aa_pair, self.angle_pair  = vdmer.pair_wise_geometry(self.geometry)
         return
 
@@ -84,9 +84,9 @@ class CombInfo:
         for _query in self.centroid_dict.values():                                
             all_coords.append(_query.get_contact_coord())
             metal_coords.append(_query.get_metal_coord())   
-        all_coords.append(pr.calcCenter(hull.transfer2pdb(metal_coords)))
+        all_coords.append(pr.calcCenter(prody_ext.transfer2pdb(metal_coords)))
 
-        self.geometry = hull.transfer2pdb(all_coords, ['NI' if i == len(all_coords)-1 else 'N' for i in range(len(all_coords))])      
+        self.geometry = prody_ext.transfer2pdb(all_coords, ['NI' if i == len(all_coords)-1 else 'N' for i in range(len(all_coords))])      
         
         self.aa_aa_pair, self.metal_aa_pair, self.angle_pair  = vdmer.pair_wise_geometry(self.geometry)
         return     

@@ -26,19 +26,3 @@ def calc_pairwise_hull(points1, points2):
         overlap = True
     return overlap, x, y, ol_points
 
-def transfer2pdb(points, names = None, title = 'MetalMol'):
-    if not names:
-        names = ['NI' for i in range(len(points))]
-    resnums = [i for i in range(len(points))]
-    chains = ['A' for i in range(len(points))]
-    mm = pr.AtomGroup(title)
-    mm.setCoords(points)
-    mm.setResnums(resnums)
-    mm.setNames(names)
-    mm.setResnames(names)
-    mm.setChids(chains)
-    return mm
-
-def write2pymol(points, outdir, filename, names = None):
-    mm = transfer2pdb(points, names)
-    pr.writePDB(outdir + filename + '.pdb', mm)

@@ -4,10 +4,10 @@ Design metal + ligand bindin protein.
 Need to run search_selfcenter function first. 
 '''
 
+from metalprot.combs import position_ligand, position_porphyrin
 from metalprot.search import search_selfcenter
 from metalprot.basic import filter
 import metalprot.basic.constant as constant
-from metalprot.search import position_ligand, position_porphyrin
 import pickle
 import time
 import prody as pr

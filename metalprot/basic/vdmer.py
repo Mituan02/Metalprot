@@ -3,7 +3,6 @@ import itertools
 import numpy as np
 from numpy.core.fromnumeric import argmin
 from prody.atomic import pointer
-from .hull import transfer2pdb, write2pymol
 from .utils import get_ABPLE
 from . import constant 
 

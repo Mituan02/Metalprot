@@ -72,61 +72,6 @@ def calc_pairwise_neighbor(n_x, n_y, r = 0.25):
     return x_in_y[1], x_has_y
 
 
-def combine_vdm_into_ag(comb, key, tag, geometry = None, ideal_geometry = None):
-    '''
-    Merge all vdms from one CombInfo.centroid_dict in to an AtomGroup.
-    '''
-    centroid_dict = comb.centroid_dict
-    ag = pr.AtomGroup(tag)
-    coords = []
-    chids = []
-    names = []
-    resnames = []
-    resnums = []
-    betas = []
-    occu = []
-    chain_num = 0
-    for w in key[0]:
-        c = centroid_dict[w].query.select('not name NI MN ZN CO CU MG FE' )
-        c.setChids(string.ascii_uppercase[chain_num])
-        coords.extend(c.getCoords())
-        chids.extend(c.getChids())
-        names.extend(c.getNames())
-        resnames.extend(c.getResnames())
-        resnums.extend(c.getResnums())
-        betas.extend([0 for i in range(len(c))])
-        occu.extend([0 for i in range(len(c))])
-        chain_num += 1
-
-    geometry.setChids(string.ascii_uppercase[chain_num])
-    _geo = geometry.select('name NI')
-    coords.extend(_geo.getCoords())
-    chids.extend(_geo.getChids())
-    names.extend(_geo.getNames())
-    resnames.extend(_geo.getResnames())
-    resnums.extend(_geo.getResnums())
-    betas.append(comb.overlapScore)
-    occu.append(comb.cluScore)
-    chain_num += 1
-
-    if ideal_geometry:     
-        ideal_geometry.setChids(string.ascii_uppercase[chain_num])
-        coords.extend(ideal_geometry.getCoords())
-        chids.extend(ideal_geometry.getChids())
-        names.extend(ideal_geometry.getNames())
-        resnames.extend(ideal_geometry.getResnames())
-        resnums.extend(ideal_geometry.getResnums())
-        betas.extend([0 for i in range(len(ideal_geometry))])
-        occu.extend([0 for i in range(len(ideal_geometry))])
-
-    ag.setCoords(np.array(coords))
-    ag.setChids(chids)
-    ag.setNames(names)
-    ag.setResnames(resnames)
-    ag.setResnums(resnums)
-    ag.setBetas(betas)
-    ag.setOccupancies(occu)
-    return ag
 
 
 class Search_vdM:

@@ -4,7 +4,7 @@ from numpy.core.numeric import count_nonzero
 import prody as pr
 
 from ..basic import vdmer
-from ..basic import hull
+from ..basic import prody_ext
 from ..basic import utils
 from ..database import core
 from ..database import database_extract
@@ -203,7 +203,7 @@ class Search_eval(Search_selfcenter):
 
         #     #pr.writePDB(evaldir + tag + 'origin_' + origin_centroid.query.getTitle(), origin_centroid.query)
         #     clu_origin_allmetal_coords = origin_centroid.get_metal_mem_coords()
-        #     hull.write2pymol(clu_origin_allmetal_coords, evaldir, tag + '_origin_w_' + str(w) +'_points.pdb') 
+        #     prody_ext.write2pymol(clu_origin_allmetal_coords, evaldir, tag + '_origin_w_' + str(w) +'_points.pdb') 
 
         centroid_id = self.cluster_centroid_dict[clu_key]
         centroid = self.vdms[centroid_id].copy()
@@ -211,7 +211,7 @@ class Search_eval(Search_selfcenter):
 
         pr.writePDB(evaldir + tag + centroid.query.getTitle(), centroid.query)
         clu_allmetal_coords = centroid.get_metal_mem_coords()
-        hull.write2pymol(clu_allmetal_coords, evaldir, tag + '_w_' + str(w) +'_points.pdb') 
+        prody_ext.write2pymol(clu_allmetal_coords, evaldir, tag + '_w_' + str(w) +'_points.pdb') 
 
         origin_best_v = best_v.copy()
         transform = pr.calcTransformation(origin_best_v.query.select('heavy'), centroid.query.select('heavy'))

@@ -48,8 +48,8 @@ def combine_vdm_into_ag(vdms, tag, geometry, overlapScore = 0, cluScore = 0, ide
         names.extend(c.getNames())
         resnames.extend(c.getResnames())
         resnums.extend(c.getResnums())
-        betas.extend([0 for x in range(len(c))])
-        occu.extend([0 for x in range(len(c))])
+        betas.extend([overlapScore for x in range(len(c))])
+        occu.extend([cluScore for x in range(len(c))])
         chain_num += 1
 
     if not geometry:
@@ -73,8 +73,8 @@ def combine_vdm_into_ag(vdms, tag, geometry, overlapScore = 0, cluScore = 0, ide
         names.extend(ideal_geometry.getNames())
         resnames.extend(ideal_geometry.getResnames())
         resnums.extend(ideal_geometry.getResnums())
-        betas.extend([0 for i in range(len(ideal_geometry))])
-        occu.extend([0 for i in range(len(ideal_geometry))])
+        betas.extend([overlapScore for i in range(len(ideal_geometry))])
+        occu.extend([cluScore for i in range(len(ideal_geometry))])
 
     ag.setCoords(np.array(coords))
     ag.setChids(chids)

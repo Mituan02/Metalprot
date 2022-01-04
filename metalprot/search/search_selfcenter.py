@@ -245,7 +245,7 @@ class Search_selfcenter(Search_vdM):
             if 'BestOPscore' not in self.best_aa_comb_dict[key].tag:
                 continue
             tag = 'W_' + '-'.join([self.target_index_dict[k] for k in key[0]]) + '_' + '-'.join([k[0] for k in key[1]]) + '_' + '-'.join([str(k[1]) for k in key[1]])
-            ag = prody_ext.combine_vdm_into_ag(self.best_aa_comb_dict[key].centroid_dict.values(), tag, self.best_aa_comb_dict[key].geometry)
+            ag = prody_ext.combine_vdm_into_ag(self.best_aa_comb_dict[key].centroid_dict.values(), tag, self.best_aa_comb_dict[key].geometry, self.best_aa_comb_dict[key].overlapScore, self.best_aa_comb_dict[key].cluScore)
             pdb_path = self.outdir_represent + tag 
             pr.writePDB(pdb_path + '.pdb', ag)    
             # # If the ideal geometry is not used as a filter before. 

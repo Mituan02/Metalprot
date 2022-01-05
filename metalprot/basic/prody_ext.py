@@ -7,13 +7,14 @@ import string
 import numpy as np
 from . import constant
 
-def transfer2pdb(points, names = None, title = 'MetalMol'):
+def transfer2pdb(points, names = None, resnums = None, resnames = None, title = 'MetalMol'):
     '''
     Speically used for Metal binding geometry pdb. 
     '''
     if not names:
         names = ['NI' for i in range(len(points))]
-    resnums = [i for i in range(len(points))]
+    if not resnums:
+        resnums = [0 for i in range(len(points))]
     chains = ['A' for i in range(len(points))]
     mm = pr.AtomGroup(title)
     mm.setCoords(points)
@@ -21,6 +22,8 @@ def transfer2pdb(points, names = None, title = 'MetalMol'):
     mm.setNames(names)
     mm.setResnames(names)
     mm.setChids(chains)
+    if resnames:
+        mm.setResnames(resnames)
     return mm
 
 
@@ -60,7 +63,7 @@ def ordered_sel_transformation(mobile, target, mob_sel, target_sel):
     return rmsd
 
 
-def ordered_sel_transformation_rmsd(mobile, target, mob_sel, target_sel):
+def ordered_sel_rmsd(mobile, target, mob_sel, target_sel):
     mobile_sel_coords, target_sel_coords = ordered_sel(mobile, target, mob_sel, target_sel)
     rmsd = pr.calcRMSD(mobile_sel_coords, target_sel_coords)
     return rmsd

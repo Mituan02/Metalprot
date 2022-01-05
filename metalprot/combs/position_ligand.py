@@ -1,5 +1,6 @@
 import prody as pr
 import numpy as np
+from prody.utilities.catchall import getCoords
 from scipy.spatial.transform import Rotation
 from sklearn.neighbors import NearestNeighbors
 
@@ -7,6 +8,8 @@ import os
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem.rdmolfiles import MolToPDBFile
+
+from ..basic import prody_ext 
 
 def rotate_ligs(orign_lig, rot, rest, rotation_degree = 10, dist = 3):
     '''
@@ -77,9 +80,39 @@ def generate_rotated_ligs_rdkit(lig_smiles, total, outdir):
     for p in os.listdir(outdir):
         if '.pdb' not in p:
             continue
-        m2s.append(pr.parsePDB(outdir + 'all_ligs_rdkit/' + p))
+        m2s.append(pr.parsePDB(outdir + p))
     return m2s
 
+
+def add_metal2lig(lig, rig, lig_sel, rig_sel, metal):
+    '''
+    Add metal to ligs that do not contain metal for superimpose on binding geometry.
+    The rdkit generated ligands generally do not contain metal.
+
+    rig: the ligand-metal prody obejct extracted from pdb.
+    '''
+    prody_ext.ordered_sel_transformation(rig, lig, rig_sel, lig_sel)
+    
+    metal_point = rig.select('name ' + metal)[0].getCoords()
+    points = [x.getCoords() for x in lig.select('heavy')]
+    points.append(metal_point)
+
+    names = [x.getName() for x in lig.select('heavy')]
+    names.append(metal)
+    resnames = [x.getResname() for x in lig.select('heavy')]
+    resnames.append(metal)
+    resnums = [0 for x in lig.select('heavy')]
+    resnums.append(1)
+    mm = prody_ext.transfer2pdb(points, names, resnums, resnames, title= lig.getTitle())
+    return mm
+
+
+def add_metal2ligs(ligs, rig, lig_sel, rig_sel, metal):
+    lig_metals = []
+    for lig in ligs:
+        lig_metal = add_metal2lig(lig, rig, lig_sel, rig_sel, metal)
+        lig_metals.append(lig_metal)
+    return lig_metals
 
 def ligand_rot_is_clash(lig, rot, rest, dist = 3):
     '''

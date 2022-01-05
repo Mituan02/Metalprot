@@ -78,22 +78,26 @@ def ligand_rot_is_clash(lig, rot, rest, dist = 3):
     return False
 
 
-def lig_2_ideageo(ligs, lig_connects, ideal_geo_o = None, geo_sel = 'name OE2 ZN', metal_sel = 'name NI MN ZN CO CU MG FE'):
+def lig_2_ideageo(ligs, lig_connect_sel, ideal_geo_o = None, geo_sel = 'OE2 ZN'):
     '''
     supperimpose the ligand to the ideal metal binding geometry.
     '''
     _lig = ligs[0]
 
-    lig_sel = _lig.select('name ' + ' '.join(lig_connects))
+    mobile_sel_coords = []
+    for s in lig_connect_sel:
+        mobile_sel_coords.append(_lig.select('name ' + s).getCoords()[0])
 
-    ideal_geo_sel = ideal_geo_o.select(geo_sel)
+    ideal_geo_sel_coords = []
+    for s in geo_sel.split(' '):
+        ideal_geo_sel_coords.append(ideal_geo_o.select('name ' + s).getCoords()[0])
 
-    transformation = pr.calcTransformation(lig_sel, ideal_geo_sel)
+    transformation = pr.calcTransformation(np.array(mobile_sel_coords), np.array(ideal_geo_sel_coords))
 
     for lg in ligs:
         transformation.apply(lg)
 
-    return 
+    return
 
 
 def ligand_clashing_filter(ligs, target, dist = 3):

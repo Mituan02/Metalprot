@@ -8,6 +8,9 @@ import numpy as np
 from . import constant
 
 def transfer2pdb(points, names = None, title = 'MetalMol'):
+    '''
+    Speically used for Metal binding geometry pdb. 
+    '''
     if not names:
         names = ['NI' for i in range(len(points))]
     resnums = [i for i in range(len(points))]
@@ -22,8 +25,33 @@ def transfer2pdb(points, names = None, title = 'MetalMol'):
 
 
 def write2pymol(points, outdir, filename, names = None):
+        '''
+    Speically used for Metal binding geometry pdb output.
+    '''
     mm = transfer2pdb(points, names)
     pr.writePDB(outdir + filename + '.pdb', mm)
+
+
+def transformed_inordered_sel(mobile, target, mob_sel, target_sel):
+    '''
+    The prody sel always follow the order of atom index. 
+    Here is to follow the selection order for alignment.
+    mobile: prody object.
+    target, prody object.
+    mob_sel: list of atom names.
+    target_sel: list of atom names.
+    '''
+    mobile_sel_coords = []
+    for s in mob_sel.split(' '):
+        mobile_sel_coords.append(mobile.select('name ' + s).getCoords()[0])
+    
+    target_sel_coords = []
+    for s in target_sel.split(' '):
+        target_sel_coords.append(target.select('name ' + s).getCoords()[0])
+
+    transformation = pr.calcTransformation(np.array(target_sel_coords), np.array(target_sel_coords))
+    transformation.apply(mobile)
+    return
 
 
 def combine_vdm_into_ag(vdms, tag, geometry, overlapScore = 0, cluScore = 0, ideal_geometry = None):

@@ -29,16 +29,21 @@ class Search_ligand:
         self.filtered_ligands = None
 
 
-    def generate_ligands(self, all_ligs, lig_connects, target, clash_dist = 2.5):
+    def generate_ligands(self, all_ligs, target, lig_connects, geo_sels = ['OE2 OK1 FE', 'OE2 OK2 FE', 'OK1 OE2 FE', 'OK1 OK2 FE', 'OK2 OE2 FE', 'OK2 OK1 FE'], clash_dist = 2.5):
         '''
         Generate all potential artificial ligand positions.
         '''
-        self.all_ligands = [l.copy() for l in all_ligs]
+        self.all_ligands = []
         
         min_geo_struct, min_rmsd = filter.Search_filter.get_min_geo(self.ideal_geo, self.ideal_geo_o) 
         self.min_geo_struct = min_geo_struct
-        
-        position_ligand.lig_2_ideageo(self.all_ligands, lig_connects, min_geo_struct, geo_sel = 'name OE2 OK1 FE')
+
+        for i in range(len(geo_sels)):
+            geo_sel = geo_sels[i]
+            _ligs = [l.copy() for l in all_ligs]
+            [l.setTitle('Geo_' + str(i) + '_' + l.getTitle() ) for l in _ligs]
+            position_ligand.lig_2_ideageo(_ligs, lig_connects, min_geo_struct, geo_sel = geo_sel)
+            self.all_ligands.extend(_ligs)
 
         filtered_ligs = position_ligand.ligand_clashing_filter(self.all_ligands, target, dist = clash_dist)
 
@@ -50,7 +55,7 @@ class Search_ligand:
         return
 
 
-    def write_ligands(self):
+    def write_ligands(self, write_all_ligands = False):
 
         
         os.makedirs(self.outdir, exist_ok= True)
@@ -58,15 +63,15 @@ class Search_ligand:
         pr.writePDB(self.workdir + self.min_geo_struct.getTitle(), self.min_geo_struct)
 
         os.makedirs(self.outdir + 'filtered_ligs/', exist_ok=True)
-        for lg in self.filtered_ligs:
+        for lg in self.filtered_ligands:
             pr.writePDB(self.outdir + 'filtered_ligs/' +  lg.getTitle(), lg)
 
-        '''
+        if write_all_ligands:
         # output all aligned ligands.
-        os.makedirs(self.outdir + 'all_ligs/', exist_ok=True)
-        for lg in all_ligs:
-            pr.writePDB(self.outdir + 'all_ligs/' +  lg.getTitle(), lg)
-        '''
+            os.makedirs(self.outdir + 'all_ligs/', exist_ok=True)
+            for lg in self.all_ligands:
+                pr.writePDB(self.outdir + 'all_ligs/' +  lg.getTitle(), lg)
+        
 
         '''
         # For benchmarking, the nature ligand exist. Try to get the minimum superimposed artificial ligand.

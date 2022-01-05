@@ -3,6 +3,10 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 from sklearn.neighbors import NearestNeighbors
 
+import os
+from rdkit import Chem
+from rdkit.Chem import AllChem
+from rdkit.Chem.rdmolfiles import MolToPDBFile
 
 def rotate_ligs(orign_lig, rot, rest, rotation_degree = 10, dist = 3):
     '''
@@ -58,6 +62,23 @@ def generate_rotated_ligs(lig, rots, rests, rotation_degrees, clash_dist = 3):
         ligs2 = rotate_ligs(_lig, rot, rest, degree, clash_dist)
         all_ligs.extend(ligs2)
     return all_ligs
+
+
+def generate_rotated_ligs_rdkit(lig_smiles, total, outdir):
+    m = Chem.MolFromSmiles(lig_smiles)
+    m2=Chem.AddHs(m)
+    AllChem.EmbedMolecule(m2)
+
+    cids = AllChem.EmbedMultipleConfs(m2, numConfs=total)
+    for i in range(total):
+        MolToPDBFile(m2, outdir + 'rdkit_' + str(i) + '.pdb', confId = i)
+
+    m2s = []
+    for p in os.listdir(outdir):
+        if '.pdb' not in p:
+            continue
+        m2s.append(pr.parsePDB(outdir + 'all_ligs_rdkit/' + p))
+    return m2s
 
 
 def ligand_rot_is_clash(lig, rot, rest, dist = 3):

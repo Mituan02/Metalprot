@@ -25,14 +25,14 @@ def transfer2pdb(points, names = None, title = 'MetalMol'):
 
 
 def write2pymol(points, outdir, filename, names = None):
-        '''
+    '''
     Speically used for Metal binding geometry pdb output.
     '''
     mm = transfer2pdb(points, names)
     pr.writePDB(outdir + filename + '.pdb', mm)
 
 
-def transformed_inordered_sel(mobile, target, mob_sel, target_sel):
+def ordered_sel(mobile, target, mob_sel, target_sel):
     '''
     The prody sel always follow the order of atom index. 
     Here is to follow the selection order for alignment.
@@ -49,9 +49,21 @@ def transformed_inordered_sel(mobile, target, mob_sel, target_sel):
     for s in target_sel.split(' '):
         target_sel_coords.append(target.select('name ' + s).getCoords()[0])
 
-    transformation = pr.calcTransformation(np.array(target_sel_coords), np.array(target_sel_coords))
+    return np.array(mobile_sel_coords), np.array(target_sel_coords)
+
+
+def ordered_sel_transformation(mobile, target, mob_sel, target_sel):
+    mobile_sel_coords, target_sel_coords = ordered_sel(mobile, target, mob_sel, target_sel)
+    transformation = pr.calcTransformation(mobile_sel_coords, target_sel_coords)
     transformation.apply(mobile)
-    return
+    rmsd = pr.calcRMSD(mobile_sel_coords, target_sel_coords)
+    return rmsd
+
+
+def ordered_sel_transformation_rmsd(mobile, target, mob_sel, target_sel):
+    mobile_sel_coords, target_sel_coords = ordered_sel(mobile, target, mob_sel, target_sel)
+    rmsd = pr.calcRMSD(mobile_sel_coords, target_sel_coords)
+    return rmsd
 
 
 def combine_vdm_into_ag(vdms, tag, geometry, overlapScore = 0, cluScore = 0, ideal_geometry = None):

@@ -161,7 +161,7 @@ def search_vdm(cg_dict, ligands, cg_id, input_dict, labels_cgs, df_cgs, dist_ind
 
 
 
-def construct_vdm_write(outdir, ligands, labels_cgs, input_dict, df_cgs, dist_ind_cgs, clash_radius = 2.7):
+def construct_vdm_write(outdir, ligands, labels_cgs, input_dict, df_cgs, dist_ind_cgs, clash_radius = 2.7, benchmark_filters = []):
     '''
     dist_ind_cgs: dict. {cg: (dists, inds)}, where dists in shape: (len(ligands), )
     df_cgs: {cg: df}
@@ -171,8 +171,6 @@ def construct_vdm_write(outdir, ligands, labels_cgs, input_dict, df_cgs, dist_in
     for i in range(len(ligands)):
         cgCombInfo = CgCombInfo()
         cgCombInfo.ligand_id = i
-
-        pr.writePDB(outdir + str(i) + '_ligand_' + ligands[i].getTitle(), ligands[i])
 
         for cg in dist_ind_cgs.keys():
             info = []
@@ -192,14 +190,28 @@ def construct_vdm_write(outdir, ligands, labels_cgs, input_dict, df_cgs, dist_in
                     print(labels.shape)
                     print(inds)
                 x = labels.iloc[ind]
-                prefix = str(i) + '_' + '-'.join(str(z) for z in cg) + '_' + str(round(rmsd, 2)) + '_' # + str(x['C_score_bb_ind']) + '_'              
                 v = dfa[(dfa['CG'] == x['CG']) & (dfa['rota'] == x['rota']) & (dfa['probe_name'] == x['probe_name']) & (dfa['seg_chain_resnum'] == x['seg_chain_resnum'])]
                 if vdm_ligand_clash(v, ligands[i], clash_radius):
                     continue
+                
+                seg_chain_resnum = v['seg_chain_resnum'].iloc[-1]
+                #print(seg_chain_resnum)
+                resname = v['resname'].iloc[-1]
+
+                if len(benchmark_filters) > 0:
+                    if seg_chain_resnum in benchmark_filters.keys():
+                        if benchmark_filters[seg_chain_resnum] != resname:
+                            continue
+
                 info.append((rmsd, v)) 
+                prefix = 'Lig-'+ str(i) + '_'  + '_'.join(str(z) for z in seg_chain_resnum) + '_key_' + '-'.join(str(z) for z in cg) + '_rmsd_' + str(round(rmsd, 2))  + '_' + resname + '_' # + str(x['C_score_bb_ind']) + '_'                              
                 combs2.design.functions.print_dataframe(v, outpath=outdir, tag = '_' + str(ind), prefix = prefix)
             cgCombInfo.vdm_cgs[cg] = info
         CgCombInfoDict[i] = cgCombInfo
+        
+        if any([len(cgCombInfo.vdm_cgs[k]) > 0 for k in cgCombInfo.vdm_cgs.keys()]):
+            pr.writePDB(outdir + 'Lig-' + str(i) + '_' + ligands[i].getTitle(), ligands[i])
+
     return CgCombInfoDict
 
             

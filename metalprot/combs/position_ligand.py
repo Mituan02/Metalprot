@@ -91,7 +91,7 @@ def add_metal2lig(lig, rig, lig_sel, rig_sel, metal):
 
     rig: the ligand-metal prody obejct extracted from pdb.
     '''
-    prody_ext.ordered_sel_transformation(rig, lig, rig_sel, lig_sel)
+    prody_ext.ordered_sel_transformation(lig, rig, lig_sel, rig_sel)
     
     metal_point = rig.select('name ' + metal)[0].getCoords()
     points = [x.getCoords() for x in lig.select('heavy')]
@@ -113,6 +113,7 @@ def add_metal2ligs(ligs, rig, lig_sel, rig_sel, metal):
         lig_metal = add_metal2lig(lig, rig, lig_sel, rig_sel, metal)
         lig_metals.append(lig_metal)
     return lig_metals
+
 
 def ligand_rot_is_clash(lig, rot, rest, dist = 3):
     '''
@@ -139,12 +140,22 @@ def lig_2_ideageo(ligs, lig_connect_sel, ideal_geo_o = None, geo_sel = 'OE2 ZN')
     _lig = ligs[0]
 
     mobile_sel_coords = []
-    for s in lig_connect_sel:
-        mobile_sel_coords.append(_lig.select('name ' + s).getCoords()[0])
+    for s in lig_connect_sel.split(' '):
+        try:
+            mobile_sel_coords.append(_lig.select('name ' + s).getCoords()[0])
+        except: 
+            print('ERROR: (lig_2_ideageo) ' + ' '.join(lig_connect_sel))
+            print(_lig.getNames())
+            print(s)
 
     ideal_geo_sel_coords = []
     for s in geo_sel.split(' '):
-        ideal_geo_sel_coords.append(ideal_geo_o.select('name ' + s).getCoords()[0])
+        try:
+            ideal_geo_sel_coords.append(ideal_geo_o.select('name ' + s).getCoords()[0])
+        except:
+            print('ERROR: (lig_2_ideageo lig) ' + ' '.join(lig_connect_sel))
+            print('ERROR: (lig_2_ideageo) ' + geo_sel)
+            print(s)
 
     transformation = pr.calcTransformation(np.array(mobile_sel_coords), np.array(ideal_geo_sel_coords))
 

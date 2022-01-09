@@ -195,7 +195,7 @@ def combine_vdm_target_into_ag(target, resind_vdm_dict, write_geo, geometry, tit
     return ag
 
 
-def target_to_all_gly_ala(target, title, aa = 'ALA'):
+def target_to_all_gly_ala(target, title, win_no_mutation = [], aa = 'ALA'):
     '''
     For the prody object target, mutate all the aa into ala or gly. 
     '''
@@ -205,36 +205,43 @@ def target_to_all_gly_ala(target, title, aa = 'ALA'):
     names = []
     resnames = []
     resnums = []
+    betas = []
+    occu = []
 
     if aa == 'GLY':
         bb_sel = 'name N CA C O H'
     if aa == 'ALA':
         bb_sel = 'name N CA C O H CB'
-
+    
     for i in target.select('protein and name C').getResindices():
-        c = target.select('resindex ' + str(i)  + ' ' + bb_sel)
-        if aa == 'GLY':
-            c.setResnums(['GLY' for i in range(len(ala))])
-        elif aa == 'ALA':
-            '''
-            Add CB for gly in original structure.
-            '''
-            ala = constant.ideal_ala.copy()
-            pr.calcTransformation(ala.select('name N CA C'), c.select('name N CA C')).apply(ala)
-            ala.setChids([c.getChids()[0] for x in range(len(ala))])
-            ala.setResnums([c.getResnums()[0] for x in range(len(ala))])
-            c = ala.select('resindex ' + str(i)  + ' ' + bb_sel)
+        if i in win_no_mutation:
+            c = target.select('resindex ' + str(i))
+        else:
+            c = target.select('resindex ' + str(i)  + ' ' + bb_sel)
+            if aa == 'GLY':
+                c.setResnames(['GLY' for i in range(len(c))])
+            elif aa == 'ALA':
+                '''
+                Add CB for gly in original structure.
+                '''
+                ala = constant.ideal_ala.copy()
+                pr.calcTransformation(ala.select('name N CA C'), c.select('name N CA C')).apply(ala)
+                ala.setChids([c.getChids()[0] for x in range(len(ala))])
+                ala.setResnums([c.getResnums()[0] for x in range(len(ala))])
+                c = ala.select(bb_sel)
         coords.extend(c.getCoords())
         chids.extend(c.getChids())
         names.extend(c.getNames())
         resnames.extend(c.getResnames())
         resnums.extend(c.getResnums())
+        betas.extend([0 for x in range(len(c))])
+        occu.extend([0 for x in range(len(c))])
 
     ag.setCoords(np.array(coords))
     ag.setChids(chids)
     ag.setNames(names)
     ag.setResnames(resnames)
     ag.setResnums(resnums)
+    ag.setBetas(betas)
+    ag.setOccupancies(occu)
     return ag
-
-

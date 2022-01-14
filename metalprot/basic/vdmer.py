@@ -102,6 +102,15 @@ def pair_wise_geometry_matrix(geometry_ag, metal_sel = 'name NI MN ZN CO CU MG F
     return aa_aa_pair, metal_aa_pair, angle_pair  
 
 
+def adjust_metal_bond_lenght(pdb_prody, bond_length_diff):
+    '''
+    To combine vdM with different metal, the metal bond distance is adjusted based on the database.
+    It is tricky to adjust the distance between Metal-Oxygen(ASP/GLU) if considering the bidentate contact.
+    '''
+    return
+
+
+
 class VDM:
     def __init__(self, query, id = -1, clu_rank = -1, score = 0, clu_num = 0, max_clu_num = 0, clu_total_num = 0, clu_member_ids= None, metal_atomgroup = None, win = None, path = None):
         '''

@@ -139,7 +139,7 @@ class Search_selfcenter(Search_vdM):
         return      
 
 
-    def selfcenter_write_info(self, key, info, end_tag = ''):
+    def selfcenter_write_info(self, key, info, path_tag = '', end_tag = ''):
         '''
         Write output.
         Too many output, May need optimization. 
@@ -147,7 +147,7 @@ class Search_selfcenter(Search_vdM):
         if not self.search_filter.write_filtered_result and info.after_search_filtered:
             return
             
-        outpath = 'win_' + '-'.join([self.target_index_dict[k] for k in key[0]]) + '/'
+        outpath = path_tag + 'win_' + '-'.join([self.target_index_dict[k] for k in key[0]]) + '/'
         outdir = self.workdir + outpath
         if not os.path.exists(outdir):
             os.mkdir(outdir)
@@ -190,7 +190,7 @@ class Search_selfcenter(Search_vdM):
         return 
 
 
-    def selfcenter_write_win(self, comb_dict):
+    def selfcenter_write_win(self, comb_dict, path_tag = ''):
         '''
         Write output.
         Too many output, May need optimization. 
@@ -198,7 +198,7 @@ class Search_selfcenter(Search_vdM):
         print('selfcenter search neighbor_write')
         for key in comb_dict.keys(): 
             info = comb_dict[key]
-            self.selfcenter_write_info(key, info, end_tag = '_' + info.tag)
+            self.selfcenter_write_info(key, info, path_tag = path_tag, end_tag = '_' + info.tag)
         return   
         
 

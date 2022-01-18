@@ -82,7 +82,7 @@ def get_metal_core_seq(pdb_prody, metal_sel, extend = 4):
 
 
 
-def get_metal_core_seq_2ndshell(pdb_prody, metal_sel, extend = 4):
+def get_metal_core_seq_2ndshell(pdb_prody, metal_sel, extend = 4, _2nd_extend = 0):
     metal = metal_sel.split(' ')[-1]
     nis = pdb_prody.select(metal_sel)
 
@@ -100,14 +100,14 @@ def get_metal_core_seq_2ndshell(pdb_prody, metal_sel, extend = 4):
             continue          
         inds = all_near.select('nitrogen or oxygen or sulfur').getResindices()
         ext_inds = core.extend_res_indices(inds, pdb_prody, extend)
-        _2ndshell_inds = core.get_2ndshell_indices(inds, pdb_prody, ni_index)
+        _2ndshell_inds = core.get_2ndshell_indices(inds, pdb_prody, ni_index, only_bb_2ndshell = False, _2nd_extend = _2nd_extend)
         count += 1
         sel_pdb_prody = pdb_prody.select('resindex ' + ' '.join([str(ind) for ind in ext_inds]) + ' '+ ' '.join([str(ind) for ind in _2ndshell_inds]) + ' ' + str(ni.getResindex()))
         metal_cores.append((pdb_prody.getTitle() + '_' + metal + '_'+ str(count), sel_pdb_prody))        
     return metal_cores
 
 
-def extract_all_core_seq_from_path(workdir, metal_sel, extend = 4, extract_2ndshell = False):
+def extract_all_core_seq_from_path(workdir, metal_sel, extend = 4, extract_2ndshell = False, _2ndshell_extend = 0):
     cores = []
     for pdb_path in os.listdir(workdir):
         if not pdb_path.endswith(".pdb"):
@@ -115,7 +115,7 @@ def extract_all_core_seq_from_path(workdir, metal_sel, extend = 4, extract_2ndsh
         try:
             pdb_prody = pr.parsePDB(workdir + pdb_path)
             if extract_2ndshell:
-                core = get_metal_core_seq_2ndshell(pdb_prody, metal_sel, extend)
+                core = get_metal_core_seq_2ndshell(pdb_prody, metal_sel, extend, _2ndshell_extend)
             else:
                 core = get_metal_core_seq(pdb_prody, metal_sel, extend)
             if core:

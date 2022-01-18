@@ -169,11 +169,11 @@ def write_metal_diff(workdir, metal_diffs, metals = ['CA', 'CO', 'CU', 'FE', 'MG
 
 # run cluster
 
-def run_cluster(_pdbs, workdir, outdir, rmsd, metal_sel, len_sel, align_sel, min_cluster_size = 0, tag = '', is_self_center = False):
+def run_cluster(_pdbs, workdir, outdir, rmsd, metal_sel, len_sel, align_sel, min_cluster_size = 0, tag = '', is_self_center = False, select_poses = []):
     if not is_self_center:
         clu = superimpose_aa_core(_pdbs, rmsd = rmsd, len_sel = len_sel, align_sel = align_sel, min_cluster_size = min_cluster_size)
     else:
-        clu = cluster_selfcenter(_pdbs, rmsd = rmsd, len_sel = len_sel, align_sel = align_sel, min_cluster_size = min_cluster_size)
+        clu = cluster_selfcenter(_pdbs, rmsd = rmsd, len_sel = len_sel, align_sel = align_sel, min_cluster_size = min_cluster_size, select_poses = select_poses)
     
     if not clu or len(clu.mems) == 0: 
         print('clu is None')
@@ -194,7 +194,7 @@ def run_cluster(_pdbs, workdir, outdir, rmsd, metal_sel, len_sel, align_sel, min
 
 ### new cluster method.
 
-def cluster_selfcenter(pdbs, rmsd = 0.5, len_sel = 5, align_sel = 'name C CA N O NI', min_cluster_size = 0):
+def cluster_selfcenter(pdbs, rmsd = 0.5, len_sel = 5, align_sel = 'name C CA N O NI', min_cluster_size = 0, select_poses = []):
     '''
     selfcenter cluster method.
     '''
@@ -202,8 +202,14 @@ def cluster_selfcenter(pdbs, rmsd = 0.5, len_sel = 5, align_sel = 'name C CA N O
     clu.rmsd_cutoff = rmsd
     clu.pdbs = []
 
-    for pdb in pdbs:
-        c = pdb.select(align_sel).getCoords()       
+    for i in range(len(pdbs)):
+        pdb = pdbs[i]
+        if len(select_poses) > 0:
+            select_pos = select_poses[i]
+            select_str = align_sel + ' and resindex ' + ' '.join([str(x) for x in select_pos])
+        else:
+            select_str = align_sel
+        c = pdb.select(select_str).getCoords()       
         if len(c)!= len_sel: 
             continue
         clu.pdb_coords.append(c)

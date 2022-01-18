@@ -86,6 +86,7 @@ print(len(all_2ndshell_vdms))
 ss.secondshell_vdms = all_2ndshell_vdms
 len(list(ss.best_aa_comb_dict))
 
-search_2ndshell.run_search_2ndshell(ss.best_aa_comb_dict, ss.target, ss.secondshell_vdms, ss.rmsd_2ndshell)
+search_2ndshell.run_search_2ndshell(ss.best_aa_comb_dict, ss.target, ss.secondshell_vdms, allInOne2ndShellVdm, rmsd_2ndshell = 1.0)
 
-search_2ndshell.write_2ndshell(ss.workdir, ss.best_aa_comb_dict)
+search_2ndshell.write_2ndshell(ss, ss.workdir, ss.best_aa_comb_dict)
+

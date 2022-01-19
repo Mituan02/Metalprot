@@ -16,7 +16,7 @@ import numpy as np
 #You can either add the python package path.
 #sys.path.append(r'/mnt/e/GitHub_Design/Metalprot')
 from metalprot.search import extract_vdm
-from metalprot.basic import hull, quco
+from metalprot.basic import prody_ext, quco
 import pickle
 
 '''
@@ -24,7 +24,7 @@ python /mnt/e/GitHub_Design/Metalprot/scrips/search/database_pickle.py
 '''
 
 query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_category/'
-
+query_dir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/'
 # Get query pdbs, Add the cluster metal points into the query.hull_points
 
 centroid_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['AAMetalPhiPsi', 'cluster'], file_name_not_includes= ['CYS'], score_cut = 0, clu_num_cut = 0)
@@ -57,7 +57,7 @@ for _query in centroid_querys:
         q.max_clu_num = len(clu.querys)
         q.clu_rank = int(query.query.getTitle().split('_')[3])
         if 'centroid' in q.query.getTitle():      
-            q.metal_atomgroup = hull.transfer2pdb(melal_coord_in_clu)  
+            q.metal_atomgroup = prody_ext.transfer2pdb(melal_coord_in_clu)  
             cluster_key = q.get_cluster_key()
             cluster_centroid_dict[cluster_key] = q.id
         all_vdms.append(q)
@@ -65,7 +65,7 @@ for _query in centroid_querys:
         all_coords.append(q.query.select(metal_sel)[0].getCoords())
         query_id += 1
 
-all_metal_vdm.metal_atomgroup = hull.transfer2pdb(all_coords)
+all_metal_vdm.metal_atomgroup = prody_ext.transfer2pdb(all_coords)
 
 outdir = query_dir + 'pickle_noCYS/'
 os.makedirs(outdir, exist_ok= True)

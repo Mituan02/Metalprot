@@ -12,7 +12,8 @@ python /mnt/e/GitHub_Design/Metalprot/scrips/database_generate/run_cluster_singl
 
 def cluster_single(workdir, outdir, is_self_center, metal_sel, align_sel, len_sel):
 
-    aas = ['HIS', 'GLU', 'ASP', 'CYS']
+    #aas = ['HIS', 'GLU', 'ASP', 'CYS']
+    aas = ['HIS', 'GLU', 'ASP']
     for AA in aas:
         #Change len_sel according to aa sidechain number. His:6, Glu: 5, Asp: 4, Cys: 2
         if AA == 'HIS':
@@ -38,7 +39,7 @@ def cluster_single(workdir, outdir, is_self_center, metal_sel, align_sel, len_se
 ### set up parameters
 
 workdir = "/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/20211013_vdm_reps/"
-
+workdir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_vdm_reps/'
 is_self_center = True
 
 
@@ -49,6 +50,7 @@ align_sel = 'heavy and not name NI MN ZN CO CU FE'
 len_sel = 8
 
 outdir = '/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/20211209_selfcenter_nometal/'
+outdir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/'
 os.makedirs(outdir, exist_ok = True)
 
 cluster_single(workdir, outdir, is_self_center, metal_sel, align_sel, len_sel)

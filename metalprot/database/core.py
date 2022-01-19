@@ -38,7 +38,7 @@ def extend_res_indices(inds_near_res, pdb_prody, extend = 4):
     return extend_inds
 
 
-def get_2ndshell_indices(inds, pdb_prody, ni_index):
+def get_2ndshell_indices(inds, contact_aa_resinds, pdb_prody, ni_index, only_bb_2ndshell = False, _2nd_extend = 0):
     _2nd_resindices = []
     for ind in inds:
         if pdb_prody.select('resindex ' + str(ind)).getResnames()[0] == 'HIS':
@@ -70,11 +70,20 @@ def get_2ndshell_indices(inds, pdb_prody, ni_index):
                 resindex = pdb_prody.select('resindex ' + str(ind) + ' name OE1')[0].getResindex()
         else:
             continue     
-        all_near = pdb_prody.select('protein and heavy and within 3.4 of index ' + str(index) + ' and not resindex ' + str(resindex))
+        if only_bb_2ndshell:
+            all_near = pdb_prody.select('protein and heavy and backbone and within 3.4 of index ' + str(index) + ' and not resindex ' + str(resindex))
+        else:
+            all_near = pdb_prody.select('protein and heavy and within 3.4 of index ' + str(index) + ' and not resindex ' + str(resindex))
+
         if not all_near or not all_near.select('nitrogen or oxygen or sulfur'):
             continue
         inds_2nshell = all_near.select('nitrogen or oxygen or sulfur').getResindices()
-        _2nd_resindices.extend(inds_2nshell) 
+        inds_2nshell = [x for x in inds_2nshell if x not in contact_aa_resinds] #Remove from contact_aa_resinds
+        if _2nd_extend > 0:
+            #Here we extend the inds_2nshell, so later we can extract more bb infomation.
+            inds_2nshell = extend_res_indices(inds_2nshell, pdb_prody, _2nd_extend)
+
+        _2nd_resindices.extend(np.unique(inds_2nshell)) 
 
     return _2nd_resindices
 
@@ -136,12 +145,12 @@ class Core:
         if not key in self.atomGroupDict.keys():
             return
 
-        if not os.path.exists(outdir):
-            os.mkdir(outdir)
+        os.makedirs(outdir, exist_ok=True)
 
         count = 0
         for ag in self.atomGroupDict[key]:
-            pr.writePDB(outdir + self.full_pdb.getTitle() + '_mem' + str(count) + '.pdb', ag)
+            #ag[1] here is supposed to be tag in the title.
+            pr.writePDB(outdir + self.full_pdb.getTitle() + '_mem' + str(count) + ag[1] + '.pdb', ag[0])
             count+=1
             
         
@@ -153,7 +162,7 @@ class Core:
                 continue
             sel_pdb_prody = self.full_pdb.select('resindex ' + str(resind) + ' '+ str(self.metal_resind))
             
-            self.add2atomGroupDict(key, sel_pdb_prody)            
+            self.add2atomGroupDict(key, (sel_pdb_prody, ''))            
         return 
         
     
@@ -170,7 +179,7 @@ class Core:
             #print(self.full_pdb.getTitle() + '+' + '-'.join([str(x) for x in ext_inds]))
             sel_pdb_prody = self.full_pdb.select('resindex ' + ' '.join([str(ind) for ind in ext_inds]) + ' '+ str(self.metal_resind))
 
-            self.add2atomGroupDict(key, sel_pdb_prody)
+            self.add2atomGroupDict(key, (sel_pdb_prody, ''))
         return
 
 
@@ -197,7 +206,7 @@ class Core:
             sel_pdb_prody = self._generate_AA_phipsi_Metal(resind)
             if not sel_pdb_prody:
                 continue
-            self.add2atomGroupDict(key, sel_pdb_prody)
+            self.add2atomGroupDict(key, (sel_pdb_prody, ''))
         return
 
 
@@ -236,7 +245,7 @@ class Core:
             ext_inds = [x for x in ext_inds if x >= pairs_ind[v][0]-extention_out and x <= pairs_ind[v][1]+extention_out]
             sel_pdb_prody = self.full_pdb.select('resindex ' + ' '.join([str(ind) for ind in ext_inds]) + ' '+ str(self.metal_resind))
             
-            self.add2atomGroupDict(key, sel_pdb_prody)
+            self.add2atomGroupDict(key, (sel_pdb_prody, ''))
         return
 
 
@@ -260,7 +269,7 @@ class Core:
         for p in pairs_ind:
             sel_pdb_prody = self.full_pdb.select('resindex ' + str(p[0]) + ' ' +  str(p[1]) + ' '+ str(self.metal_resind))
             
-            self.add2atomGroupDict(key, sel_pdb_prody)
+            self.add2atomGroupDict(key, (sel_pdb_prody, ''))
         return
 
 
@@ -276,18 +285,53 @@ class Core:
         return inds
 
 
-    def generate_AA_2ndShell_Metal(self, key = 'AA2ndShellMetal', filter_AA = False, AA = 'HIS'):
+    def generate_AA_2ndShell_Metal(self, key = 'AA2ndShellMetal', filter_AA = False, AA = 'HIS', only_bb_2ndshell = False):
         for resind in self.contact_aa_resinds:
             if filter_AA and not self.full_pdb.select('resname ' + AA + ' and resindex ' + str(resind)):
                 continue      
             #inds = get_inds_from_resind(pdb_prody, resind, aa)
-            _2nshell_resinds = get_2ndshell_indices([resind], self.full_pdb, self.metal.getIndex())
+            _2nshell_resinds = get_2ndshell_indices([resind], self.contact_aa_resinds, self.full_pdb, self.metal.getIndex(), only_bb_2ndshell = only_bb_2ndshell)
             if len(_2nshell_resinds) > 0:
                 for _2resind in _2nshell_resinds:      
                     #print(self.full_pdb.getTitle() + '+' + '-'.join([str(x) for x in _2nshell_resinds]))
                     sel_pdb_prody = self.full_pdb.select('resindex ' + str(resind) + ' ' + str(_2resind) + ' ' + str(self.metal_resind))
                   
-                    self.add2atomGroupDict(key, sel_pdb_prody)
+                    self.add2atomGroupDict(key, (sel_pdb_prody, '_aa' + str(resind) + '_aa' + str(_2resind) + '_'))
+        return
+
+
+    def generate_AA_2ndShell_connect_Metal(self, key = 'AA2ndShellConnectMetal', filter_AA = False, AA = 'HIS', only_bb_2ndshell = False, extend = 4 ,_2nd_extend = 4, generate_sse = False):
+        '''
+        The purpose of the function is to find 2nd shell that are in the same secondary structure with the 1st shell.
+        At the same time, the function could be used to find bb only 2ndshell vdMs. 
+        '''
+        for resind in self.contact_aa_resinds:
+            if filter_AA and not self.full_pdb.select('resname ' + AA + ' and resindex ' + str(resind)):
+                continue      
+            _resinds = extend_res_indices([resind], self.full_pdb, extend)
+            _resnums = self.full_pdb.select('resindex ' + ' '.join([str(r) for r in _resinds])).getResnums()
+            #inds = get_inds_from_resind(pdb_prody, resind, aa)
+            _2nshell_resinds = get_2ndshell_indices([resind], self.contact_aa_resinds, self.full_pdb, self.metal.getIndex(), only_bb_2ndshell = only_bb_2ndshell)
+            if len(_2nshell_resinds) > 0:
+                for _2resind in _2nshell_resinds:      
+                    #print(self.full_pdb.getTitle() + '+' + '-'.join([str(x) for x in _2nshell_resinds]))
+                    inds_2ndshell = extend_res_indices([_2resind], self.full_pdb, _2nd_extend)
+                    #Note that the resnums could come from different chain or segments. The chances are low though.
+                    _resnums_2ndshell = self.full_pdb.select('resindex ' + ' '.join([str(r) for r in inds_2ndshell])).getResnums()
+
+                    if len(set(_resinds).intersection(inds_2ndshell)) <= 0 or len(set(_resnums).intersection(_resnums_2ndshell)) <= 0:
+                        continue
+                    if generate_sse:
+                        #Here try to generate the secondary structure by get [resind:_2resind].
+                        #all_inds = list(set(_resinds) | set(inds_2ndshell))
+                        if resind < _2resind:
+                            all_inds = [x for x in range(resind, _2resind + 1, 1)]
+                        else:
+                            all_inds = [x for x in range(_2resind, resind + 1, 1)]
+                        sel_pdb_prody = self.full_pdb.select('resindex ' + ' '.join([str(x) for x in all_inds]) +  ' ' + str(self.metal_resind))                       
+                    else:
+                        sel_pdb_prody = self.full_pdb.select('resindex ' + str(resind) + ' ' + str(_2resind) + ' ' + str(self.metal_resind))
+                    self.add2atomGroupDict(key, (sel_pdb_prody, '_aa' + str(resind) + '_aa' + str(_2resind) + '_'))
         return
 
 
@@ -314,8 +358,9 @@ class Core:
         for xs in itertools.combinations(atom_inds, 3):
             sel_pdb_prody = self.full_pdb.select('index ' + ' '.join([str(x) for x in xs])+ ' ' + str(self.metal.getIndex()))
 
-            self.add2atomGroupDict(key, sel_pdb_prody)            
+            self.add2atomGroupDict(key, (sel_pdb_prody, ''))            
         return 
+
 
     def generate_atom_contact(self, key = 'AtomContact'):
         '''
@@ -325,5 +370,5 @@ class Core:
 
         sel_pdb_prody = self.full_pdb.select('index ' + ' '.join([str(x) for x in atom_inds])+ ' ' + str(self.metal.getIndex()))
         _key = key + str(len(sel_pdb_prody))
-        self.add2atomGroupDict(_key, sel_pdb_prody)            
+        self.add2atomGroupDict(_key, (sel_pdb_prody, ''))            
         return 

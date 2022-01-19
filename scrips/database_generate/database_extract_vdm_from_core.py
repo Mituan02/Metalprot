@@ -23,9 +23,9 @@ def extract_single_vdm(cores, outdir, AA, key, basic = True, extention = None, n
     return
 
 
-def extract_vdm(workdir, outdir):
-    cores = database_extract.load_cores(workdir + '_Seq_core_reps/')
-    aas = ['HIS', 'GLU', 'ASP', 'CYS']
+def extract_vdm(coredir, outdir, aas):
+    cores = database_extract.load_cores(coredir)
+
     for AA in aas:
         ### extract core
         extract_single_vdm(cores, outdir + 'AAMetalPhiPsi_' + AA + '_reps/', AA = AA, key = 'AAMetalPhiPsi_' + AA, basic = False, phipsi=True)
@@ -51,4 +51,7 @@ workdir = "/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/"
 outdir = workdir + '20211209_vdm_reps/'
 os.makedirs(outdir, exist_ok = True)
 
-extract_vdm(workdir, outdir)
+#aas = ['HIS', 'GLU', 'ASP', 'CYS']
+aas = ['HIS', 'GLU', 'ASP']
+
+extract_vdm(workdir, outdir, aas)

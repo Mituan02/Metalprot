@@ -112,8 +112,8 @@ class Search_eval(Search_selfcenter):
         # if len([comb_dict.keys()]) <= 0:
         #     return comb_dict
 
-        self.selfcenter_write_win(comb_dict)
-        outpath = 'closest_win_' + '_'.join([str(w) for w in win_comb]) + '/'
+        self.selfcenter_write_win(comb_dict, path_tag= 'closest_calc_')
+        outpath = 'closest_calc_win_' + '-'.join([self.target_index_dict[k] for k in win_comb])  + '/'
         outdir = self.workdir + outpath  
         self.neighbor_write_summary(outdir, comb_dict, name = '_closest_summary_' + self.target.getTitle() + '.tsv')
 
@@ -230,7 +230,7 @@ class Search_eval(Search_selfcenter):
         win_combs = []
         vdM_combs = []
         for i in range(len(wins)):
-            evaldir = self.workdir + 'closest_win_' + '_'.join([str(w) for w in wins[i]])
+            evaldir = self.workdir + 'closest_win_' + '-'.join([self.target_index_dict[k] for k in wins[i]])
             os.makedirs(evaldir, exist_ok=True)
             best_wins = []
             best_vdMs = []

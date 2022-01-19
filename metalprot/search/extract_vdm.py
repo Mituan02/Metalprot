@@ -7,7 +7,7 @@ from ..database.database_extract import get_all_pbd_prody
 from ..database.database_cluster import clu_info
 from ..basic.vdmer import VDM
 from ..basic.quco import Query, Comb, Cluster
-from ..basic.hull import transfer2pdb
+from ..basic.prody_ext import transfer2pdb
 
 def read_cluster_info(file_path):
     clu_infos = []

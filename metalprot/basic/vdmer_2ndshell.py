@@ -15,13 +15,20 @@ def organize_2ndshellVdm(query):
     metal_resind = metal.getResindex()
 
     contact_aa = query.select('protein and not carbon and not hydrogen and within 2.83 of resindex ' + str(metal_resind))
-    _1stshell = query.select('name N C CA O and resindex ' + ' '.join([str(x) for x in contact_aa.getResindices()]))
+    _1stshell = query.select('protein and resindex ' + ' '.join([str(x) for x in contact_aa.getResindices()]))
     _1stshell_inds = _1stshell.getResindices()
     all_resinds = query.select('protein').getResindices()
     _2ndshell_resinds = [x for x in all_resinds if x not in _1stshell_inds]
-    if len(_2ndshell_resinds) == 0:
+    #In certain situation, two contact aas are 2ndshell to each other will be ignored.
+    if len(_2ndshell_resinds) == 0: 
         return None
-    _2ndshell = query.select('name N C CA O and resindex ' + ' '.join([str(x) for x in _2ndshell_resinds]))
+    _2ndshell = query.select('protein and resindex ' + ' '.join([str(x) for x in _2ndshell_resinds]))
+
+    coords = []
+    chids = []
+    names = []
+    resnames = []
+    resnums = []
 
     neary_aas_coords = []
     neary_aas_coords.extend([x for x in _2ndshell.getCoords()])
@@ -29,14 +36,26 @@ def organize_2ndshellVdm(query):
     neary_aas_coords.append(metal.getCoords())
     coords = np.array(neary_aas_coords)
 
-    names = []
+    chids.extend(['A' for i in range(len(coords))])
+
     names.extend(_2ndshell.getNames())
     names.extend(_1stshell.getNames())
     names.append(metal.getName())
 
+    resnames.extend(_2ndshell.getResnames())
+    resnames.extend(_1stshell.getResnames()) #In a weird case '1996_1dvf_ZN_1', the 1st and 2nd resnames are the same.
+    resnames.append(metal.getResname())
+
+    resnums.extend(_2ndshell.getResnums())
+    resnums.extend(_1stshell.getResnums())
+    resnums.append(metal.getResnum())
+
     ag = pr.AtomGroup(query.getTitle())
     ag.setCoords(coords)
     ag.setNames(names)
+    ag.setResnums(resnums)
+    ag.setResnames(resnames)
+    ag.setChids(chids)
 
     return ag
 

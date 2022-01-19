@@ -8,12 +8,12 @@ import prody as pr
 from metalprot.database import database_extract, database_evaluate
 import itertools
 import numpy as np
-from numpy.core.fromnumeric import argmin
+
 
 '''
 Extract binary metal binding dists and angles. 
 '''
-metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
+metal_sel = 'name NI MN ZN CO CU MG FE' 
 
 root_dir = '/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20210624/'
 

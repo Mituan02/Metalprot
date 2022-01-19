@@ -110,7 +110,11 @@ def vdm_ligand_clash(vdm, ligand, clash_radius = 2.7):
 
     ligand_coords = ligand.select('heavy').getCoords()
 
-    nbr = NearestNeighbors(radius=clash_radius).fit(vdm_coords)
+
+    if len(vdm_coords) == 0:
+        print(vdm[['CG', 'rota', 'probe_name', 'chain', 'name']])
+        return False
+    nbr = NearestNeighbors(radius=clash_radius).fit(np.array(vdm_coords))
     adj_matrix = nbr.radius_neighbors_graph(ligand_coords).astype(bool)
 
     if adj_matrix.sum() > 0:

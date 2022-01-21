@@ -12,18 +12,17 @@ centroid_query_dict = [clu_key:vdm id] for example '(HIS, 1234): 4567'
 import os
 import prody as pr
 from metalprot.search import extract_vdm
-from metalprot.basic import hull
+from metalprot.basic import prody_ext
 import pickle
 
 '''
 python /mnt/e/GitHub_Design/Metalprot/scrips/search_selfcenter/database_selfcenter_pickle.py
 '''
 
-#query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211008/20211009_selfcenter/'
 query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/'
+query_dir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/'
 
-
-centroid_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['AAMetalPhiPsi', 'cluster'], file_name_not_includes=['@'], score_cut = 0, clu_num_cut = 0)
+centroid_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['AAMetalPhiPsi', 'cluster'], file_name_not_includes=['@', 'CYS'], score_cut = 0, clu_num_cut = 0)
 
 
 centroid_query_dict = {}
@@ -34,7 +33,7 @@ for i in range(len(centroid_querys)):
 
 #Prepare all the data, this should be optimized in the future.
 
-metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
+metal_sel = 'name NI MN ZN CO CU MG FE' 
 align_sel = 'name N CA C'
 all_metal_vdm = centroid_querys[0].copy()
 
@@ -83,7 +82,7 @@ for query_id in range(len(centroid_querys)):
     query.id = query_id
     query.clu_rank = int(query.query.getTitle().split('_')[3]) 
     query.max_clu_num = max_clu_num
-    query.metal_atomgroup = hull.transfer2pdb(cluster_coords)
+    query.metal_atomgroup = prody_ext.transfer2pdb(cluster_coords)
     query.clu_member_ids = selfcenter_cluster_queryid
     all_vdms.append(query)
 
@@ -91,7 +90,7 @@ for query_id in range(len(centroid_querys)):
     cluster_centroid_dict[cluster_key] = query.id
 
 
-all_metal_vdm.metal_atomgroup = hull.transfer2pdb(all_coords)
+all_metal_vdm.metal_atomgroup = prody_ext.transfer2pdb(all_coords)
 
 '''
 #plot the coords of all metals.
@@ -100,7 +99,7 @@ hull.write2pymol(points, query_dir, 'align_' + all_metal_vdm.query.getTitle())
 '''
 
 #query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/20210916_2017_2018_selfcenter_alignBB/'
-outdir = query_dir + 'pickle_all/'
+outdir = query_dir + 'pickle_noCYS/'
 os.makedirs(outdir, exist_ok= True)
 
 with open(outdir + 'all_metal_vdm.pkl', 'wb') as f:

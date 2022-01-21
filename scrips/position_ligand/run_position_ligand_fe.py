@@ -13,19 +13,25 @@ import prody as pr
 import os
 
 import sys
-sys.path.append(r'/wynton/home/degradolab/lonelu/GitHub_Design/Combs2')
-import combs2
+#sys.path.append(r'/wynton/home/degradolab/lonelu/GitHub_Design/Combs2')
+#import combs2
+#from metalprot.combs import search_cg_vdms as metalprot_scv
 
-from metalprot.combs import search_cg_vdms as metalprot_scv
 import pandas as pd
 import os
 pd.set_option("display.max_columns", None)
+
+'''
+python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/run_position_ligand_fe.py
+'''
 
 start_time = time.time()
 
 ########################################################################################
 
 query_dir = '/mnt/e/DesignData/ligands/FE_rcsb/20211206/20211206_selfcenter/pickle_all/'
+query_dir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/pickle_noCYS/'
+
 
 with open(query_dir + 'all_metal_vdm.pkl', 'rb') as f:
     query_all_metal = pickle.load(f)
@@ -41,13 +47,14 @@ print(len(all_querys))
 
 ### run Search_struct
 
-workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/ntf2/'
+workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/ntf2_1cqs/'
 
 outdir = workdir + 'output_selfcenter/'
 
 target_path = workdir + '1cqs.pdb'
 
-win_filter = [16, 17, 84]
+#win_filter = [16, 17, 84]
+win_filter = []
 
 allowed_aa_combinations = [['H', 'H', 'D'], ['H', 'H', 'E']] 
 #allowed_aa_combinations = []
@@ -72,7 +79,7 @@ ss.write_for_combs()
 
 ########################################################################################
 
-
+'''
 lig_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/tts_fe.pdb'
 lig = pr.parsePDB(lig_path)
 
@@ -226,3 +233,4 @@ for sl in search_ligands:
 
     metalprot_scv.write_summary(outdir, CgCombInfoDict, name = '_summary.tsv')
 
+'''

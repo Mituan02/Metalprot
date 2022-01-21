@@ -80,7 +80,7 @@ class Search_vdM:
     '''
     def __init__(self, target_pdb, workdir, vdms, cluster_centroid_dict, all_metal_vdm, 
     num_contact_vdms = [3], metal_metal_dist = 0.45, win_filtered = [], 
-    validateOriginStruct = False, search_filter = None, geometry_path= None, parallel = False, density_radius = 0.6,
+    validateOriginStruct = False, search_filter = None, geometry_path= None, geometry_o_path = None, parallel = False, density_radius = 0.6,
     secondshell_vdms = None, rmsd_2ndshell = 0.5, allowed_aa_combinations = [],
     output_wincomb_overlap = False, eval_density = False, eval_mmdist = False):
         self.time_tag = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') 
@@ -116,6 +116,12 @@ class Search_vdM:
         else:
             self.geo_struct = constant.tetrahydra_geo
 
+        if geometry_o_path:
+            self.geo_o_struct = pr.parsePDB(geometry_path)
+        else:
+            self.geo_o_struct = constant.tetrahydra_geo_o
+
+        
         #neighbor parallel mechanism-----------
         self.parallel = parallel
 
@@ -363,14 +369,15 @@ class Search_vdM:
                     comb_dict[key].after_search_filtered = True  
                 else:
                     comb_dict[key].vdm_no_clash = 1    
+
             if self.search_filter.after_search_open_site_clash:
                 if not comb_dict[key].ideal_geo:
                     ideal_geometry, rmsd = Search_filter.get_min_geo(info.geometry, self.geo_struct)  
                     comb_dict[key].geo_rmsd = rmsd
                     comb_dict[key].ideal_geo = ideal_geometry
 
-                ideal_geo_o = constant.tetrahydra_geo_o
-                min_geo_struct, min_rmsd = Search_filter.get_min_geo(comb_dict[key].ideal_geo, ideal_geo_o) 
+
+                min_geo_struct, min_rmsd = Search_filter.get_min_geo(comb_dict[key].ideal_geo, self.geo_o_struct) 
                 if Search_filter.open_site_clashing(vdms, _target, min_geo_struct, self.search_filter.open_site_dist):
                     comb_dict[key].open_site_clash = -1
                     comb_dict[key].after_search_filtered = True 

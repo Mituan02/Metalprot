@@ -122,16 +122,19 @@ class Search_filter:
                 coords.append(aa_coords[x])
             coords.append(metal_coord) 
             _geo_struct.setCoords(np.array(coords))
-            pr.calcTransformation(_geo_struct.select('not oxygen'), geometry).apply(_geo_struct)
-            
-            rmsd = pr.calcRMSD(_geo_struct.select('not oxygen'), geometry)
-            if not min_geo_struct:
-                min_geo_struct = _geo_struct
-                min_rmsd = rmsd
-            elif rmsd < min_rmsd:
-                min_geo_struct = _geo_struct
-                min_rmsd = rmsd
-
+            try:
+                pr.calcTransformation(_geo_struct.select('not oxygen'), geometry).apply(_geo_struct)
+                
+                rmsd = pr.calcRMSD(_geo_struct.select('not oxygen'), geometry)
+                if not min_geo_struct:
+                    min_geo_struct = _geo_struct
+                    min_rmsd = rmsd
+                elif rmsd < min_rmsd:
+                    min_geo_struct = _geo_struct
+                    min_rmsd = rmsd
+            except Exception as e:
+                print(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
+                
         return min_geo_struct, min_rmsd
         
 

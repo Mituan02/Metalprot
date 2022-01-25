@@ -4,26 +4,7 @@ import numpy as np
 
 metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
 
-
-def organize_2ndshellVdm(query):
-    '''
-    A query for 2nd shell can have different atom orders as an prody.atomGroup.
-    The function is supposed to get the atomGroup of the query with the right atom order.
-    '''
-
-    metal = query.select(metal_sel)[0]
-    metal_resind = metal.getResindex()
-
-    contact_aa = query.select('protein and not carbon and not hydrogen and within 2.83 of resindex ' + str(metal_resind))
-    _1stshell = query.select('protein and resindex ' + ' '.join([str(x) for x in contact_aa.getResindices()]))
-    _1stshell_inds = _1stshell.getResindices()
-    all_resinds = query.select('protein').getResindices()
-    _2ndshell_resinds = [x for x in all_resinds if x not in _1stshell_inds]
-    #In certain situation, two contact aas are 2ndshell to each other will be ignored.
-    if len(_2ndshell_resinds) == 0: 
-        return None
-    _2ndshell = query.select('protein and resindex ' + ' '.join([str(x) for x in _2ndshell_resinds]))
-
+def _generate_2ndshellVdm(query, _2ndshell, _1stshell, metal):
     coords = []
     chids = []
     names = []
@@ -56,8 +37,64 @@ def organize_2ndshellVdm(query):
     ag.setResnums(resnums)
     ag.setResnames(resnames)
     ag.setChids(chids)
+    return ag
+
+def organize_2ndshellVdm(query):
+    '''
+    A query for 2nd shell can have different atom orders as an prody.atomGroup.
+    The function is supposed to get the atomGroup of the query with the right atom order.
+    '''
+
+    metal = query.select(metal_sel)[0]
+    metal_resind = metal.getResindex()
+
+    contact_aa = query.select('protein and not carbon and not hydrogen and within 2.83 of resindex ' + str(metal_resind))
+    _1stshell = query.select('protein and resindex ' + ' '.join([str(x) for x in contact_aa.getResindices()]))
+    _1stshell_inds = [_1stshell.getResindices()[0]]
+    all_resinds = query.select('protein').getResindices()
+    _2ndshell_resinds = [x for x in all_resinds if x not in _1stshell_inds]
+    #In certain situation, two contact aas are 2ndshell to each other will be ignored.
+    if len(_2ndshell_resinds) == 0: 
+        print('Not a 2ndshell: ' + query.getTitle())
+        return None
+    _2ndshell = query.select('protein and resindex ' + ' '.join([str(x) for x in _2ndshell_resinds]))
+
+    ag = _generate_2ndshellVdm(query, _2ndshell, _1stshell, metal)
 
     return ag
+
+
+def organize_2ndshellVdm_probe(query):
+    '''
+    A query for 2nd shell can have different atom orders as an prody.atomGroup.
+    The function is supposed to get the atomGroup of the query with the right atom order.
+
+    Different from the previous function, this function tried to apply to 2ndshell vdms from probe calculated Hbond.
+    '''
+
+    metal = query.select(metal_sel)[0]
+
+    itags = query.getTitle().split('_')
+    if itags[5]!= 'hb':
+        print('Please check the naming of the 2nd shell vdm.')
+        return 
+    
+    
+    _1stshell = query.select('chid ' + itags[6] + ' resnum ' + str(itags[7]))
+
+    if not _1stshell:
+        print(query.getTitle() +  '_1stshell is None')
+
+    _2ndshell = query.select('chid ' + itags[11] + ' resnum ' + str(itags[12]))
+    
+    
+    if not _2ndshell:
+        print(query.getTitle() + '_2ndshell is None')
+    ag = _generate_2ndshellVdm(query, _2ndshell, _1stshell, metal)
+   
+    return ag
+
+
 
 class SecondShellVDM():
     '''

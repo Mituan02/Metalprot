@@ -1,14 +1,9 @@
 import itertools
-from logging import NullHandler
 import os
 from numpy.core.fromnumeric import argmin
 import prody as pr
-from scipy.spatial.distance import cdist
-from dataclasses import dataclass
-import shutil
-import sys
 import numpy as np
-import matplotlib.pyplot as plt
+
 
 # According to the prody atom flag (http://prody.csb.pitt.edu/manual/reference/atomic/flags.html#flags), NI MN ZN CO CU MG FE CA are not all flag as ion. 
 # Note that calcium is read as CA, which is same as alpha carbon in prody selection. 
@@ -39,6 +34,9 @@ def extend_res_indices(inds_near_res, pdb_prody, extend = 4):
 
 
 def get_2ndshell_indices(inds, contact_aa_resinds, pdb_prody, ni_index, only_bb_2ndshell = False, _2nd_extend = 0):
+    '''
+    The method is to extract 2nd shell contact by applying heavy atom distance cut off 3.4.
+    '''
     _2nd_resindices = []
     for ind in inds:
         if pdb_prody.select('resindex ' + str(ind)).getResnames()[0] == 'HIS':
@@ -121,6 +119,7 @@ def get_contact(pdbs):
     atom_contact_pdb.setNames(names)
         
     return atom_contact_pdb
+
 
 class Core:
     def __init__(self, full_pdb):

@@ -12,7 +12,7 @@ class Search_filter:
     after_search_filter_geometry = False, filter_based_geometry_structure = False, angle_tol = 5, aa_aa_tol = 0.5, aa_metal_tol = 0.2,
     pair_angle_range = None, pair_aa_aa_dist_range = None, pair_metal_aa_dist_range = None,
     after_search_filter_qt_clash = False, vdm_vdm_clash_dist = 2.7, vdm_bb_clash_dist = 2.2, 
-    after_search_open_site_clash = True, open_site_dist = 3.0, write_filtered_result = False, 
+    after_search_open_site_clash = False, open_site_dist = 3.0, write_filtered_result = False, 
     selfcenter_filter_member_phipsi = True):
 
         self.filter_abple = filter_abple

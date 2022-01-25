@@ -18,10 +18,14 @@ python /mnt/e/GitHub_Design/Metalprot/scrips/search_2ndshell/database_2ndshell_p
 '''
 
 vdm_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/20220116_selfcenter_bb2ndshell_notconnect/'
+vdm_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/_Seq_core_2ndshell_date_reps_probe2ndshell/'
+
+
 outdir = vdm_dir + 'pickle_noCYS/'
 os.makedirs(outdir, exist_ok=True)
 
-centroid_vdms = extract_vdm.extract_all_centroid(vdm_dir, summary_name = '_summary.txt', file_name_includes = ['AA2ndS', 'cluster'], file_name_not_includes=['CYS'], score_cut = 0, clu_num_cut = 0)
+centroid_vdms = extract_vdm.extract_all_centroid(vdm_dir, summary_name = '_summary.txt', file_name_includes = ['cluster'], file_name_not_includes=['CYS'], score_cut = 0, clu_num_cut = 0)
+print(len(centroid_vdms))
 
 ### Generate all_2ndshell_vdms.
 root_vdm = centroid_vdms[0]
@@ -37,7 +41,7 @@ for vdm_id in range(len(centroid_vdms)):
         transform = pr.calcTransformation(_vdm.query.select('resindex 1 and name N C CA'), root_vdm.query.select('resindex 1 and name N C CA'))
         transform.apply(_vdm.query)
     except:
-        print(_vdm.query.getTitle())
+        print('Failed transform: ' + _vdm.query.getTitle())
         continue
 
     vdm = vdmer_2ndshell.SecondShellVDM(_vdm.query, score = _vdm.score, clu_num = _vdm.clu_num, clu_total_num = _vdm.clu_total_num)
@@ -62,13 +66,15 @@ resnums = []
 last = 0
 for _vdm in all_2ndshell_vdms:
     qs = _vdm.query.select('name N C CA O MG MN FE CO NI CU ZN')
+    if len(qs) != 9:
+        print('Coords len is wrong.' + _vdm.query.getTitle())
+        continue
     coords.extend(qs.getCoords())
     names.extend(qs.getNames())
     resnames.extend(qs.getResnames())
     resnums.extend([last, last, last, last, last + 1, last + 1, last+ 1, last + 1, last + 2])
     last += 3
-    if len(qs) != 9:
-        print('Coords len is wrong.' + _vdm.query.getTitle())
+
 allInOne2ndShellVdm.setCoords(coords)
 chids = ['A' for i in range(len(coords))]
 allInOne2ndShellVdm.setNames(names)

@@ -147,21 +147,22 @@ def write_2ndshell(ss, workdir, comb_dict):
     for key in comb_dict.keys():
         outdir = workdir + 'win_' + '-'.join([ss.target_index_dict[w] for w in key[0]]) + '/'
         
-        tag = 'win_' + '-'.join([ss.target_index_dict[w] for w in key[0]]) + '_clu_' + '-'.join(k[0] + '-' + str(k[1]) for k in key[1])
+        tag = 'W_' + '-'.join([ss.target_index_dict[w] for w in key[0]]) + '_X_' + '-'.join(k[0] + '-' + str(k[1]) for k in key[1])
         
-        outdir += tag + '_2ndS/'
+        outdir += tag + '_hb/'
         os.makedirs(outdir, exist_ok=True)
 
         for w in key[0]:
             for c in comb_dict[key].secondshell_dict[w]:
-                out_file = outdir + tag + '_w_' + str(w) + '_2ndS_' + c[0].query.getTitle()
+                c_names = c[0].query.getTitle().split('_')
+                out_file = outdir + tag + '_w_' + str(w) + '_hb_' + '_'.join([c_names[i] for i in range(5)])
                 pr.writePDB(out_file, c[0].query)
 
         with open(outdir + tag + '_2ndshell_summary.tsv', 'w') as f:
             f.write('name\twin\trmsd\n')
             for w in key[0]:
                 for c in comb_dict[key].secondshell_dict[w]:
-                    name = tag + '_w_' + str(w) + '_2ndS_' + c[0].query.getTitle()
+                    name = tag + '_w_' + str(w) + '_hb_' + c[0].query.getTitle()
                     f.write(name + '\t' + str(w) + '\t' + str(round(c[1], 2)) + '\n')
     
     return 

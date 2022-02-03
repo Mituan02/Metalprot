@@ -1,9 +1,9 @@
-from genericpath import exists
 import os
 import pandas as pd
 
 #workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/_Seq_core_3contact_all_dup/_20211202_eval_dup/'
-workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_new/20211119/_Seq_core_3contact_new/_20211202_eval_new/'
+#workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_new/20211119/_Seq_core_3contact_new/_20211202_eval_new/'
+workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/family_3vsy_220118_result/'
 
 outfile = workdir + '_summary_new.tsv'
 
@@ -21,7 +21,7 @@ for dir in os.listdir(workdir):
         file_path = workdir + dir + '/' + v
         #print(v)
         
-        if ('_best_summary' not in v) or ('.tsv' not in v):
+        if ('_summary' not in v) or ('.tsv' not in v):
             continue
         
         df = pd.read_csv(file_path, sep='\t', lineterminator='\n', index_col=False)

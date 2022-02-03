@@ -1,6 +1,7 @@
 '''
 Prepare 2nd shell vdm from probe calculated Hbond. 
 We need the probe output and the metal binding core to run the function.
+After run the script, one can use the 'run_cluster_2ndshell_probe.py' to get the clustered database.
 '''
 
 from itertools import chain

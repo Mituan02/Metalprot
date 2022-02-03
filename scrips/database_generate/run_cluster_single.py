@@ -1,3 +1,8 @@
+'''
+For the generation of single vdMers. 
+This is the third step. To run this, run the 'database_extract_vdm_from_core' first. And then run '.../search_selfcenter/database_selfcenter_pickle.py'
+'''
+
 import os
 import sys
 import prody as pr
@@ -40,6 +45,7 @@ def cluster_single(workdir, outdir, is_self_center, metal_sel, align_sel, len_se
 
 workdir = "/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/20211013_vdm_reps/"
 workdir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_vdm_reps/'
+workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/20220128_1stshell/'
 is_self_center = True
 
 
@@ -51,6 +57,7 @@ len_sel = 8
 
 outdir = '/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/20211209_selfcenter_nometal/'
 outdir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/'
+outdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/20220128_1stshell/20220128_selfcenter/'
 os.makedirs(outdir, exist_ok = True)
 
 cluster_single(workdir, outdir, is_self_center, metal_sel, align_sel, len_sel)

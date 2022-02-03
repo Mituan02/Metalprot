@@ -82,7 +82,7 @@ def extract_candidates(ags, secondshell_vdms, candidateIds, transform):
         ag = ags[x]
         vdm = secondshell_vdms[y].copy()
         transform.apply(vdm.query)
-        candidates.append((vdm, 0))
+        candidates.append(vdm)
     return candidates
 
 
@@ -154,15 +154,16 @@ def write_2ndshell(ss, workdir, comb_dict):
 
         for w in key[0]:
             for c in comb_dict[key].secondshell_dict[w]:
-                c_names = c[0].query.getTitle().split('_')
+                c_names = c.query.getTitle().split('_')
                 out_file = outdir + tag + '_w_' + str(w) + '_hb_' + '_'.join([c_names[i] for i in range(5)])
-                pr.writePDB(out_file, c[0].query)
+                pr.writePDB(out_file, c.query)
 
-        with open(outdir + tag + '_2ndshell_summary.tsv', 'w') as f:
-            f.write('name\twin\trmsd\n')
+    with open(outdir + tag + '_2ndshell_summary.tsv', 'w') as f:
+        f.write('name\twin\trmsd\n')
+        for key in comb_dict.keys():
             for w in key[0]:
                 for c in comb_dict[key].secondshell_dict[w]:
                     name = tag + '_w_' + str(w) + '_hb_' + c[0].query.getTitle()
-                    f.write(name + '\t' + str(w) + '\t' + str(round(c[1], 2)) + '\n')
+                    f.write(name + '\t' + str(w) + '\t' + 'None' + '\t' + str(c.score) + '\n')
     
     return 

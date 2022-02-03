@@ -146,11 +146,9 @@ class Core:
 
         os.makedirs(outdir, exist_ok=True)
 
-        count = 0
         for ag in self.atomGroupDict[key]:
             #ag[1] here is supposed to be tag in the title.
-            pr.writePDB(outdir + self.full_pdb.getTitle() + '_mem' + str(count) + ag[1] + '.pdb', ag[0])
-            count+=1
+            pr.writePDB(outdir + self.full_pdb.getTitle() + '_' + ag[1] + '.pdb', ag[0])
             
         
     def generate_AA_Metal(self, AA = 'HIS', key = 'AAMetal_HIS'):
@@ -160,8 +158,9 @@ class Core:
             if not self.full_pdb.select(aa_sel + ' and resindex ' + str(resind)):
                 continue
             sel_pdb_prody = self.full_pdb.select('resindex ' + str(resind) + ' '+ str(self.metal_resind))
+            tag = AA + '_' + self.full_pdb.select('resindex ' + str(resind)).getChids()[0] + '_' + str(self.full_pdb.select('resindex ' + str(resind)).getResnums()[0]) 
             
-            self.add2atomGroupDict(key, (sel_pdb_prody, ''))            
+            self.add2atomGroupDict(key, (sel_pdb_prody, tag))            
         return 
         
     
@@ -177,8 +176,9 @@ class Core:
                 continue
             #print(self.full_pdb.getTitle() + '+' + '-'.join([str(x) for x in ext_inds]))
             sel_pdb_prody = self.full_pdb.select('resindex ' + ' '.join([str(ind) for ind in ext_inds]) + ' '+ str(self.metal_resind))
+            tag =  AA + '_' + self.full_pdb.select('resindex ' + str(resind)).getChids()[0] + '_' + str(self.full_pdb.select('resindex ' + str(resind)).getResnums()[0]) 
 
-            self.add2atomGroupDict(key, (sel_pdb_prody, ''))
+            self.add2atomGroupDict(key, (sel_pdb_prody, tag))
         return
 
 
@@ -205,7 +205,8 @@ class Core:
             sel_pdb_prody = self._generate_AA_phipsi_Metal(resind)
             if not sel_pdb_prody:
                 continue
-            self.add2atomGroupDict(key, (sel_pdb_prody, ''))
+            tag = AA + '_' + self.full_pdb.select('resindex ' + str(resind)).getChids()[0] + '_' + str(self.full_pdb.select('resindex ' + str(resind)).getResnums()[0]) 
+            self.add2atomGroupDict(key, (sel_pdb_prody, tag))
         return
 
 
@@ -244,7 +245,7 @@ class Core:
             ext_inds = [x for x in ext_inds if x >= pairs_ind[v][0]-extention_out and x <= pairs_ind[v][1]+extention_out]
             sel_pdb_prody = self.full_pdb.select('resindex ' + ' '.join([str(ind) for ind in ext_inds]) + ' '+ str(self.metal_resind))
             
-            self.add2atomGroupDict(key, (sel_pdb_prody, ''))
+            self.add2atomGroupDict(key, (sel_pdb_prody, str(i) + '_' +str(j)))
         return
 
 
@@ -357,7 +358,7 @@ class Core:
         for xs in itertools.combinations(atom_inds, 3):
             sel_pdb_prody = self.full_pdb.select('index ' + ' '.join([str(x) for x in xs])+ ' ' + str(self.metal.getIndex()))
 
-            self.add2atomGroupDict(key, (sel_pdb_prody, ''))            
+            self.add2atomGroupDict(key, (sel_pdb_prody, '_'.join([str(x) for x in xs])))            
         return 
 
 

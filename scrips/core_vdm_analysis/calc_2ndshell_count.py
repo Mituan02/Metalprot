@@ -1,8 +1,5 @@
-'''
-The 2ndshell vdm counting.
-'''
 
-
+#The 2ndshell vdm counting. Note there is two methods below based on different creteria. 
 
 '''
 The method is to extract 2nd shell vdm by heavy atom distance cut off 3.4, then count the types of extracted 2nd shell vdms.  

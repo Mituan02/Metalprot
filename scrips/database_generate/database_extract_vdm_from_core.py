@@ -1,3 +1,8 @@
+'''
+For the generation of single vdMers. 
+This is the second step. To run this, run the 'database_preparation.py' first. And then run 'run_cluster_single.py'
+'''
+
 import os
 import sys
 import prody as pr
@@ -47,8 +52,10 @@ def extract_vdm(coredir, outdir, aas):
                 pr.writePDB(_outdir + pdb.getTitle(), pdb)
 
 workdir = "/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/"
+workdir = workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/_Seq_core_2ndshell_date_reps/'
 
 outdir = workdir + '20211209_vdm_reps/'
+outdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/20220128_1stshell/'
 os.makedirs(outdir, exist_ok = True)
 
 #aas = ['HIS', 'GLU', 'ASP', 'CYS']

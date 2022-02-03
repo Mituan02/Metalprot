@@ -17,7 +17,9 @@ def _generate_2ndshellVdm(query, _2ndshell, _1stshell, metal):
     neary_aas_coords.append(metal.getCoords())
     coords = np.array(neary_aas_coords)
 
-    chids.extend(['A' for i in range(len(coords))])
+    chids.extend(_2ndshell.getChids())
+    chids.extend(_1stshell.getChids())
+    chids.append(metal.getChid())
 
     names.extend(_2ndshell.getNames())
     names.extend(_1stshell.getNames())

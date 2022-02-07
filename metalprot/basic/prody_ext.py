@@ -143,8 +143,10 @@ def combine_vdm_target_into_ag(target, resind_vdm_dict, write_geo, geometry, tit
 
     if aa == 'GLY':
         bb_sel = 'name N CA C O H'
-    if aa == 'ALA':
+    elif aa == 'ALA':
         bb_sel = 'name N CA C O H CB'
+    else:
+        bb_sel = ''
 
     for i in target.select('protein and name C').getResindices():
         c = target.select('resindex ' + str(i)  + ' ' + bb_sel)

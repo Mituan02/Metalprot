@@ -271,7 +271,9 @@ class Search_selfcenter(Search_vdM):
                 pdb_path_idealgeo = pdb_path + '_idealgeo_' + str(round(self.best_aa_comb_dict[key].geo_rmsd, 2)) + '.pdb'
                 pr.writePDB(pdb_path_idealgeo, self.best_aa_comb_dict[key].ideal_geo)                     
             
-            #ag_ala = prody_ext.combine_vdm_target_into_ag(self.target, self.best_aa_comb_dict[key].centroid_dict, False, None, tag, aa = 'ALA')
+            ag_new = prody_ext.combine_vdm_target_into_ag(self.target, self.best_aa_comb_dict[key].centroid_dict, True, self.best_aa_comb_dict[key].geometry, tag, aa = '')
+            pr.writePDB(pdb_path + '_all_vdms.pdb', ag_new)
+
             ag_ala = prody_ext.target_to_all_gly_ala(self.target, pdb_path + 'all_ala.pdb', [], aa = 'ALA')
             pr.writePDB(pdb_path + '_allala.pdb', ag_ala)
 

@@ -113,5 +113,7 @@ ss =  search_selfcenter.Search_selfcenter(target_path,  outdir, all_querys, clus
 #ss.run_selfcenter_search()
 search_selfcenter.run_search_selfcenter(ss)
 
+ss.write_for_combs()
+
 end_time = time.time()
 print(end_time - start_time, "seconds")

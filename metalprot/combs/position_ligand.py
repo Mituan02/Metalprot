@@ -140,7 +140,7 @@ def lig_2_ideageo(ligs, lig_connect_sel, ideal_geo_o = None, geo_sel = 'OE2 ZN')
     _lig = ligs[0]
 
     mobile_sel_coords = []
-    for s in lig_connect_sel.split(' '):
+    for s in lig_connect_sel:
         try:
             mobile_sel_coords.append(_lig.select('name ' + s).getCoords()[0])
         except: 

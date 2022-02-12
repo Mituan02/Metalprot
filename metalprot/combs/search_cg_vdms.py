@@ -1,6 +1,6 @@
 import sys
-sys.path.append(r'/wynton/home/degradolab/lonelu/GitHub_Design/Combs2')
-import combs2
+#sys.path.append(r'/wynton/home/degradolab/lonelu/GitHub_Design/Combs2')
+#import combs2
 import prody as pr
 import pandas as pd
 import os

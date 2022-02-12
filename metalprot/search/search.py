@@ -193,7 +193,7 @@ class Search_vdM:
             self.target_index_dict[ind] = chid_resnum
 
         self.win_filtered = [resnum2ind[str(rn)] for rn in self._resnum_filtered]
-
+        print('_resnum_filter: {}'.format(self._resnum_filtered))
         #allowed_aa_types example: [[H,H,H], [H,H,E], [H,H,D]]
         self.allowed_aas = set()
         self.allowed_aa_combinations_sorted = set()

@@ -160,7 +160,7 @@ def combine_vdm_target_into_ag(target, resind_vdm_dict, write_geo, geometry, tit
 
         else:
             if aa == 'GLY':
-                c.setResnums(['GLY' for x in range(len(ala))])
+                c.setResnames(['GLY' for u in range(len(c))])
             elif aa == 'ALA':
                 '''
                 Add CB for gly in original structure.

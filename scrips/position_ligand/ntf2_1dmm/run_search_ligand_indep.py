@@ -24,17 +24,7 @@ import datetime
 python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/run_search_ligand_indep.py
 '''
 
-with open('/mnt/e/GitHub_Design/Metalprot/metalprot/constants/ideal_alanine_bb_only.pkl', 'rb') as f:
-#with open('/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/metalprot/constants/ideal_alanine_bb_only.pkl', 'rb') as f:
-    ideal_alanine_bb_only = pickle.load(f)
-ideal_ala_coords = np.array(ideal_alanine_bb_only[['c_x', 'c_y', 'c_z']])
-
-
-path_to_database='/mnt/e/DesignData/Combs/Combs2_database/'
-#path_to_database='/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/'
-
-
-def run_ligand(outdir, target):
+def run_ligand(outdir, target, lig_path):
     '''
     Generate all potential ligands for each binding position. 
     '''
@@ -52,7 +42,7 @@ def run_ligand(outdir, target):
     return
 
 
-def run_search(target, ligs):
+def run_search(target, ligs, path_to_database, ideal_ala_coords):
     '''
     cg = 'phenol'
     resnum = 102
@@ -102,14 +92,7 @@ def run_search(target, ligs):
 ########################################################################
 ### Position ligand paramters.
 
-workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/'
-#workdir = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe_1dmm_rosetta_sel/'
-
-
 predefined_win_filters = [15, 19, 27]
-
-lig_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/tts_fe_adj.pdb'
-#lig_path = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe/tts_fe_adj.pdb'
 
 ro1 = ['C8', 'C7']
 rest1 = ['C9', 'O1', 'O3', 'O4', 'FE1']
@@ -287,7 +270,7 @@ rmsd = 0.6
 ########################################################################
 ### Run Search ligands.
 
-def run_all(file):
+def run_all(file, workdir, path_to_database, ideal_ala_coords, lig_path):
     time_tag = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') 
 
     target_path = workdir + file
@@ -297,7 +280,7 @@ def run_all(file):
 
     target = search_lig_indep.prepare_rosetta_target(outdir, target_path, predefined_win_filters)
     #target = pr.parsePDB(workdir + 'o1_1dmm_16-20-28_H-H-D_a_820_gly.pdb.pdb')
-    run_ligand(outdir, target)
+    run_ligand(outdir, target, lig_path)
 
     outdir_uni = outdir + 'vdms_output_uni/'
     os.makedirs(outdir_uni, exist_ok=True)
@@ -321,7 +304,7 @@ def run_all(file):
     if len(ligs) <= 0:
         return
 
-    lig_vdm_dict = run_search(target, ligs)
+    lig_vdm_dict = run_search(target, ligs, path_to_database, ideal_ala_coords)
 
     ### write filtered vdms.
     summaries = []
@@ -391,13 +374,38 @@ def run_all(file):
 #run_all('o2_1dmm_16-20-28_H-H-D_a_842.pdb')
 
 def main():
+    on_wynton = bool(int(sys.argv[1]))
+
+    if on_wynton:
+        with open('/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/metalprot/constants/ideal_alanine_bb_only.pkl', 'rb') as f:
+            ideal_alanine_bb_only = pickle.load(f)
+        ideal_ala_coords = np.array(ideal_alanine_bb_only[['c_x', 'c_y', 'c_z']])
+
+        path_to_database='/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/'
+
+        workdir = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe_1dmm_rosetta_sel/'
+
+        lig_path = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe/tts_fe_adj.pdb'
+    else:
+        with open('/mnt/e/GitHub_Design/Metalprot/metalprot/constants/ideal_alanine_bb_only.pkl', 'rb') as f:
+            ideal_alanine_bb_only = pickle.load(f)
+        ideal_ala_coords = np.array(ideal_alanine_bb_only[['c_x', 'c_y', 'c_z']])
+
+        path_to_database='/mnt/e/DesignData/Combs/Combs2_database/'
+        workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/'
+
+        lig_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/tts_fe_adj.pdb'
+
+    print('on_wynton: ' + str(on_wynton))
+ 
     pdb_files = sorted([fp for fp in os.listdir(workdir) if fp[0] != '.' and '.pdb' in fp])
 
-    ind = int(sys.argv[1]) -1
+    ind = int(sys.argv[2]) -1
     if ind > len(pdb_files) -1:
         return
-
-    run_all(pdb_files[ind])
+    print(pdb_files[ind])
+    
+    run_all(pdb_files[ind], workdir, path_to_database, ideal_ala_coords, lig_path)
     return
 
 if __name__=='__main__':

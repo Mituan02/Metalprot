@@ -31,7 +31,7 @@ ideal_ala_coords = np.array(ideal_alanine_bb_only[['c_x', 'c_y', 'c_z']])
 
 
 #path_to_database='/mnt/e/DesignData/Combs/Combs2_database/'
-path_to_database='/wynton/home/degradolab/lonelu/Combs2_library/'
+path_to_database='/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/'
 
 
 def run_ligand(outdir, target):
@@ -114,12 +114,12 @@ def run_search(target, ligs):
 ### Position ligand paramters.
 
 #workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/'
-workdir = '/wynton/home/degradolab/lonelu/Combs2_library/ntf2_fe_rosetta_sel/'
+workdir = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe_rosetta_sel/'
 
 
 predefined_win_filters = [15, 19, 27]
 
-lig_path = '/wynton/home/degradolab/lonelu/Combs2_library/ntf2_fe/tts_fe_adj.pdb'
+lig_path = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe/tts_fe_adj.pdb'
 
 ro1 = ['C8', 'C7']
 rest1 = ['C9', 'O1', 'O3', 'O4', 'FE1']

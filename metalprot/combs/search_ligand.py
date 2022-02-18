@@ -54,44 +54,7 @@ class Search_ligand:
         self.filtered_ligands = filtered_ligs
         return
 
-
-    def write_ligands(self, write_all_ligands = False):
-
-        
-        os.makedirs(self.outdir, exist_ok= True)
-
-        pr.writePDB(self.workdir + self.min_geo_struct.getTitle(), self.min_geo_struct)
-
-        os.makedirs(self.outdir + 'filtered_ligs/', exist_ok=True)
-        for lg in self.filtered_ligands:
-            pr.writePDB(self.outdir + 'filtered_ligs/' +  lg.getTitle(), lg)
-
-        if write_all_ligands:
-        # output all aligned ligands.
-            os.makedirs(self.outdir + 'all_ligs/', exist_ok=True)
-            for lg in self.all_ligands:
-                pr.writePDB(self.outdir + 'all_ligs/' +  lg.getTitle(), lg)
-        
-
-        '''
-        # For benchmarking, the nature ligand exist. Try to get the minimum superimposed artificial ligand.
-        nature_lig = pr.parsePDB(lig_path)
-        min_RMSD = 100
-        min_lg = None
-        for lg in all_ligs:
-            rmsd = pr.calcRMSD(lg, nature_lig)
-            if rmsd < min_RMSD:
-                min_RMSD = rmsd
-                min_lg = lg
-        print(min_RMSD)
-        print(min_lg.getTitle())
-        pr.writePDB(workdir + '_min_' + min_lg.getTitle(), min_lg)
-        '''
-
-        return 
-
     
-
 
 def prepare_search_ligand(workdir, ideal_geo_o_path):
     '''

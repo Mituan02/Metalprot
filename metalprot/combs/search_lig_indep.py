@@ -1,8 +1,3 @@
-'''
-The script is to design ligand-metal binding enzyme using the vdM idea. 
-Specially, here is to search the combs vdM library without using Combs2.
-'''
-
 import os
 import pdb
 import prody as pr
@@ -11,14 +6,27 @@ import pandas as pd
 import numpy as np
 from metalprot.basic import constant
 from metalprot.basic import utils
+from metalprot.basic import prody_ext
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse import lil_matrix
 import gc
 import shutil
 
-with open('/mnt/e/GitHub_Design/Combs2/combs2/files/ideal_alanine_bb_only.pkl', 'rb') as f:
-    ideal_alanine_bb_only = pickle.load(f)
-ideal_ala_coords = np.array(ideal_alanine_bb_only[['c_x', 'c_y', 'c_z']])
+
+def prepare_rosetta_target(outdir, target_path, designed_site = [15, 19, 27]):
+    '''
+    Or searching rosetta 1st round designed target backbone. 
+    All aas are mutated into gly except the metal binding ones.
+    '''
+    target = pr.parsePDB(target_path)
+
+    resindices, target_index_dict = prody_ext.transfer2resindices(target, designed_site)
+
+    pdb_gly = prody_ext.target_to_all_gly_ala(target, target.getTitle() + '_gly.pdb', resindices, aa= 'GLY', keep_no_protein = True )
+    
+    pr.writePDB(outdir + pdb_gly.getTitle() + '.pdb', pdb_gly)
+
+    return pdb_gly
 
 
 def load_new_vdm(path_to_database, cg, aa):
@@ -130,7 +138,7 @@ def filter_db(df_vdm, use_enriched = True, use_abple = True, abple = 'A'):
     return df_vdm
 
 
-def search_lig_at_cg_aa_resnum(target, resnum, pos, abple, ligs, input_dict, cg, df_vdm, rmsd = 0.7):
+def search_lig_at_cg_aa_resnum(target, resnum, pos, abple, ligs, input_dict, cg, df_vdm, ideal_ala_coords, rmsd = 0.7, filter_hb = False, filter_cc = False):
     
     results = []
 
@@ -140,7 +148,7 @@ def search_lig_at_cg_aa_resnum(target, resnum, pos, abple, ligs, input_dict, cg,
         if input_dict[cg_id]['cg'] != cg:
             continue
         ligand_coords = get_ligand_coords(_ligs, input_dict[cg_id]['lgd_sel'])
-        
+
         labels, vdm_coords = get_vdm_labels_coords_4old_vdm_db(df_vdm, input_dict[cg_id]['represent_name'], input_dict[cg_id]['correspond_resname'], input_dict[cg_id]['correspond_names'])
 
         if vdm_coords.shape[0] <=0 or vdm_coords.shape[0] != labels.shape[0]:
@@ -149,7 +157,6 @@ def search_lig_at_cg_aa_resnum(target, resnum, pos, abple, ligs, input_dict, cg,
         
         num_cg_atoms = len(input_dict[cg_id]['lgd_sel'])
         radius = np.sqrt(num_cg_atoms) * rmsd
-
         dists, inds = get_nearest_vdms_rmsd(vdm_coords, ligand_coords, radius = radius)
 
         #u is lig id, v is vdM id.
@@ -160,13 +167,16 @@ def search_lig_at_cg_aa_resnum(target, resnum, pos, abple, ligs, input_dict, cg,
                 try:
                     x = labels.iloc[ind]
                     v = df_vdm[(df_vdm['CG'] == x['CG']) & (df_vdm['rota'] == x['rota']) & (df_vdm['probe_name'] == x['probe_name'])]
-                    ag = df2ag(v)
-                    tf_rev.apply(ag)
 
-                    if clash_filter_protein_single(target, resnum, ag) or clash_filter_lig(ligs[u], ag):
-                        #print('filtered')
-                        continue
-                    results.append((cg_id, u, rmsd, ag, ind, v['C_score_ABPLE_' + abple].values[0]))
+                    if (not filter_hb and not filter_cc) or (filter_hb and v[['contact_hb']].any()[0]) or (filter_cc and v[['contact_cc']].any()[0]):
+                        
+                        ag = df2ag(v)
+                        tf_rev.apply(ag)
+
+                        if clash_filter_protein_single(target, resnum, ag) or clash_filter_lig(ligs[u], ag):
+                            #print('filtered')
+                            continue
+                        results.append((cg_id, u, rmsd, ag, ind, v['C_score_ABPLE_' + abple].values[0], None, v[['contact_hb']].any()[0], v[['contact_cc']].any()[0]))
                 except:
                     print(cg_id)
                     print(x)
@@ -247,178 +257,3 @@ def clash_filter_lig(lig, vdm, dist_cut = 2.5):
     if np.sum(adj_matrix) >0:
         return True
     return False
-
-def run():
-    '''
-    cg = 'phenol'
-    resnum = 102
-    '''
-    # load_cg_aa_vdm_dict = {'phenol': 'F'}
-    # predefined_resnums = [102]
-
-    summaries = []
-    for cg in load_cg_aa_vdm_dict.keys():
-
-        for a in load_cg_aa_vdm_dict[cg]:
-            aa = constant.inv_one_letter_code[a]
-            #df_vdm, df_gr, df_score = load_new_vdm(path_to_database, cg, aa)
-            df_vdm = load_old_vdm(path_to_database, cg, aa)
-
-            for resnum in predefined_resnums:
-                print('Searching: ' + cg + ' ' + aa + ' ' + str(resnum))
-                pos = target.select('resnum ' + str(resnum))
-                abple = abples[pos.getResindices()[0]]
-                df_vdm_filter = filter_db(df_vdm, abple=abple)        
-
-                results = search_lig_at_cg_aa_resnum(target, resnum, pos, abple, ligs, input_dict, cg, df_vdm_filter, rmsd)
-
-                pdbs = {}
-                for cg_id, lig_id, _rmsd, vdm_ag, vdm_id, score in results:
-                    prefix = 'Lig-' + str(lig_id) + '_' + cg  + '_' + aa + '_' + str(resnum) + '_rmsd_' + str(round(_rmsd, 2)) + '_v_' + str(round(score, 1)) + '_'       
-                    pr.writePDB(outdir_all + prefix + str(vdm_id) + '.pdb.gz', vdm_ag)
-
-                    summaries.append((cg, aa, resnum, cg_id, lig_id, _rmsd, vdm_id, score))
-                    if (cg, aa, vdm_id) in pdbs.keys():
-                        continue
-                    else:
-                        pdbs[(cg, aa, vdm_id)] = vdm_ag
-
-                for (cg, aa, vdm_id) in pdbs.keys():
-                    prefix = cg  + '_' + aa + '_' + str(resnum) + '_'                   
-                    #print_dataframe(vdm, filename = str(vdm_id), outpath=outdir, prefix = prefix)
-                    pr.writePDB(outdir + prefix + str(vdm_id) + '.pdb.gz', pdbs[(cg, aa, vdm_id)])
-                    
-            del [[df_vdm]]
-            gc.collect()
-            df_vdm = pd.DataFrame()
-
-    
-    with open(outdir + '_summary.tsv', 'w') as f:
-        for s in summaries:
-            #print(s)
-            f.write('\t'.join([str(x) for x in s]) + '\n')
-        
-    return results
-
-#path_to_database='/mnt/e/DesignData/Combs_update_20220210/'
-path_to_database='/mnt/e/DesignData/Combs/Combs2_database/'
-
-load_cg_aa_vdm_dict = {
-    'coo': 'AGKNQRSTWY',
-    'bb_cco': 'AGKNQRSTWY',
-    'phenol': 'ADEFGKNQRSTWY'
-}
-
-workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/output_selfcenter_o1_1dmm_16-20-28_H-H-D_a_820__20220210-101859/represents_combs/'
-
-outdir = workdir + 'W_15-19-27_H-H-D_1000-404-467_/vdms_output/'
-os.makedirs(outdir, exist_ok=True)
-
-outdir_all = workdir + 'W_15-19-27_H-H-D_1000-404-467_/vdms_output_all/'
-os.makedirs(outdir_all, exist_ok=True)
-
-target = pr.parsePDB(workdir + 'W_15-19-27_H-H-D_1000-404-467_allgly.pdb')
-abples, phipsi = utils.seq_get_ABPLE(target)
-
-predefined_resnums = [11, 12, 15, 16, 19, 24, 27, 30, 31, 35, 37, 39, 46, 52, 55, 56, 60, 65, 67, 69, 83, 85, 87, 98, 100, 102, 104, 106, 112, 115, 117, 119]
-
-# outdir_ligs = workdir + 'W_15-19-27_H-H-D_1000-404-467_/ligs_inorder/'
-# os.makedirs(outdir_ligs, exist_ok=True)
-ligs = []
-lig_id = 0
-for file in os.listdir(workdir + 'W_15-19-27_H-H-D_1000-404-467_/filtered_ligs/'):
-    if '.pdb' in file:
-        lig = pr.parsePDB(workdir + 'W_15-19-27_H-H-D_1000-404-467_/filtered_ligs/' + file)
-        # shutil.copy2(workdir + 'W_15-19-27_H-H-D_1000-404-467_/filtered_ligs/' + file, outdir_ligs + 'Lig-'+ str(lig_id) + '_'+ file)
-        # lig_id += 1
-        ligs.append(lig)
-
-input_dict = {
-    ('coo_0'):{
-        'cg' : 'coo',
-        'lgd_sel' : ['C8', 'C9', 'O3', 'O4'],
-        'represent_name' : 'OD2',
-        'correspond_resname' : 'ASP',
-        'correspond_names' : ['CB', 'CG', 'OD1', 'OD2']
-    },
-    ('coo_1'):{
-        'cg' : 'coo',
-        'lgd_sel' : ['C8', 'C9', 'O3', 'O4'],
-        'represent_name' : 'OD2',
-        'correspond_resname' : 'ASP',
-        'correspond_names' : ['CB', 'CG', 'OD2', 'OD1']
-    },    
-    ('coo_2'):{
-        'cg' : 'coo',
-        'lgd_sel' : ['C8', 'C9', 'O3', 'O4'],
-        'represent_name' : 'OE2',
-        'correspond_resname' : 'GLU',
-        'correspond_names' : ['CG', 'CD', 'OE1', 'OE2']
-    },
-    ('coo_3'):{
-        'cg' : 'coo',
-        'lgd_sel' : ['C8', 'C9', 'O3', 'O4'],
-        'represent_name' : 'OE2',
-        'correspond_resname' : 'GLU',
-        'correspond_names' : ['CG', 'CD', 'OE2', 'OE1']
-    },
-    ('phenol_0'):{
-        'cg' : 'phenol',
-        'lgd_sel' : ['C2', 'C3', 'C4', 'O2'],
-        'represent_name' : 'OH',
-        'correspond_resname' : 'TYR',
-        'correspond_names' : ['CE1', 'CZ', 'CE2', 'OH']
-    },
-    ('phenol_1'):{
-        'cg' : 'phenol',
-        'lgd_sel' : ['C2', 'C3', 'C4', 'O2'],
-        'represent_name' : 'OH',
-        'correspond_resname' : 'TYR',
-        'correspond_names' : ['CE2', 'CZ', 'CE1', 'OH']
-    },
-    ('bb_cco_0'):{
-        'cg' : 'bb_cco',
-        'lgd_sel' : ['C8', 'C9', 'O4'],
-        'represent_name' : 'O',
-        'correspond_resname' : 'GLY',
-        'correspond_names' : ['CA', 'C', 'O']
-    },
-    ('bb_cco_1'):{
-        'cg' : 'bb_cco',
-        'lgd_sel' : ['C8', 'C9', 'O4'],
-        'represent_name' : 'O',
-        'correspond_resname' : 'ALA',
-        'correspond_names' : ['CA', 'C', 'O']
-    },
-    ('bb_cco_2'):{
-        'cg' : 'bb_cco',
-        'lgd_sel' : ['C8', 'C9', 'O4'],
-        'represent_name' : 'O',
-        'correspond_resname' : 'PRO',
-        'correspond_names' : ['CA', 'C', 'O']
-    }
-}
-
-rmsd = 0.6
-
-run()
-
-'''
-# Testing clashing. loading files.
-import prody as pr
-from sklearn.neighbors import NearestNeighbors
-
-workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/output_selfcenter_o1_1dmm_16-20-28_H-H-D_a_820__20220210-101859/represents_combs/'
-
-target = pr.parsePDB(workdir + 'W_15-19-27_H-H-D_1000-404-467_allgly.pdb')
-
-outdir = workdir + 'W_15-19-27_H-H-D_1000-404-467_/vdms_output/'
-
-vdm = pr.parsePDB(outdir + 'phenol_PHE_102_2763.pdb')
-
-outdir_ligs = workdir + 'W_15-19-27_H-H-D_1000-404-467_/ligs_inorder/'
-
-lig = pr.parsePDB(outdir_ligs + 'Lig-150_Geo_5_tts_fe_C8-C7_255_C7-C6_355.pdb')
-
-
-'''

@@ -1,13 +1,12 @@
 import prody as pr
 import numpy as np
-from prody.utilities.catchall import getCoords
 from scipy.spatial.transform import Rotation
 from sklearn.neighbors import NearestNeighbors
-
+import math
 import os
-from rdkit import Chem
-from rdkit.Chem import AllChem
-from rdkit.Chem.rdmolfiles import MolToPDBFile
+# from rdkit import Chem
+# from rdkit.Chem import AllChem
+# from rdkit.Chem.rdmolfiles import MolToPDBFile
 
 from ..basic import prody_ext 
 
@@ -67,21 +66,21 @@ def generate_rotated_ligs(lig, rots, rests, rotation_degrees, clash_dist = 3):
     return all_ligs
 
 
-def generate_rotated_ligs_rdkit(lig_smiles, total, outdir):
-    m = Chem.MolFromSmiles(lig_smiles)
-    m2=Chem.AddHs(m)
-    AllChem.EmbedMolecule(m2)
+# def generate_rotated_ligs_rdkit(lig_smiles, total, outdir):
+#     m = Chem.MolFromSmiles(lig_smiles)
+#     m2=Chem.AddHs(m)
+#     AllChem.EmbedMolecule(m2)
 
-    cids = AllChem.EmbedMultipleConfs(m2, numConfs=total)
-    for i in range(total):
-        MolToPDBFile(m2, outdir + 'rdkit_' + str(i) + '.pdb', confId = i)
+#     cids = AllChem.EmbedMultipleConfs(m2, numConfs=total)
+#     for i in range(total):
+#         MolToPDBFile(m2, outdir + 'rdkit_' + str(i) + '.pdb', confId = i)
 
-    m2s = []
-    for p in os.listdir(outdir):
-        if '.pdb' not in p:
-            continue
-        m2s.append(pr.parsePDB(outdir + p))
-    return m2s
+#     m2s = []
+#     for p in os.listdir(outdir):
+#         if '.pdb' not in p:
+#             continue
+#         m2s.append(pr.parsePDB(outdir + p))
+#     return m2s
 
 
 def add_metal2lig(lig, rig, lig_sel, rig_sel, metal):
@@ -165,6 +164,37 @@ def lig_2_ideageo(ligs, lig_connect_sel, ideal_geo_o = None, geo_sel = 'OE2 ZN')
     return
 
 
+def lig_2_target(ligs, lig_connect_sel, target, geo_sel = 'chid X and name FE1 O2 O3'):
+    '''
+    supperimpose the ligand to the ideal metal binding geometry.
+    '''
+    _lig = ligs[0]
+
+    mobile_sel_coords = []
+    for s in lig_connect_sel:
+        try:
+            mobile_sel_coords.append(_lig.select('name ' + s).getCoords()[0])
+        except: 
+            print('ERROR: (lig_2_ideageo) ' + ' '.join(lig_connect_sel))
+            print(_lig.getNames())
+            print(s)
+
+    try:
+        target_sel_coords = target.select(geo_sel).getCoords()
+    except:
+        print('ERROR: (lig_2_ideageo lig) ' + ' '.join(lig_connect_sel))
+        print('ERROR: (lig_2_ideageo) ' + geo_sel)
+
+
+    transformation = pr.calcTransformation(np.array(mobile_sel_coords), np.array(target_sel_coords))
+
+    for lg in ligs:
+        transformation.apply(lg)
+
+    return
+
+
+
 def ligand_clashing_filter(ligs, target, dist = 3):
     '''
     The ligand clashing: the ligs cannot have any heavy atom within 3 A of a target bb.
@@ -196,6 +226,97 @@ def ligand_clashing_filter(ligs, target, dist = 3):
         filtered_ligs.append(ligs[i])
 
     return filtered_ligs
-    
+
+
+def write_ligands(outdir, filtered_ligs, all_ligs = None, write_all_ligands = False):
+
+    os.makedirs(outdir, exist_ok= True)
+
+    os.makedirs(outdir + 'filtered_ligs/', exist_ok=True)
+
+    for lg in filtered_ligs:
+        pr.writePDB(outdir + 'filtered_ligs/' + lg.getTitle() + '.pdb.gz', lg)
+
+    if write_all_ligands:
+    # output all aligned ligands.
+        os.makedirs(outdir + 'all_ligs/', exist_ok=True)
+        for lg in all_ligs:
+            pr.writePDB(outdir + 'all_ligs/' +  lg.getTitle() + '.pdb.gz', lg)
+
+    '''
+    # For benchmarking, the nature ligand exist. Try to get the minimum superimposed artificial ligand.
+    nature_lig = pr.parsePDB(lig_path)
+    min_RMSD = 100
+    min_lg = None
+    for lg in all_ligs:
+        rmsd = pr.calcRMSD(lg, nature_lig)
+        if rmsd < min_RMSD:
+            min_RMSD = rmsd
+            min_lg = lg
+    print(min_RMSD)
+    print(min_lg.getTitle())
+    pr.writePDB(workdir + '_min_' + min_lg.getTitle(), min_lg)
+    '''
+
+    return 
+
+
+def fibonacci_sphere(samples=20, scale = 0.1):
+    '''
+    Generating points distributed evenly on a sphere. For metal position stimulation. 
+    Based on: https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
+    '''
+    points = []
+    phi = math.pi * (3. - math.sqrt(5.))  # golden angle in radians
+
+    for i in range(samples):
+        y = 1 - (i / float(samples - 1)) * 2  # y goes from 1 to -1
+        radius = math.sqrt(1 - y * y)  # radius at y
+
+        theta = phi * i  # golden angle increment
+
+        x = math.cos(theta) * radius
+        z = math.sin(theta) * radius
+
+        points.append((scale*x, scale*y, scale*z))
+
+    return points
+
+
+
+def generate_ligands(all_ligs, target, lig_connects, geo_sel, points = None, point_sel = None, clash_dist = 2.5):
+    '''
+    Generate all potential artificial ligand positions.
+
+    points are from the stimulated potential metal positions. 
+    '''
+    all_ligands = []
+    for i in range(len(lig_connects)):
+        lig_connect = lig_connects[i]
+        _ligs = [l.copy() for l in all_ligs]
+        [l.setTitle('Geo_' + str(i) + '_P_0_' + l.getTitle() ) for l in _ligs]
+        lig_2_target(_ligs, lig_connect, target, geo_sel = geo_sel)
+        all_ligands.extend(_ligs)
+
+        if points == None:
+            continue
+        tr = pr.calcTransformation(np.zeros((1, 3)), target.select(point_sel).getCoords())
+        _points = tr.apply(points)
+
+        for j in range(1, 1+len(_points)):
+            p = _points[j-1]   
+            _target = target.copy()
+            _target.select(point_sel).setCoords(p)
+            _ligs = [l.copy() for l in all_ligs]
+            [l.setTitle('Geo_' + str(i) + '_P_' + str(j) + '_' + l.getTitle() ) for l in _ligs]
+            lig_2_target(_ligs, lig_connect, _target, geo_sel = geo_sel)
+            all_ligands.extend(_ligs)
+
+    filtered_ligs = ligand_clashing_filter(all_ligands, target, dist = clash_dist)
+
+    if len(filtered_ligs) <= 0:
+        print('The position could not support the ligand.')
+
+    return filtered_ligs, all_ligands
 
 

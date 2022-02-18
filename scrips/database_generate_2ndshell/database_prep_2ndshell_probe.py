@@ -2,6 +2,8 @@
 Prepare 2nd shell vdm from probe calculated Hbond. 
 We need the probe output and the metal binding core to run the function.
 After run the script, one can use the 'run_cluster_2ndshell_probe.py' to get the clustered database.
+*hb* (H-bond), then *wh* (weak H-bond), then *cc* (close contact).  Contacts
+    labeled *so* (small overlap), *bo* (bad overlap), *wc* (wide contact)
 '''
 
 from itertools import chain

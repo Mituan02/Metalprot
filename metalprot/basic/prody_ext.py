@@ -7,6 +7,26 @@ import string
 import numpy as np
 from . import constant
 
+
+def transfer2resindices(pdb, chidresnums):
+    '''
+    Input of [resnum] or [chid-resnum] or [seg-chid-resnum] transfer to [resindex]
+    '''
+    target_resnums = pdb.select('protein and name CA').getResnums()
+    target_chids = pdb.select('protein and name CA').getChids()
+    target_index_dict = {}
+    resnum2ind = {}
+    for ind in range(len(target_resnums)):
+        if len(np.unique(target_chids)) != 1:
+            chid_resnum = target_chids[ind] + '-' + str(target_resnums[ind])
+        else:
+            chid_resnum = str(target_resnums[ind])
+        resnum2ind[chid_resnum] = ind
+        target_index_dict[ind] = chid_resnum
+    #print(resnum2ind)
+    resindices = [resnum2ind[str(x)] for x in chidresnums]
+    return resindices, target_index_dict
+
 def transfer2pdb(points, names = None, resnums = None, resnames = None, title = 'MetalMol'):
     '''
     Speically used for Metal binding geometry pdb. 
@@ -197,7 +217,7 @@ def combine_vdm_target_into_ag(target, resind_vdm_dict, write_geo, geometry, tit
     return ag
 
 
-def target_to_all_gly_ala(target, title, win_no_mutation = [], aa = 'ALA'):
+def target_to_all_gly_ala(target, title, win_no_mutation = [], aa = 'ALA', keep_no_protein = False):
     '''
     For the prody object target, mutate all the aa into ala or gly. 
     '''
@@ -238,7 +258,15 @@ def target_to_all_gly_ala(target, title, win_no_mutation = [], aa = 'ALA'):
         resnums.extend(c.getResnums())
         betas.extend([0 for x in range(len(c))])
         occu.extend([0 for x in range(len(c))])
-
+    if keep_no_protein:
+        x = target.select('not protein')
+        coords.extend(x.getCoords())
+        chids.extend(x.getChids())
+        names.extend(x.getNames())
+        resnames.extend(x.getResnames())
+        resnums.extend(x.getResnums())
+        betas.extend([0 for x in range(len(x))])
+        occu.extend([0 for x in range(len(x))])
     ag.setCoords(np.array(coords))
     ag.setChids(chids)
     ag.setNames(names)

@@ -114,7 +114,7 @@ def run_search(target, ligs):
 ### Position ligand paramters.
 
 #workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/'
-workdir = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe_rosetta_sel/'
+workdir = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe_1dmm_rosetta_sel/'
 
 
 predefined_win_filters = [15, 19, 27]
@@ -134,10 +134,10 @@ clash_dist = 3.0
 ### Search ligands paramters.
 
 load_cg_aa_vdm_dict = {
-    #'coo': [('AGKNQRSTY', True, False)], # (aas, filter_hb, filter_cc)
-    #'bb_cco': [('AGKNQRSTY', True, False)],
+    'coo': [('AGKNQRSTY', True, False)], # (aas, filter_hb, filter_cc)
+    'bb_cco': [('AGKNQRSTY', True, False)],
     'phenol': [('AGDEKNQRST', True, False), ('FWY', False, True)],
-    #'ph': [('FWY', False, True)]
+    'ph': [('FWY', False, True)]
 }
 
 predefined_resnums = [11, 12, 15, 16, 19, 24, 27, 30, 31, 35, 37, 39, 46, 52, 55, 56, 60, 65, 67, 69, 83, 85, 87, 98, 100, 102, 104, 106, 112, 115, 117, 119]

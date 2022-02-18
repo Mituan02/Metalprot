@@ -24,14 +24,14 @@ import datetime
 python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/run_search_ligand_indep.py
 '''
 
-#with open('/mnt/e/GitHub_Design/Metalprot/metalprot/constants/ideal_alanine_bb_only.pkl', 'rb') as f:
-with open('/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/metalprot/constants/ideal_alanine_bb_only.pkl', 'rb') as f:
+with open('/mnt/e/GitHub_Design/Metalprot/metalprot/constants/ideal_alanine_bb_only.pkl', 'rb') as f:
+#with open('/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/metalprot/constants/ideal_alanine_bb_only.pkl', 'rb') as f:
     ideal_alanine_bb_only = pickle.load(f)
 ideal_ala_coords = np.array(ideal_alanine_bb_only[['c_x', 'c_y', 'c_z']])
 
 
-#path_to_database='/mnt/e/DesignData/Combs/Combs2_database/'
-path_to_database='/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/'
+path_to_database='/mnt/e/DesignData/Combs/Combs2_database/'
+#path_to_database='/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/'
 
 
 def run_ligand(outdir, target):
@@ -78,7 +78,7 @@ def run_search(target, ligs):
 
                     results = search_lig_indep.search_lig_at_cg_aa_resnum(target, resnum, pos, abple, ligs, input_dict, cg, df_vdm_filter, ideal_ala_coords, rmsd, cg_aa_vdms[1], cg_aa_vdms[2])
 
-                    #pdbs = {}
+
                     for cg_id, lig_id, _rmsd, vdm_ag, vdm_id, score, v, contact_hb, contact_cc in results:
                         prefix = 'Lig-' + str(lig_id) + '_' + cg  + '_' + aa + '_' + str(resnum) + '_rmsd_' + str(round(_rmsd, 2)) + '_v_' + str(round(score, 1)) + '_'       
 
@@ -91,17 +91,6 @@ def run_search(target, ligs):
                         else:
                             lig_vdm_dict[lig_id] = [(vdm_ag, (cg, aa, resnum, cg_id, lig_id, _rmsd, vdm_id, score, v, contact_hb, contact_cc))]
 
-
-                    #     if (cg, aa, vdm_id) in pdbs.keys():
-                    #         continue
-                    #     else:
-                    #         pdbs[(cg, aa, vdm_id)] = (vdm_ag, v)
-
-                    # for (cg, aa, vdm_id) in pdbs.keys():
-                    #     prefix = cg  + '_' + aa + '_' + str(resnum) + '_' + str(vdm_id)                 
-                    #     pr.writePDB(outdir + prefix  + '.pdb.gz', pdbs[(cg, aa, vdm_id)][0])
-                    #     #v = pdbs[(cg, aa, vdm_id)][1]
-                    #     #v.to_csv(outdir + prefix + '_summary_vdms.csv')
                         
                 del [[df_vdm]]
                 gc.collect()
@@ -113,13 +102,14 @@ def run_search(target, ligs):
 ########################################################################
 ### Position ligand paramters.
 
-#workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/'
-workdir = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe_1dmm_rosetta_sel/'
+workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/'
+#workdir = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe_1dmm_rosetta_sel/'
 
 
 predefined_win_filters = [15, 19, 27]
 
-lig_path = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe/tts_fe_adj.pdb'
+lig_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/tts_fe_adj.pdb'
+#lig_path = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe/tts_fe_adj.pdb'
 
 ro1 = ['C8', 'C7']
 rest1 = ['C9', 'O1', 'O3', 'O4', 'FE1']
@@ -309,6 +299,9 @@ def run_all(file):
     #target = pr.parsePDB(workdir + 'o1_1dmm_16-20-28_H-H-D_a_820_gly.pdb.pdb')
     run_ligand(outdir, target)
 
+    outdir_uni = outdir + 'vdms_output_uni/'
+    os.makedirs(outdir_uni, exist_ok=True)
+
     outdir_all = outdir + 'vdms_output_all/'
     os.makedirs(outdir_all, exist_ok=True)
 
@@ -323,11 +316,14 @@ def run_all(file):
         shutil.copy2(outdir + 'filtered_ligs/' + file, outdir_ligs + 'Lig-'+ str(lig_id) + '_'+ file)
         lig_id += 1
         ligs.append(lig)
-    print('Filtered Ligs: ' + str(len(ligs)))
 
+    print('Filtered Ligs: ' + str(len(ligs)))
+    if len(ligs) <= 0:
+        return
 
     lig_vdm_dict = run_search(target, ligs)
 
+    ### write filtered vdms.
     summaries = []
     for lig_id in lig_vdm_dict.keys():
         values = lig_vdm_dict[lig_id]
@@ -343,19 +339,41 @@ def run_all(file):
             pr.writePDB(outdir_all + vdm_ag.getTitle() + '.pdb.gz', vdm_ag)
             summaries.append(_info)
 
-    with open(outdir + '_summary.tsv', 'w') as f:
-        f.write('cg\taa\tpos\tcg_tag\tlig\trmsd\tvdm_id\tscore\tvdm\tContact_hb\tContact_cc\n')
+    if len(summaries) <= 0:
+        print('Filtered vdms is 0.')
+        return
+
+    with open(outdir + target.getTitle() + '_summary.tsv', 'w') as f:
+        f.write('file\tcg\taa\tpos\tcg_tag\tlig\trmsd\tvdm_id\tscore\tvdm\tContact_hb\tContact_cc\n')
         for s in summaries:
             #print(s)
-            f.write('\t'.join([str(x) for x in s]) + '\n')
+            f.write(target.getTitle() + '\t' + '\t'.join([str(x) for x in s]) + '\n')
+
+
+    ### Write unique vdms.
+    unique_vdms = {}
+    for lig_id in lig_vdm_dict.keys():
+        values = lig_vdm_dict[lig_id]
+        for v in values:
+            vdm_ag = v[0]
+            (cg, aa, resnum, cg_id, lig_id, _rmsd, vdm_id, score, v, contact_hb, contact_cc) = v[1]
+            if (cg, aa, vdm_id) in unique_vdms.keys():
+                continue
+            else:
+                unique_vdms[(cg, aa, vdm_id)] = (vdm_ag, v)
+
+    for (cg, aa, vdm_id) in unique_vdms.keys():
+        prefix = cg  + '_' + aa + '_' + str(resnum) + '_' + str(vdm_id)                 
+        pr.writePDB(outdir_uni + prefix  + '.pdb.gz', unique_vdms[(cg, aa, vdm_id)][0])
+
 
     ### Write summary file.
-    df = pd.read_csv(outdir + '_summary.tsv', sep = '\t')
-    df_group = df.groupby(['lig'])
+    df = pd.read_csv(outdir + target.getTitle() + '_summary.tsv', sep = '\t')
+    df_group = df.groupby(['file', 'lig'])
 
     df_score = df_group[['score']].sum()
 
-    df_score.to_csv(outdir + '_sum_score.tsv', sep = '\t')
+    df_score.to_csv(outdir + target.getTitle() + '_sum_score.tsv', sep = '\t')
 
     scores = []
     for g_name, g in df_group:
@@ -365,10 +383,10 @@ def run_all(file):
             score += gg[['score']].max()
         scores.append((g_name, score.sum()))
 
-    with open(outdir + '_sum_score_rmdu.tsv', 'w') as f:
-        f.write('lig\tscore\n')
+    with open(outdir + + target.getTitle() + '_sum_score_rmdu.tsv', 'w') as f:
+        f.write('file\tlig\tscore\n')
         for s in scores:
-            f.write(str(s[0]) + '\t' +  str(s[1]) + '\n')
+            f.write('\t'.join([str(x) for x in s[0]]) + '\t' +  str(s[1]) + '\n')
 
 #run_all('o2_1dmm_16-20-28_H-H-D_a_842.pdb')
 
@@ -385,21 +403,3 @@ def main():
 if __name__=='__main__':
     main()
 
-'''
-# Testing clashing. loading files.
-import prody as pr
-from sklearn.neighbors import NearestNeighbors
-
-workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/output_selfcenter_o1_1dmm_16-20-28_H-H-D_a_820__20220210-101859/represents_combs/'
-
-target = pr.parsePDB(workdir + 'W_15-19-27_H-H-D_1000-404-467_allgly.pdb')
-
-outdir = workdir + 'W_15-19-27_H-H-D_1000-404-467_/vdms_output/'
-
-vdm = pr.parsePDB(outdir + 'phenol_PHE_102_2763.pdb')
-
-outdir_ligs = workdir + 'W_15-19-27_H-H-D_1000-404-467_/ligs_inorder/'
-
-lig = pr.parsePDB(outdir_ligs + 'Lig-150_Geo_5_tts_fe_C8-C7_255_C7-C6_355.pdb')
-
-'''

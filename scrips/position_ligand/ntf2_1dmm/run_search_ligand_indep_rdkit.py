@@ -42,6 +42,15 @@ def run_ligand(outdir, target, lig_path):
     return
 
 
+def extract_ligand(outdir, target, lig_name = None):
+    if not lig_name:
+        lig = target.select('not protein')
+    lig = target.select('resname ' + lig_name)
+    os.makedirs(outdir + 'filtered_ligs/', exist_ok=True)
+    pr.writePDB(outdir + 'filtered_ligs/' + lig_name + '.pdb', lig)
+
+
+
 def run_search(target, ligs, path_to_database, ideal_ala_coords):
     '''
     cg = 'phenol'
@@ -102,13 +111,14 @@ rest2 = ['H5', 'H6', 'H7', 'C8', 'C9', 'O1', 'O3', 'O2', 'FE1']
 lig_connects = [['FE1', 'O3','O1']]
 geo_sel = 'chid X and name FE1 O2 O3'
 clash_dist = 3.0
+lig_name = 'TTS'
 
 ########################################################################
 ### Search ligands paramters.
 
 load_cg_aa_vdm_dict = {
-    #'coo': [('AGKNQRSTY', True, False)], # (aas, filter_hb, filter_cc)
-    #'bb_cco': [('AGKNQRSTY', True, False)],
+    'coo': [('AGKNQRSTY', True, False)], # (aas, filter_hb, filter_cc)
+    'bb_cco': [('AGKNQRSTY', True, False)],
     'phenol': [('AGDEKNQRST', True, False), ('FWY', False, True)],
     'ph': [('FWY', False, True)]
 }
@@ -270,7 +280,7 @@ rmsd = 0.6
 ########################################################################
 ### Run Search ligands.
 
-def run_all(file, workdir, path_to_database, ideal_ala_coords, lig_path):
+def run_all(file, workdir, path_to_database, ideal_ala_coords, lig_path, lig_name):
     time_tag = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') 
 
     target_path = workdir + file
@@ -280,7 +290,8 @@ def run_all(file, workdir, path_to_database, ideal_ala_coords, lig_path):
 
     target = search_lig_indep.prepare_rosetta_target(outdir, target_path, predefined_win_filters)
     #target = pr.parsePDB(workdir + 'o1_1dmm_16-20-28_H-H-D_a_820_gly.pdb.pdb')
-    run_ligand(outdir, target, lig_path)
+    #run_ligand(outdir, target, lig_path)
+    extract_ligand(outdir, target, lig_name)
 
     outdir_uni = outdir + 'vdms_output_uni/'
     os.makedirs(outdir_uni, exist_ok=True)
@@ -315,8 +326,8 @@ def run_all(file, workdir, path_to_database, ideal_ala_coords, lig_path):
             if v[1][0] == 'phenol' and v[1][-2] == True:
                 exist_required_cg_contact = True
 
-        if not exist_required_cg_contact:
-            continue
+        # if not exist_required_cg_contact:
+        #     continue
 
         for vdm_ag, _info in values:
             pr.writePDB(outdir_all + vdm_ag.getTitle() + '.pdb.gz', vdm_ag)
@@ -383,7 +394,8 @@ def main():
 
         path_to_database='/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/'
 
-        workdir = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe_1dmm_rosetta_sel/'
+        #workdir = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe_1dmm_rosetta_sel/'
+        workdir = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe_1dmm_rosetta_2rd_sel/'
 
         lig_path = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe/tts_fe_rdkit.pdb'
     else:
@@ -392,7 +404,8 @@ def main():
         ideal_ala_coords = np.array(ideal_alanine_bb_only[['c_x', 'c_y', 'c_z']])
 
         path_to_database='/mnt/e/DesignData/Combs/Combs2_database/'
-        workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/'
+        #workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/'
+        workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/_rosetta_2ndRound/output_F55D_sel/'
 
         lig_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/tts_fe_rdkit.pdb'
 
@@ -405,7 +418,7 @@ def main():
         return
     print(pdb_files[ind])
     
-    run_all(pdb_files[ind], workdir, path_to_database, ideal_ala_coords, lig_path)
+    run_all(pdb_files[ind], workdir, path_to_database, ideal_ala_coords, lig_path, lig_name)
     return
 
 if __name__=='__main__':

@@ -9,7 +9,7 @@
 #$ -l mem_free=48G
 #$ -l hostname="qb3*&!qb3-ad*&!*gpu*"
 #$ -l h_rt=48:00:00
-#$ -t 1-10
+#$ -t 1-20
 
 # Anything under here can be a bash script
 

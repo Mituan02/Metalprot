@@ -261,6 +261,32 @@ def write_ligands(outdir, filtered_ligs, all_ligs = None, write_all_ligands = Fa
     return 
 
 
+def run_ligand(outdir, target, lig_path, ro1, ro2, rest1, rest2, lig_connects, geo_sel, clash_dist = 2.7):
+    '''
+    Generate all potential ligands for each binding position. 
+    '''
+    lig = pr.parsePDB(lig_path)
+
+    all_ligs = generate_rotated_ligs(lig, [ro1, ro2], [rest1, rest2], [5, 5])
+
+    # points = np.array(position_ligand.fibonacci_sphere(10, scale=0.2))
+    # point_sel = 'name FE1'
+
+    filtered_ligs, _ = generate_ligands(all_ligs, target, lig_connects, geo_sel, clash_dist = clash_dist)
+
+    write_ligands(outdir, filtered_ligs)
+
+    return
+
+
+def extract_ligand(outdir, target, lig_name = None):
+    if not lig_name:
+        lig = target.select('not protein')
+    lig = target.select('resname ' + lig_name)
+    os.makedirs(outdir + 'filtered_ligs/', exist_ok=True)
+    pr.writePDB(outdir + 'filtered_ligs/' + lig_name + '.pdb', lig)
+
+
 def fibonacci_sphere(samples=20, scale = 0.1):
     '''
     Generating points distributed evenly on a sphere. For metal position stimulation. 

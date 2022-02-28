@@ -9,7 +9,6 @@ from metalprot.basic import utils
 from metalprot.basic import prody_ext
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse import lil_matrix
-import gc
 import shutil
 
 
@@ -161,9 +160,9 @@ def search_lig_at_cg_aa_resnum(target, resnum, pos, abple, ligs, input_dict, cg,
 
         #u is lig id, v is vdM id.
         for u in range(len(inds)): 
-            for v in range(len(inds[u])):                
-                ind = inds[u][v]
-                rmsd = dists[u][v]/np.sqrt(num_cg_atoms)
+            for z in range(len(inds[u])):                
+                ind = inds[u][z]
+                rmsd = dists[u][z]/np.sqrt(num_cg_atoms)
                 try:
                     x = labels.iloc[ind]
                     v = df_vdm[(df_vdm['CG'] == x['CG']) & (df_vdm['rota'] == x['rota']) & (df_vdm['probe_name'] == x['probe_name'])]
@@ -257,3 +256,5 @@ def clash_filter_lig(lig, vdm, dist_cut = 2.5):
     if np.sum(adj_matrix) >0:
         return True
     return False
+
+

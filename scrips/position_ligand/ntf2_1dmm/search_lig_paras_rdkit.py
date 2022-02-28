@@ -28,16 +28,17 @@ def get_file_path(on_wynton):
 
     return workdir, path_to_database, ideal_ala_coords, lig_path
 
-
+### TaskType
+task_type = 'search_unknow'
 ### Target strcture 
 predefined_win_filters = [15, 19, 27]
+lig_cgs = [None, None, None]
 
 ### Database para
 use_enriched = True
 use_abple=True
 
 ### Ligand 
-find_unknow = True
 ro1 = ['C8', 'C7']
 rest1 = ['H7', 'C9', 'O1', 'O3', 'O2', 'FE1']
 ro2 = ['C7', 'C6']

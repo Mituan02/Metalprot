@@ -14,6 +14,7 @@ def get_file_path(on_wynton):
 
         lig_path = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe/i3pa_rdkit_fe.pdb'
 
+
     else:
         with open('/mnt/e/GitHub_Design/Metalprot/metalprot/constants/ideal_alanine_bb_only.pkl', 'rb') as f:
             ideal_alanine_bb_only = pickle.load(f)
@@ -27,9 +28,10 @@ def get_file_path(on_wynton):
 
     return workdir, path_to_database, ideal_ala_coords, lig_path
 
-
+task_type = 'search_unknow'
 ### Target strcture 
 predefined_win_filters = [15, 19, 27]
+lig_cgs = [None, None, None]
 
 ### Database para
 use_enriched = True

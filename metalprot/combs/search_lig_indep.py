@@ -146,6 +146,8 @@ def search_lig_at_cg_aa_resnum(target, resnum, pos, abple, ligs, input_dict, cg,
     for cg_id in input_dict.keys():
         if input_dict[cg_id]['cg'] != cg:
             continue
+        #print(input_dict[cg_id]['lgd_sel'])
+        #print(_ligs)
         ligand_coords = get_ligand_coords(_ligs, input_dict[cg_id]['lgd_sel'])
 
         labels, vdm_coords = get_vdm_labels_coords_4old_vdm_db(df_vdm, input_dict[cg_id]['represent_name'], input_dict[cg_id]['correspond_resname'], input_dict[cg_id]['correspond_names'])

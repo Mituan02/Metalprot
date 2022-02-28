@@ -163,7 +163,7 @@ def write_2ndshell(ss, workdir, comb_dict):
         for key in comb_dict.keys():
             for w in key[0]:
                 for c in comb_dict[key].secondshell_dict[w]:
-                    name = tag + '_w_' + str(w) + '_hb_' + c[0].query.getTitle()
+                    name = tag + '_w_' + str(w) + '_hb_' + c.query.getTitle()
                     f.write(name + '\t' + str(w) + '\t' + 'None' + '\t' + str(c.score) + '\n')
     
     return 

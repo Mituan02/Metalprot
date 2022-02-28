@@ -28,8 +28,10 @@ def get_file_path(on_wynton):
     return workdir, path_to_database, ideal_ala_coords, lig_path
 
 
+task_type = 'search_unknow'
 ### Target strcture 
 predefined_win_filters = [15, 19, 27]
+lig_cgs = [None, None, None]
 
 ### Database para
 use_enriched = True

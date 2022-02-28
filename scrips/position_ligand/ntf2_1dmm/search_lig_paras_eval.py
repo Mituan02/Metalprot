@@ -29,15 +29,17 @@ def get_file_path(on_wynton):
     return workdir, path_to_database, ideal_ala_coords, lig_path
 
 
+task_type = 'search_eval'
+
 ### Target strcture 
 predefined_win_filters = [15, 19, 27]
+lig_cgs = [None, None, None]
 
 ### Database para
 use_enriched = True
 use_abple=True
 
 ### Ligand 
-find_unknow = False
 ro1 = ['C8', 'C7']
 rest1 = ['H7', 'C9', 'O1', 'O3', 'O2', 'FE1']
 ro2 = ['C7', 'C6']
@@ -53,7 +55,7 @@ lig_name = 'TTS'
 predefined_resnums = [46, 55]
 
 load_cg_aa_vdm_dict = {
-    # 'coo': [('AGKNQRSTY', True, False)], # (aas, filter_hb, filter_cc)
+    #'coo': [('AGKNQRSTY', True, False)], # (aas, filter_hb, filter_cc)
     # 'bb_cco': [('AGKNQRSTY', True, False)],
     # 'phenol': [('AGDEKNQRST', True, False), ('FWY', False, True)],
     # 'ph': [('FWY', False, True)]

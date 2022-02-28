@@ -9,7 +9,7 @@ from metalprot.basic import filter
 import pickle
 
 '''
-python /mnt/e/GitHub_Design/Metalprot/scrips/search_2ndshell/run_selfcenter_2ndshell_search.py
+python /mnt/e/GitHub_Design/Metalprot/scrips/search_2ndshell/run_selfcenter_2ndshell_search_1dmm.py
 '''
 
 query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS/'
@@ -28,33 +28,24 @@ print(len(all_querys))
 
 ### run Search_struct
 
-workdir = '/mnt/e/DesignData/ligands/LigandBB/'
+workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/'
 
 outdir = workdir + 'output_selfcenter/'
 
-target_path = workdir + '5od1_zn.pdb'
+target_path = workdir + 'o1_1dmm_16-20-28_H-H-D_a_876.pdb'
 
-win_filter = [35,  61,  65]
-
-
-# workdir = '/mnt/e/DesignData/ligands/LigandBB/6dwv/'
-
-# outdir = workdir + 'output_selfcenter/'
-
-# target_path = workdir + '6dwv_core.pdb'
-
-# win_filter = [4, 6, 15]
+win_filter = [15,  19,  27]
 
 
 geometry_path = None
 #geometry_path = workdir + 'tetrahydral_geo.pdb'
 
-metal_metal_dist = 0.3
+metal_metal_dist = 0.45
 
 num_contact_vdms = [3]
 
-allowed_aa_combinations = [['H', 'H', 'H']]
-allowed_aa_combinations = []
+allowed_aa_combinations = [['H', 'H', 'D'], ['H', 'H', 'E']]
+#allowed_aa_combinations = []
 
 _filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_phipsi_val = 25, 
     filter_vdm_score = False, min_vdm_score = 0, filter_vdm_count = False, min_vdm_clu_num = 20,

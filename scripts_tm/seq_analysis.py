@@ -5,7 +5,7 @@ import logomaker
 import matplotlib.pyplot as plt
 
 '''
-python seq_analysis.py /mnt/e/DesignData/tm/ test_0.pdb.pds.opm.seq
+python /mnt/e/GitHub_Design/Metalprot/scripts_tm/seq_analysis.py /mnt/e/DesignData/tm/ test_0.pdb.pds.opm.seq
 '''
 
 def _get_seq_rmsd(seqfile):
@@ -72,16 +72,29 @@ def _plot_log(fig, ax, seqs):
     xs = list(range(1, len(df)+1))
     ax.set_xticks(range(len(xs)))
     ax.set_xticklabels(xs)
+    return df
+
+
+def write_top_aa(workdir, df, top = 5, filename = '_top_seq.txt'):
+    '''
+    For the logo frequency, output the top aa.
+    '''
+    with open(workdir + filename, 'w') as f:
+        for i in range(df.shape[0]):
+            idx = np.argsort(df.iloc[i])
+            aas = np.flip(df.columns[idx][-top:])
+            f.write(str(i) + '\t' + ''.join([a for a in aas]) + '\n')
+    return
 
 
 def main(workdir, seqfile, out_name = '_info.png'):
     all_seqs, all_rmsds = _get_seq_rmsd(workdir + seqfile)
     fig, (ax1) =plt.subplots(1, 1, figsize=(15, 6))
-    _plot_log(fig, ax1, all_seqs)
+    df = _plot_log(fig, ax1, all_seqs)
     plt.tight_layout()
     plt.savefig(workdir + out_name )
     plt.close()
-
+    write_top_aa(workdir, df, top = 5, filename = '_top_seq.txt')
 
 if __name__=='__main__':
     main(sys.argv[1], sys.argv[2])

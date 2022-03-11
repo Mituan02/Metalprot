@@ -22,7 +22,7 @@ import datetime
 import importlib.machinery
 
 '''
-python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/run_search_liga.py 0 search_lig_paras.py 7
+python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/run_search_lig_indep.py 0 search_lig_paras.py 7
 
 python run_search_lig_indep.py 0 search_lig_paras_eval.py 7
 python run_search_lig_indep.py 0 search_2ndshell_paras.py 5

@@ -6,7 +6,7 @@ from prody.atomic import pointer
 from .utils import get_ABPLE
 from . import constant 
 
-metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
+metal_sel = 'name NI MN ZN CO CU MG FE' 
 
 def get_metal_contact_atoms(pdb):
     '''

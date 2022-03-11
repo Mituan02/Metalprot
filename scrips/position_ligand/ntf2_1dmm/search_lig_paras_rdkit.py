@@ -21,9 +21,9 @@ def get_file_path(on_wynton):
         ideal_ala_coords = np.array(ideal_alanine_bb_only[['c_x', 'c_y', 'c_z']])
 
         path_to_database='/mnt/e/DesignData/Combs/Combs2_database/'
-        workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/'
+        #workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/'
         #workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/_rosetta_2ndRound/output_F55D_sel/'
-
+        workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta_86-88-101/_rosetta_r1/output_sel/'
         lig_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/tts_fe_rdkit.pdb'
 
     return workdir, path_to_database, ideal_ala_coords, lig_path
@@ -31,7 +31,8 @@ def get_file_path(on_wynton):
 ### TaskType
 task_type = 'search_unknow'
 ### Target strcture 
-predefined_win_filters = [15, 19, 27]
+#predefined_win_filters = [15, 19, 27]
+predefined_win_filters = [85, 87, 100]
 lig_cgs = [None, None, None]
 
 ### Database para
@@ -50,7 +51,9 @@ clash_dist = 3.0
 lig_name = 'TTS'
 
 ### Search ligands paramters.
-predefined_resnums = [11, 12, 16, 24, 30, 31, 35, 37, 39, 46, 52, 55, 56, 60, 65, 67, 69, 83, 85, 87, 98, 100, 102, 104, 106, 112, 115, 117, 119]
+#predefined_resnums = [11, 12, 16, 24, 30, 31, 35, 37, 39, 46, 52, 55, 56, 60, 65, 67, 69, 83, 85, 87, 98, 100, 102, 104, 106, 112, 115, 117, 119] 
+predefined_resnums = [11, 12, 15, 16, 19, 24, 27, 30, 31, 35, 37, 39, 43, 46, 52, 55, 56, 59, 60, 65, 67, 69, 83, 89, 98, 102, 104, 106, 112, 115, 117, 119]
+
 
 load_cg_aa_vdm_dict = {
     'coo': [('AGKNQRSTY', True, False)], # (aas, filter_hb, filter_cc)

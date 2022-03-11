@@ -22,8 +22,9 @@ def get_file_path(on_wynton):
 
         path_to_database='/mnt/e/DesignData/Combs/Combs2_database/'
         #workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/'
-        workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/_rosetta_2ndRound/output_F55D_sel/'
-
+        #workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/_rosetta_2ndRound/output_F55D_sel/'
+        #workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/_rosetta_r2_820/output_sel/'
+        workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/_rosetta_3rdRound/output_55F_newlop/output_55F_newlop_sel/eval/'
         lig_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/tts_fe_rdkit.pdb'
 
     return workdir, path_to_database, ideal_ala_coords, lig_path
@@ -52,17 +53,17 @@ lig_name = 'TTS'
 
 ### Search ligands paramters.
 #predefined_resnums = [11, 12, 16, 24, 30, 31, 35, 37, 39, 46, 52, 55, 56, 60, 65, 67, 69, 83, 85, 87, 98, 100, 102, 104, 106, 112, 115, 117, 119]
-predefined_resnums = [46, 55]
+predefined_resnums = [46, 55, 117]
 
 load_cg_aa_vdm_dict = {
     #'coo': [('AGKNQRSTY', True, False)], # (aas, filter_hb, filter_cc)
     # 'bb_cco': [('AGKNQRSTY', True, False)],
     # 'phenol': [('AGDEKNQRST', True, False), ('FWY', False, True)],
-    # 'ph': [('FWY', False, True)]
+    'ph': [('FWY', False, True)],
     'phenol': [('DS', True, False)]
 }
 
-rmsd = 0.75
+rmsd = 0.85
 
 #TO DO: rename the atoms
 vdm_cg_aa_cc_dict = {

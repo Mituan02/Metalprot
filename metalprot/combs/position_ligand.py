@@ -10,7 +10,7 @@ import os
 
 from ..basic import prody_ext 
 
-def rotate_ligs(orign_lig, rot, rest, rotation_degree = 10, dist = 3):
+def rotate_ligs(orign_lig, rot, rest, rotation_degree = 10, interclash_dist = 3):
     '''
     Note that the ZN must be the last element of the ligand.
     '''
@@ -38,14 +38,14 @@ def rotate_ligs(orign_lig, rot, rest, rotation_degree = 10, dist = 3):
         _lig.setTitle(lig.getTitle() + '_' + '-'.join(rot) + '_' + str(i))
         #pr.writePDB(workdir + 'ligand_rotation/' +_lig.getTitle() + '_' + '-'.join(rot) + '_' + str(i), _lig)
 
-        if ligand_rot_is_clash(_lig, rot, rest, dist):
+        if ligand_rot_is_clash(_lig, rot, rest, interclash_dist):
             continue
         all_ligs.append(_lig)
 
     return all_ligs
 
 
-def generate_rotated_ligs(lig, rots, rests, rotation_degrees, clash_dist = 3):
+def generate_rotated_ligs(lig, rots, rests, rotation_degrees, interclash_dist = 2.7):
     '''
     The method only works for 2 rots.
     TO DO: use recursive algorithm to allow more than 2 rots.
@@ -55,13 +55,13 @@ def generate_rotated_ligs(lig, rots, rests, rotation_degrees, clash_dist = 3):
     rot = rots[i]
     rest = rests[i]
     degree = rotation_degrees[i]
-    ligs = rotate_ligs(lig, rot, rest, degree, clash_dist)
+    ligs = rotate_ligs(lig, rot, rest, degree, interclash_dist)
     for _lig in ligs:
         i = 1
         rot = rots[i]
         rest = rests[i]
         degree = rotation_degrees[i]
-        ligs2 = rotate_ligs(_lig, rot, rest, degree, clash_dist)
+        ligs2 = rotate_ligs(_lig, rot, rest, degree, interclash_dist)
         all_ligs.extend(ligs2)
     return all_ligs
 
@@ -114,7 +114,7 @@ def add_metal2ligs(ligs, rig, lig_sel, rig_sel, metal):
     return lig_metals
 
 
-def ligand_rot_is_clash(lig, rot, rest, dist = 3):
+def ligand_rot_is_clash(lig, rot, rest, interclash_dist = 2.7):
     '''
     The ligand it self could clash after rotation.
     The idea is to sep the ligand by rot into 2 groups anc check their dists.
@@ -124,7 +124,7 @@ def ligand_rot_is_clash(lig, rot, rest, dist = 3):
     atoms_rot = lig.select('heavy and not name ' + ' '.join(rot) + ' ' + ' '.join(rest)).getCoords()
     rest_coords = lig.select('heavy and name ' +  ' '.join(rest)).getCoords()
 
-    nbrs = NearestNeighbors(radius= dist).fit(atoms_rot)
+    nbrs = NearestNeighbors(radius= interclash_dist).fit(atoms_rot)
     adj_matrix = nbrs.radius_neighbors_graph(rest_coords).astype(bool)
 
     if np.sum(adj_matrix) >0:
@@ -261,20 +261,20 @@ def write_ligands(outdir, filtered_ligs, all_ligs = None, write_all_ligands = Fa
     return 
 
 
-def run_ligand(outdir, target, lig_path, ro1, ro2, rest1, rest2, lig_connects, geo_sel, clash_dist = 2.7):
+def run_ligand(outdir, target, lig_path, ro1, ro2, rest1, rest2, lig_connects, geo_sel, clash_dist = 2.7, write_all_ligands = False):
     '''
     Generate all potential ligands for each binding position. 
     '''
     lig = pr.parsePDB(lig_path)
 
-    all_ligs = generate_rotated_ligs(lig, [ro1, ro2], [rest1, rest2], [5, 5])
+    all_ligs = generate_rotated_ligs(lig, [ro1, ro2], [rest1, rest2], [10, 10])
 
     # points = np.array(position_ligand.fibonacci_sphere(10, scale=0.2))
     # point_sel = 'name FE1'
 
     filtered_ligs, _ = generate_ligands(all_ligs, target, lig_connects, geo_sel, clash_dist = clash_dist)
 
-    write_ligands(outdir, filtered_ligs)
+    write_ligands(outdir, filtered_ligs, all_ligs, write_all_ligands)
 
     return
 
@@ -310,7 +310,7 @@ def fibonacci_sphere(samples=20, scale = 0.1):
 
 
 
-def generate_ligands(all_ligs, target, lig_connects, geo_sel, points = None, point_sel = None, clash_dist = 2.5):
+def generate_ligands(all_ligs, target, lig_connects, geo_sel, points = None, point_sel = None, clash_dist = 2.7):
     '''
     Generate all potential artificial ligand positions.
 

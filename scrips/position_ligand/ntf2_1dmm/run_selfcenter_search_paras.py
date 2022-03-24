@@ -12,11 +12,11 @@ def get_file_path(on_wynton):
         #query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS/'
         query_dir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/pickle_noCYS/'
         workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/_rosetta_3rdRound/output_55F_newlop/output_55F_newlop_sel/eval/'
-
+        workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta_16-20-28/_rosetta_tts_r3_876/output_55F_newlop2/metalprot_eval/'
     return query_dir, workdir
 
 
-win_filters = [[15, 19, 27] for i in range(4)]
+win_filters = [[15, 19, 27] for i in range(15)]
 #win_filters = [[16, 20, 28] for i in range(3)]
 #win_filters = [[] for i in range(len(pdb_files))]
 #win_filters = predefined_win_filters

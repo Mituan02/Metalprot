@@ -23,7 +23,7 @@ def get_file_path(on_wynton):
         path_to_database='/mnt/e/DesignData/Combs/Combs2_database/'
         #workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/'
         #workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/_rosetta_2ndRound/output_F55D_sel/'
-        workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta_86-88-101/_rosetta_r1/output_sel/'
+        workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta_86-88-101/_rosetta_r1/output_1_sel/'
         lig_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/tts_fe_rdkit.pdb'
 
     return workdir, path_to_database, ideal_ala_coords, lig_path
@@ -45,8 +45,9 @@ rest1 = ['H7', 'C9', 'O1', 'O3', 'O2', 'FE1']
 ro2 = ['C7', 'C6']
 rest2 = ['H5', 'H6', 'H7', 'C8', 'C9', 'O1', 'O3', 'O2', 'FE1']
 
-lig_connects = [['FE1', 'O3','O1']]
-geo_sel = 'chid X and name FE1 O2 O3'
+lig_connects = [['FE1', 'O1','O3']]
+#geo_sel = 'chid X and name FE1 O2 O3'
+geo_sel = 'chid X and name FE1 O1 O3'
 clash_dist = 3.0
 lig_name = 'TTS'
 

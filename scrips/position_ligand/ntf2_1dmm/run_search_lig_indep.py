@@ -22,7 +22,7 @@ import datetime
 import importlib.machinery
 
 '''
-python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/run_search_lig_indep.py 0 search_lig_paras.py 7
+python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/run_search_lig_indep.py 0 /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/search_lig_paras_rdkit.py 7
 
 python run_search_lig_indep.py 0 search_lig_paras_eval.py 7
 python run_search_lig_indep.py 0 search_2ndshell_paras.py 5
@@ -91,7 +91,7 @@ def run_search(target, ligs, path_to_database, ideal_ala_coords, para, lig_cg):
 
 def prepare_ligs(outdir, target, lig_path, para):
     if para.task_type == 'search_unknow':
-        position_ligand.run_ligand(outdir, target, lig_path, para.ro1, para.ro2, para.rest1, para.rest2, para.lig_connects, para.geo_sel, clash_dist = 2.7)
+        position_ligand.run_ligand(outdir, target, lig_path, para.ro1, para.ro2, para.rest1, para.rest2, para.lig_connects, para.geo_sel, clash_dist = 2.7, write_all_ligands=False)
     else:
         position_ligand.extract_ligand(outdir, target, para.lig_name)
 
@@ -190,7 +190,7 @@ def run_all(file, workdir, path_to_database, ideal_ala_coords, lig_path, para):
         ligs = extract_2ndshell_cgs(outdir, target, para.predefined_win_filters)
     else:
         ligs = prepare_ligs(outdir, target, lig_path, para)
-    print(ligs)
+
     print('Filtered Ligs: ' + str(len(ligs)))
     if len(ligs) <= 0:
         return

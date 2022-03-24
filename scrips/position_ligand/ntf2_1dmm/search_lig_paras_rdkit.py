@@ -44,6 +44,9 @@ ro1 = ['C8', 'C7']
 rest1 = ['H7', 'C9', 'O1', 'O3', 'O2', 'FE1']
 ro2 = ['C7', 'C6']
 rest2 = ['H5', 'H6', 'H7', 'C8', 'C9', 'O1', 'O3', 'O2', 'FE1']
+rot_degree = [10, 10]
+interMolClashSets = [(['O1'], ['C1', 'C5']), (['O2'], ['C1', 'C5', 'C6'])]
+
 
 lig_connects = [['FE1', 'O1','O3']]
 #geo_sel = 'chid X and name FE1 O2 O3'

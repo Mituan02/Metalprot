@@ -10,7 +10,8 @@ import os
 
 from ..basic import prody_ext 
 
-def rotate_ligs(orign_lig, rot, rest, rotation_degree = 10, interclash_dist = 3.0):
+
+def rotate_ligs(orign_lig, rot, rest, rotation_degree, interMolClashSets, interclash_dist = 3.0):
     '''
     Note that the ZN must be the last element of the ligand.
     '''
@@ -38,14 +39,14 @@ def rotate_ligs(orign_lig, rot, rest, rotation_degree = 10, interclash_dist = 3.
         _lig.setTitle(lig.getTitle() + '_' + '-'.join(rot) + '_' + str(i))
         #pr.writePDB(workdir + 'ligand_rotation/' +_lig.getTitle() + '_' + '-'.join(rot) + '_' + str(i), _lig)
 
-        if ligand_rot_is_clash(_lig, rot, rest, interclash_dist):
+        if ligand_rot_is_clash(_lig, interMolClashSets, interclash_dist):
             continue
         all_ligs.append(_lig)
 
     return all_ligs
 
 
-def generate_rotated_ligs(lig, rots, rests, rotation_degrees, interclash_dist = 3.0):
+def generate_rotated_ligs(lig, rots, rests, rotation_degrees, interMolClashSets, interclash_dist = 3.0):
     '''
     The method only works for 2 rots.
     TO DO: use recursive algorithm to allow more than 2 rots.
@@ -55,13 +56,13 @@ def generate_rotated_ligs(lig, rots, rests, rotation_degrees, interclash_dist = 
     rot = rots[i]
     rest = rests[i]
     degree = rotation_degrees[i]
-    ligs = rotate_ligs(lig, rot, rest, degree, interclash_dist)
+    ligs = rotate_ligs(lig, rot, rest, degree, interMolClashSets, interclash_dist)
     for _lig in ligs:
         i = 1
         rot = rots[i]
         rest = rests[i]
         degree = rotation_degrees[i]
-        ligs2 = rotate_ligs(_lig, rot, rest, degree, interclash_dist)
+        ligs2 = rotate_ligs(_lig, rot, rest, degree, interMolClashSets, interclash_dist)
         all_ligs.extend(ligs2)
     return all_ligs
 
@@ -114,7 +115,7 @@ def add_metal2ligs(ligs, rig, lig_sel, rig_sel, metal):
     return lig_metals
 
 
-def ligand_rot_is_clash(lig, rot, rest, interclash_dist = 3.0):
+def ligand_rot_is_clash_depre(lig, rot, rest, interclash_dist = 3.0):
     '''
     The ligand it self could clash after rotation.
     The idea is to sep the ligand by rot into 2 groups anc check their dists.
@@ -131,6 +132,25 @@ def ligand_rot_is_clash(lig, rot, rest, interclash_dist = 3.0):
         return True
     return False
 
+
+def ligand_rot_is_clash(lig, interMolClashSets, interclash_dist = 3.0):
+    '''
+    The ligand it self could clash after rotation.
+    The idea is to check the manually defined interMolClashSets 
+    Such as interMolClashSets = [(['O1'], ['C1', 'C5']), (['O2'], ['C1', 'C5', 'C6'])], which means the rotation may induce clash between O1 and C1/C5.
+    return True if clash
+    '''
+    for clashSet in interMolClashSets:
+        atoms_rot = lig.select('name ' + ' '.join(clashSet[0])).getCoords()
+        rest_coords = lig.select('name ' +  ' '.join(clashSet[1])).getCoords()
+
+        nbrs = NearestNeighbors(radius= interclash_dist).fit(atoms_rot)
+        adj_matrix = nbrs.radius_neighbors_graph(rest_coords).astype(bool)
+
+        if np.sum(adj_matrix) >0:
+            return True
+    
+    return False
 
 def lig_2_ideageo(ligs, lig_connect_sel, ideal_geo_o = None, geo_sel = 'OE2 ZN'):
     '''
@@ -261,13 +281,13 @@ def write_ligands(outdir, filtered_ligs, all_ligs = None, write_all_ligands = Fa
     return 
 
 
-def run_ligand(outdir, target, lig_path, ro1, ro2, rest1, rest2, lig_connects, geo_sel, clash_dist = 2.7, write_all_ligands = False):
+def run_ligand(outdir, target, lig_path, ro1, ro2, rest1, rest2, lig_connects, geo_sel, rot_degree, interMolClashSets, clash_dist = 2.7, write_all_ligands = False):
     '''
     Generate all potential ligands for each binding position. 
     '''
     lig = pr.parsePDB(lig_path)
 
-    all_ligs = generate_rotated_ligs(lig, [ro1, ro2], [rest1, rest2], [8, 8], interclash_dist= 2.7)
+    all_ligs = generate_rotated_ligs(lig, [ro1, ro2], [rest1, rest2], rot_degree, interMolClashSets, interclash_dist= 3.0)
 
     # points = np.array(position_ligand.fibonacci_sphere(10, scale=0.2))
     # point_sel = 'name FE1'

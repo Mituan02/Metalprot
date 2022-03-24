@@ -91,7 +91,7 @@ def run_search(target, ligs, path_to_database, ideal_ala_coords, para, lig_cg):
 
 def prepare_ligs(outdir, target, lig_path, para):
     if para.task_type == 'search_unknow':
-        position_ligand.run_ligand(outdir, target, lig_path, para.ro1, para.ro2, para.rest1, para.rest2, para.lig_connects, para.geo_sel, clash_dist = 2.7, write_all_ligands=False)
+        position_ligand.run_ligand(outdir, target, lig_path, para.ro1, para.ro2, para.rest1, para.rest2, para.lig_connects, para.geo_sel, para.rot_degree, para.interMolClashSets, clash_dist = 2.7, write_all_ligands=False)
     else:
         position_ligand.extract_ligand(outdir, target, para.lig_name)
 
@@ -182,7 +182,7 @@ def run_all(file, workdir, path_to_database, ideal_ala_coords, lig_path, para):
     time_tag = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') 
 
     target_path = workdir + file
-    outdir = workdir + '1dmm_tts_results/output_' + para.task_type + '_'+ file + '_' + time_tag + '/'
+    outdir = workdir + '1ogx_tts_result/output_' + para.task_type + '_'+ file + '_' + time_tag + '/'
     os.makedirs(outdir, exist_ok=True)
 
     target = search_lig_indep.prepare_rosetta_target(outdir, target_path, para.predefined_win_filters)

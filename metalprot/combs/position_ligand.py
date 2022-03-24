@@ -10,7 +10,7 @@ import os
 
 from ..basic import prody_ext 
 
-def rotate_ligs(orign_lig, rot, rest, rotation_degree = 10, interclash_dist = 3):
+def rotate_ligs(orign_lig, rot, rest, rotation_degree = 10, interclash_dist = 3.0):
     '''
     Note that the ZN must be the last element of the ligand.
     '''
@@ -45,7 +45,7 @@ def rotate_ligs(orign_lig, rot, rest, rotation_degree = 10, interclash_dist = 3)
     return all_ligs
 
 
-def generate_rotated_ligs(lig, rots, rests, rotation_degrees, interclash_dist = 2.7):
+def generate_rotated_ligs(lig, rots, rests, rotation_degrees, interclash_dist = 3.0):
     '''
     The method only works for 2 rots.
     TO DO: use recursive algorithm to allow more than 2 rots.
@@ -114,7 +114,7 @@ def add_metal2ligs(ligs, rig, lig_sel, rig_sel, metal):
     return lig_metals
 
 
-def ligand_rot_is_clash(lig, rot, rest, interclash_dist = 2.7):
+def ligand_rot_is_clash(lig, rot, rest, interclash_dist = 3.0):
     '''
     The ligand it self could clash after rotation.
     The idea is to sep the ligand by rot into 2 groups anc check their dists.
@@ -267,7 +267,7 @@ def run_ligand(outdir, target, lig_path, ro1, ro2, rest1, rest2, lig_connects, g
     '''
     lig = pr.parsePDB(lig_path)
 
-    all_ligs = generate_rotated_ligs(lig, [ro1, ro2], [rest1, rest2], [10, 10])
+    all_ligs = generate_rotated_ligs(lig, [ro1, ro2], [rest1, rest2], [8, 8], interclash_dist= 2.7)
 
     # points = np.array(position_ligand.fibonacci_sphere(10, scale=0.2))
     # point_sel = 'name FE1'

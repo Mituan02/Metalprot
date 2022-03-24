@@ -12,7 +12,8 @@ import pickle
 python /mnt/e/GitHub_Design/Metalprot/scrips/search_2ndshell/run_selfcenter_2ndshell_search_1dmm.py
 '''
 
-query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS/'
+#query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS/'
+query_dir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/pickle_noCYS/'
 
 with open(query_dir + 'all_metal_vdm.pkl', 'rb') as f:
     query_all_metal = pickle.load(f)
@@ -28,19 +29,28 @@ print(len(all_querys))
 
 ### run Search_struct
 
-workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/'
+# workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/'
+
+# outdir = workdir + 'output_selfcenter/'
+
+# target_path = workdir + 'o1_1dmm_16-20-28_H-H-D_a_876.pdb'
+
+# win_filter = [15,  19,  27]
+
+
+workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta_86-88-101/_rosetta_r1/output_1_sel/'
 
 outdir = workdir + 'output_selfcenter/'
 
-target_path = workdir + 'o1_1dmm_16-20-28_H-H-D_a_876.pdb'
+target_path = workdir + '1ogx_86-88-101_H-H-E_a2_421.pdb'
 
-win_filter = [15,  19,  27]
+win_filter = [85,  87,  100]
 
 
 geometry_path = None
-#geometry_path = workdir + 'tetrahydral_geo.pdb'
+geometry_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/fe_geo.pdb'
 
-metal_metal_dist = 0.45
+metal_metal_dist = 0.85
 
 num_contact_vdms = [3]
 
@@ -49,7 +59,7 @@ allowed_aa_combinations = [['H', 'H', 'D'], ['H', 'H', 'E']]
 
 _filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_phipsi_val = 25, 
     filter_vdm_score = False, min_vdm_score = 0, filter_vdm_count = False, min_vdm_clu_num = 20,
-    after_search_filter_geometry = True, filter_based_geometry_structure = False, angle_tol = 15, aa_aa_tol = 0.3, aa_metal_tol = 0.2,
+    after_search_filter_geometry = True, filter_based_geometry_structure = False, angle_tol = 25, aa_aa_tol = 0.35, aa_metal_tol = 0.25,
     pair_angle_range = [85, 130], pair_aa_aa_dist_range = [2.8, 4], pair_metal_aa_dist_range = None,
     after_search_filter_qt_clash = True, vdm_vdm_clash_dist = 2.7, vdm_bb_clash_dist = 2.2, 
     after_search_open_site_clash = True, open_site_dist = 3.0, 

@@ -144,6 +144,9 @@ def write_2ndshell(ss, workdir, comb_dict):
     '''
     #Could be combined in write_comb_info.
     '''
+    if len(list(comb_dict.keys())) == 0:
+        return
+        
     for key in comb_dict.keys():
         outdir = workdir + 'win_' + '-'.join([ss.target_index_dict[w] for w in key[0]]) + '/'
         
@@ -157,7 +160,7 @@ def write_2ndshell(ss, workdir, comb_dict):
                 c_names = c.query.getTitle().split('_')
                 out_file = outdir + tag + '_w_' + str(w) + '_hb_' + '_'.join([c_names[i] for i in range(5)])
                 pr.writePDB(out_file, c.query)
-
+    
     with open(outdir + tag + '_2ndshell_summary.tsv', 'w') as f:
         f.write('name\twin\trmsd\n')
         for key in comb_dict.keys():

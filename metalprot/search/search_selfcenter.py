@@ -337,6 +337,7 @@ class Search_selfcenter(Search_vdM):
         paths = []
         for _num_contact in self.num_contact_vdms:
             _paths = calc_adj_matrix_paths(m_adj_matrix, _num_contact)
+   
             if not self.validateOriginStruct and len(self.allowed_aa_combinations_sorted) > 0:
                 for _path in _paths:
                     aas = tuple(sorted([self.vdms[vdm_inds[p]].aa_type for p in _path]))
@@ -832,8 +833,10 @@ def run_search_selfcenter(ss):
     m_adj_matrix, win_labels, vdm_inds = neighbor_generate_nngraph(ss)
 
     paths = []
+
     for _num_contact in ss.num_contact_vdms:
         _paths = calc_adj_matrix_paths(m_adj_matrix, _num_contact)
+        print('adj_matrix_paths: '.format(len(_paths)))
         if not ss.validateOriginStruct and len(ss.allowed_aa_combinations_sorted) > 0:
             for _path in _paths:
                 aas = tuple(sorted([ss.vdms[vdm_inds[p]].aa_type for p in _path]))

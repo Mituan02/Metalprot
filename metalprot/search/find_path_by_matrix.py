@@ -239,8 +239,8 @@ def filter_adj_matrix(ss, wins, metal_vdm_size, adj_matrix, adj_matrix_bb):
             vdm_score_labels[inx*metal_vdm_size:(inx+1)*metal_vdm_size] = v_scores >= ss.search_filter.min_vdm_score
         mask_labels *= vdm_score_labels
 
-    if ss.search_filter.filter_vdm_score:
-        v_count = np.array([v.score for v in ss.vdms])
+    if ss.search_filter.filter_vdm_count:
+        v_count = np.array([v.clu_num for v in ss.vdms])
         vdm_count_labels = np.zeros(len(wins)*metal_vdm_size, dtype=bool)
         for inx in range(len(wins)):
             vdm_count_labels[inx*metal_vdm_size:(inx+1)*metal_vdm_size] = v_count >= ss.search_filter.min_vdm_clu_num

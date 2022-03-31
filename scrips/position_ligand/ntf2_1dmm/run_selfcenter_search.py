@@ -12,7 +12,7 @@ import importlib.machinery
 
 '''
 # To run in develop mode
-python run_selfcenter_search.py 0 run_selfcenter_search_paras.py 1
+python run_selfcenter_search.py 0 /mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta_86-88-101/_rosetta_r3/eval/run_selfcenter_search_paras.py 1
 '''
 
 

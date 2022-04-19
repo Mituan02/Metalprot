@@ -52,7 +52,7 @@ def extract_vdm(coredir, outdir, aas):
                 pr.writePDB(_outdir + pdb.getTitle(), pdb)
 
 workdir = "/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/"
-workdir = workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/_Seq_core_2ndshell_date_reps/'
+workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/_Seq_core_2ndshell_date_reps/'
 
 outdir = workdir + '20211209_vdm_reps/'
 outdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/20220128_1stshell/'

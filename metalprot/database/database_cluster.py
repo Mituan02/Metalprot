@@ -169,7 +169,7 @@ def write_metal_diff(workdir, metal_diffs, metals = ['CA', 'CO', 'CU', 'FE', 'MG
 
 # run cluster
 
-def run_cluster(_pdbs, workdir, outdir, rmsd, metal_sel, len_sel, align_sel, min_cluster_size = 0, tag = '', is_self_center = False, select_poses = []):
+def run_cluster(_pdbs, workdir, outdir, rmsd, metal_sel, len_sel, align_sel, min_cluster_size = 0, tag = '', is_self_center = False, select_poses = [], check_metaldiff = False):
     if not is_self_center:
         clu = superimpose_aa_core(_pdbs, rmsd = rmsd, len_sel = len_sel, align_sel = align_sel, min_cluster_size = min_cluster_size)
     else:
@@ -181,9 +181,10 @@ def run_cluster(_pdbs, workdir, outdir, rmsd, metal_sel, len_sel, align_sel, min
     
     print_cluster_pdbs(clu, workdir + outdir, rmsd, tag)
 
-    metal_diffs = check_metal_diff(clu)
+    if check_metaldiff:
+        metal_diffs = check_metal_diff(clu)
 
-    write_metal_diff(workdir + outdir, metal_diffs)
+        write_metal_diff(workdir + outdir, metal_diffs)
 
     clu_infos = get_clu_info_write(workdir + outdir + '_summary.txt', _pdbs, clu, rmsd = rmsd, metal_sel = metal_sel, align_sel = align_sel)
 

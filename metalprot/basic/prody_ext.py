@@ -275,3 +275,47 @@ def target_to_all_gly_ala(target, title, win_no_mutation = [], aa = 'ALA', keep_
     ag.setBetas(betas)
     ag.setOccupancies(occu)
     return ag
+
+
+def mutate_vdm_target_into_ag(target, resind_vdm_dict, title, write_metal = True, contact_resind = 1):
+    '''
+    combine vdms into target and mutate all other aa 2 ala or gly for ligand position.
+    '''
+
+    ag = pr.AtomGroup(title)
+    coords = []
+    chids = []
+    names = []
+    resnames = []
+    resnums = []
+
+    for i in target.select('protein and name C').getResindices():
+        c = target.select('resindex ' + str(i))
+
+        if i in resind_vdm_dict.keys():
+            v_query = resind_vdm_dict[i]
+            query = v_query.select('resindex ' + str(contact_resind))
+            query.setChids([c.getChids()[0] for x in range(len(query))])
+            query.setResnums([c.getResnums()[0] for x in range(len(query))])
+            c = query
+            
+        coords.extend(c.getCoords())
+        chids.extend(c.getChids())
+        names.extend(c.getNames())
+        resnames.extend(c.getResnames())
+        resnums.extend(c.getResnums())
+
+    if write_metal:
+        _geo = list(resind_vdm_dict.values())[0].select('name NI MN ZN CO CU MG FE')
+        coords.extend(_geo.getCoords())
+        chids.extend(_geo.getChids())
+        names.extend(_geo.getNames())
+        resnames.extend(_geo.getResnames())
+        resnums.extend(_geo.getResnums())
+
+    ag.setCoords(np.array(coords))
+    ag.setChids(chids)
+    ag.setNames(names)
+    ag.setResnames(resnames)
+    ag.setResnums(resnums)
+    return ag

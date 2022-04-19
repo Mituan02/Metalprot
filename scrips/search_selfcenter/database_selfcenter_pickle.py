@@ -25,6 +25,9 @@ query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/20220
 
 centroid_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['AAMetalPhiPsi', 'cluster'], file_name_not_includes=['@', 'CYS'], score_cut = 0, clu_num_cut = 0)
 
+query_dir = '/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/20211015_AAext3/'
+centroid_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['AAA', 'cluster'], file_name_not_includes=['@', 'CYS'], score_cut = 0, clu_num_cut = 0)
+
 
 centroid_query_dict = {}
 for i in range(len(centroid_querys)):

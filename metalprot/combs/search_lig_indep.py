@@ -1,3 +1,4 @@
+import itertools
 import os
 import pdb
 import prody as pr
@@ -50,7 +51,7 @@ def load_old_vdm(path_to_database, cg, aa):
     Pelase check combs2_da.ipynb to learn the loaded database.
     '''
     cg_aa = cg + '/' + aa 
-    df_vdm = pd.read_parquet(path_to_database + 'vdMs/' + cg_aa + '.parquet.gzip')
+    df_vdm = pd.read_parquet(path_to_database + cg_aa + '.parquet.gzip')
 
     return df_vdm
 
@@ -222,6 +223,23 @@ def clash_filter_protein(target, all_coords, dist_cut = 2.5):
 
     #np.sum(clashing) #The clashing is too less to be considered.
     return clashing
+
+
+def clash_filter_proteins(targets, dist_cut = 2.2):
+    '''
+    # clashing: any atom close to the bb of a pair pdbs let's say dist <= dist_cut
+    return True if clashing. 
+    '''
+    for i, j in itertools.permutations(range(len(targets))):
+        t1 = targets[i]
+        t2 = targets[j]
+        nbrs = NearestNeighbors(radius= dist_cut).fit(t1.select('heavy').getCoords())
+        adj_matrix = nbrs.radius_neighbors_graph(t2.select('heavy').getCoords()).astype(bool)
+
+        if np.sum(adj_matrix) >0:
+            return True
+    #np.sum(clashing) #The clashing is too less to be considered.
+    return False
 
 
 def clash_filter_protein_single(target, resnum, vdm, dist_cut = 2.7):

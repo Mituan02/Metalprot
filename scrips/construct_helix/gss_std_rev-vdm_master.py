@@ -5,12 +5,13 @@ import shutil
 import prody as pr
 import numpy as np
 import itertools
+import statistics
 from rvrsprot.external import query
 
 
 def master_pdb(workdir, helix_noclash_outdir, outdir_mid_name, pdb, targetList):
     print(pdb)
-    _outdir = workdir + outdir_mid_name + pdb.split('.')[0] + '/'
+    _outdir = workdir + outdir_mid_name + pdb.split('.')[0] + '_all/'
     os.makedirs(_outdir, exist_ok=True)
     query.master_query(_outdir, helix_noclash_outdir + pdb, targetList = targetList, rmsdCut=1.0, topN=None, outfile=_outdir + 'stdout.txt')
     
@@ -42,6 +43,40 @@ def master_pdb_bypair(workdir, helix_noclash_outdir, outdir_mid_name, _pdb, targ
         query.master_query(_outdir, _outdir + a + '_' + b + '.pdb', targetList = targetList, rmsdCut=0.75, topN=None, outfile=_outdir + 'stdout.txt')
 
     return
+
+def find_best_all():
+    '''
+    After master search, we get results for all start structures (from master_pdb_bypair()).
+    Then we need to summary the information to find the one with the most master hit.
+    '''
+    workdir = '/wynton/home/degradolab/lonelu/DesignData/_reverse_design/'
+    _entrys = []
+    for _d1 in os.listdir(workdir):
+        if (not os.path.isdir(_d1)) or ('master_all' not in _d1):
+            continue   
+        print(_d1)
+
+        for _d2 in os.listdir(workdir + _d1):
+            if (not os.path.isdir(workdir + _d1 + '/' + _d2)) or ('cluster' not in _d2):
+                continue   
+            print(_d2) 
+
+            rmsds = []
+            with open(workdir + _d1 + '/' + _d2  + '/seq.txt', 'r') as f:         
+                lines = f.readlines()
+                if len(lines) <= 0:
+                    continue
+                for line in lines:
+                    rmsds.append(float(line.strip(' ').split(' ')[0]))
+            entry=(_d1, _d2, statistics.mean(rmsds), min(rmsds), len(lines))
+            _entrys.append(entry)
+
+    with open(workdir + '_master_all_summary.tsv', 'w') as f:
+        f.write('topology\tentry\tChid-chid\tmean_rmsd\tmin_rmsd\tcount\n')
+        for entry in _entrys:
+            f.write('\t'.join(str(e) for e in entry) + '\n') 
+
+    return 
 
 def find_best():
     '''
@@ -120,4 +155,3 @@ def main_wynton():
 
 if __name__=='__main__':
     main_wynton()
-

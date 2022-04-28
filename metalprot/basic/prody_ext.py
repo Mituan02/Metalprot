@@ -319,3 +319,73 @@ def mutate_vdm_target_into_ag(target, resind_vdm_dict, title, write_metal = True
     ag.setResnames(resnames)
     ag.setResnums(resnums)
     return ag
+
+
+def mutate_vdm_target_into_ag2(target, ind_vdm_dict, title, vdm_sel):
+    '''
+    mutate vdms into target.
+    target: protein bb, such as something like a std helix.
+    ind_vdm_dict: resind in target where we want to put the vdms on, and the corresponding vdm.
+    title: the atomgroup name.
+    vdm_sel: 'chid X and resnum 10'
+    '''
+
+    ag = pr.AtomGroup(title)
+    coords = []
+    chids = []
+    names = []
+    resnames = []
+    resnums = []
+
+    for i in np.unique(target.getResindices()):
+        c = target.select('resindex ' + str(i))
+
+        if i in ind_vdm_dict.keys():
+            v_query = ind_vdm_dict[i]
+            query = v_query.select(vdm_sel)
+            # print(i)
+            # print(v_query.getChids())
+            # print(query)
+            query.setChids([c.getChids()[0] for x in range(len(query))])
+            query.setResnums([c.getResnums()[0] for x in range(len(query))])
+            c = query
+            
+        coords.extend(c.getCoords())
+        chids.extend(c.getChids())
+        names.extend(c.getNames())
+        resnames.extend(c.getResnames())
+        resnums.extend(c.getResnums())
+
+    ag.setCoords(np.array(coords))
+    ag.setChids(chids)
+    ag.setNames(names)
+    ag.setResnames(resnames)
+    ag.setResnums(resnums)
+    return ag
+
+
+def combine_ags(ags, title):
+    ag = pr.AtomGroup(title)
+    coords = []
+    chids = []
+    names = []
+    resnames = []
+    resnums = []
+    ABCchids = [chr(i) for i in range(65, 66 + len(ags))]
+    for v in range(len(ags)):
+        _ag = ags[v]
+        chid = ABCchids[v]
+        for i in np.unique(_ag.getResindices()):
+            c = _ag.select('resindex ' + str(i))
+            coords.extend(c.getCoords())
+            chids.extend([chid for x in range(len(c))])
+            names.extend(c.getNames())
+            resnames.extend(c.getResnames())
+            resnums.extend(c.getResnums())
+
+    ag.setCoords(np.array(coords))
+    ag.setChids(chids)
+    ag.setNames(names)
+    ag.setResnames(resnames)
+    ag.setResnums(resnums)
+    return ag

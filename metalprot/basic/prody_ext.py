@@ -364,24 +364,28 @@ def mutate_vdm_target_into_ag2(target, ind_vdm_dict, title, vdm_sel):
     return ag
 
 
-def combine_ags(ags, title):
+def combine_ags(ags, title, ABCchids = None):
     ag = pr.AtomGroup(title)
     coords = []
     chids = []
     names = []
     resnames = []
     resnums = []
-    ABCchids = [chr(i) for i in range(65, 66 + len(ags))]
-    for v in range(len(ags)):
-        _ag = ags[v]
-        chid = ABCchids[v]
-        for i in np.unique(_ag.getResindices()):
-            c = _ag.select('resindex ' + str(i))
-            coords.extend(c.getCoords())
-            chids.extend([chid for x in range(len(c))])
-            names.extend(c.getNames())
-            resnames.extend(c.getResnames())
-            resnums.extend(c.getResnums())
+    if not ABCchids:
+        ABCchids = [chr(i) for i in range(65, 66 + len(ags))]
+    chid_ind = 0
+    for _ag_all in ags:
+        for cd in np.unique(_ag_all.getChids()):
+            chid = ABCchids[chid_ind]
+            chid_ind += 1
+            _ag = _ag_all.select('chid ' + cd)
+            for i in np.unique(_ag.getResindices()):
+                c = _ag.select('resindex ' + str(i))
+                coords.extend(c.getCoords())
+                chids.extend([chid for x in range(len(c))])
+                names.extend(c.getNames())
+                resnames.extend(c.getResnames())
+                resnums.extend(c.getResnums())
 
     ag.setCoords(np.array(coords))
     ag.setChids(chids)

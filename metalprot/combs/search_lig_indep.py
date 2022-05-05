@@ -132,7 +132,7 @@ def filter_db(df_vdm, use_enriched = True, use_abple = True, abple = 'A'):
     Filter database based on ABPLE, enriched. Check combs2._sample._load_res().
     '''
     if use_enriched and use_abple:
-        return df_vdm[df_vdm['C_score_' + 'ABPLE_' + abple] > 0]
+        return df_vdm[(df_vdm['C_score_' + 'ABPLE_' + abple] > 0)]
     if use_enriched and not use_abple:
         return df_vdm[df_vdm['C_score_bb_ind'] > 0]
     return df_vdm

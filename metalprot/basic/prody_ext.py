@@ -8,24 +8,24 @@ import numpy as np
 from . import constant
 
 
-def transfer2resindices(pdb, chidresnums):
+def transfer2resindices(pdb, chidress):
     '''
     Input of [resnum] or [chid-resnum] or [seg-chid-resnum] transfer to [resindex]
     '''
     target_resnums = pdb.select('protein and name CA').getResnums()
     target_chids = pdb.select('protein and name CA').getChids()
-    target_index_dict = {}
-    resnum2ind = {}
+    ind2chidres = {}
+    chidres2ind = {}
     for ind in range(len(target_resnums)):
-        if len(np.unique(target_chids)) != 1:
-            chid_resnum = target_chids[ind] + '-' + str(target_resnums[ind])
-        else:
-            chid_resnum = str(target_resnums[ind])
-        resnum2ind[chid_resnum] = ind
-        target_index_dict[ind] = chid_resnum
-    #print(resnum2ind)
-    resindices = [resnum2ind[str(x)] for x in chidresnums]
-    return resindices, target_index_dict
+        # if len(np.unique(target_chids)) != 1:
+        #     chid_resnum = target_chids[ind] + '-' + str(target_resnums[ind])
+        # else:
+        #     chid_resnum = str(target_resnums[ind])
+        chid_resnum = (target_chids[ind], target_resnums[ind])
+        chidres2ind[chid_resnum] = ind
+        ind2chidres[ind] = chid_resnum
+    resindices = [chidres2ind[x] for x in chidress]
+    return resindices, chidres2ind, ind2chidres
 
 def transfer2pdb(points, names = None, resnums = None, resnames = None, title = 'MetalMol'):
     '''
@@ -365,6 +365,7 @@ def mutate_vdm_target_into_ag2(target, ind_vdm_dict, title, vdm_sel):
 
 
 def combine_ags(ags, title, ABCchids = None):
+    
     ag = pr.AtomGroup(title)
     coords = []
     chids = []
@@ -376,9 +377,14 @@ def combine_ags(ags, title, ABCchids = None):
     chid_ind = 0
     for _ag_all in ags:
         for cd in np.unique(_ag_all.getChids()):
+            print(cd)
             chid = ABCchids[chid_ind]
             chid_ind += 1
-            _ag = _ag_all.select('chid ' + cd)
+            if cd == None:
+                _ag = _ag_all
+            else:
+                _ag = _ag_all.select('chid ' + cd)
+                
             for i in np.unique(_ag.getResindices()):
                 c = _ag.select('resindex ' + str(i))
                 coords.extend(c.getCoords())

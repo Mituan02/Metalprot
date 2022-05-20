@@ -25,20 +25,20 @@ import importlib.machinery
 python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/run_search_lig_indep.py 0 /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/search_lig_paras_rdkit.py 7
 
 python run_search_lig_indep.py 0 search_lig_paras_eval.py 7
-python run_search_lig_indep.py 0 search_2ndshell_paras.py 5
+python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/run_search_lig_indep.py 0 /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/search_2ndshell_paras.py 5
 '''
 
 def extract_2ndshell_cgs(outdir, target, win_filters):
     cgs = []
     for w in win_filters:
-        cg = target.select('protein and heavy and sc and resnum ' + str(w)).toAtomGroup()
-        cg.setTitle('w_' + str(w))
+        cg = target.select('protein and heavy and sc and chid ' + w[0] + ' and resnum ' + str(w[1])).toAtomGroup()
+        cg.setTitle('w_' + w[0] + str(w[1]))
         cgs.append([cg])
         pr.writePDB(outdir + cg.getTitle() + '.pdb', cg)
     return cgs
 
 
-def run_search(target, ligs, path_to_database, ideal_ala_coords, para, lig_cg):
+def run_search(target, ligs, path_to_database, ideal_ala_coords, para, lig_cg, chidres2ind):
     '''
     cg = 'phenol'
     resnum = 102
@@ -59,25 +59,25 @@ def run_search(target, ligs, path_to_database, ideal_ala_coords, para, lig_cg):
                 #df_vdm, df_gr, df_score = load_new_vdm(path_to_database, cg, aa)
                 df_vdm = search_lig_indep.load_old_vdm(path_to_database, cg, aa)
 
-                for resnum in para.predefined_resnums:
-                    print('Searching: ' + cg + ' ' + aa + ' ' + str(resnum))
-                    pos = target.select('resnum ' + str(resnum))
+                for chidres in para.predefined_resnums:
+                    print('Searching: ' + cg + ' ' + aa + ' ' + chidres[0] + str(chidres[1]))
+                    pos = target.select('chid ' + chidres[0] + ' and resnum ' + str(chidres[1]))
                     abple = abples[pos.getResindices()[0]]
                     df_vdm_filter = search_lig_indep.filter_db(df_vdm, use_enriched = para.use_enriched, use_abple=para.use_abple, abple=abple)        
 
-                    results = search_lig_indep.search_lig_at_cg_aa_resnum(target, resnum, pos, abple, ligs, para.vdm_cg_aa_cc_dict, cg, df_vdm_filter, ideal_ala_coords, para.rmsd, cg_aa_vdms[1], cg_aa_vdms[2])
+                    results = search_lig_indep.search_lig_at_cg_aa_resnum(target, chidres, chidres2ind, pos, abple, ligs, para.vdm_cg_aa_cc_dict, cg, df_vdm_filter, ideal_ala_coords, para.rmsd, cg_aa_vdms[1], cg_aa_vdms[2])
 
                     for cg_id, lig_id, _rmsd, vdm_ag, vdm_id, score, v, contact_hb, contact_cc in results:
-                        prefix = 'Lig-' + str(lig_id) + '_' + cg + '_' + str(resnum) + '_' + aa + '_rmsd_' + str(round(_rmsd, 2)) + '_v_' + str(round(score, 1)) + '_'       
+                        prefix = 'Lig-' + str(lig_id) + '_' + cg + '_' + chidres[0] + str(chidres[1]) + '_' + aa + '_rmsd_' + str(round(_rmsd, 2)) + '_v_' + str(round(score, 1)) + '_'       
 
                         #pr.writePDB(outdir_all + prefix + str(vdm_id) + '.pdb.gz', vdm_ag)
                         #summaries.append((cg, aa, resnum, cg_id, lig_id, _rmsd, vdm_id, score))
 
                         vdm_ag.setTitle(prefix + str(vdm_id))                       
                         if lig_id in lig_vdm_dict.keys():
-                            lig_vdm_dict[lig_id].append((vdm_ag, (cg, aa, resnum, cg_id, lig_id, _rmsd, vdm_id, score, v, contact_hb, contact_cc)))
+                            lig_vdm_dict[lig_id].append((vdm_ag, (cg, aa, chidres, cg_id, lig_id, _rmsd, vdm_id, score, v, contact_hb, contact_cc)))
                         else:
-                            lig_vdm_dict[lig_id] = [(vdm_ag, (cg, aa, resnum, cg_id, lig_id, _rmsd, vdm_id, score, v, contact_hb, contact_cc))]
+                            lig_vdm_dict[lig_id] = [(vdm_ag, (cg, aa, chidres, cg_id, lig_id, _rmsd, vdm_id, score, v, contact_hb, contact_cc))]
 
                         
                 del [[df_vdm]]
@@ -111,7 +111,7 @@ def prepare_ligs(outdir, target, lig_path, para):
     return ligss
 
 
-def write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict, para):
+def write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict, i, para):
     ### write filtered vdms.
     summaries = []
     for lig_id in lig_vdm_dict.keys():
@@ -132,7 +132,7 @@ def write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict, para):
         print('Filtered vdms is 0.')
         return
 
-    with open(outdir + target.getTitle() + '_summary.tsv', 'w') as f:
+    with open(outdir + target.getTitle() + '_' + str(i) + '_summary.tsv', 'w') as f:
         f.write('file\tcg\taa\tpos\tcg_tag\tlig\trmsd\tvdm_id\tscore\tvdm\tContact_hb\tContact_cc\n')
         for s in summaries:
             #print(s)
@@ -144,23 +144,23 @@ def write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict, para):
         values = lig_vdm_dict[lig_id]
         for v in values:
             vdm_ag = v[0]
-            (cg, aa, resnum, cg_id, lig_id, _rmsd, vdm_id, score, v, contact_hb, contact_cc) = v[1]
-            if (cg, resnum, aa, vdm_id) in unique_vdms.keys():
+            (cg, aa, chidres, cg_id, lig_id, _rmsd, vdm_id, score, v, contact_hb, contact_cc) = v[1]
+            if (cg, chidres, aa, vdm_id) in unique_vdms.keys():
                 continue
             else:
-                unique_vdms[(cg, resnum, aa, vdm_id)] = (vdm_ag, v)
+                unique_vdms[(cg, chidres, aa, vdm_id)] = (vdm_ag, v)
 
-    for (cg, resnum, aa, vdm_id) in unique_vdms.keys():
-        prefix = cg  + '_' + str(resnum) +  '_' + aa + '_' + str(vdm_id)                 
-        pr.writePDB(outdir_uni + prefix  + '.pdb.gz', unique_vdms[(cg, resnum, aa, vdm_id)][0])
+    for (cg, chidres, aa, vdm_id) in unique_vdms.keys():
+        prefix = cg  + '_' + chidres[0] + str(chidres[1]) +  '_' + aa + '_' + str(vdm_id)                 
+        pr.writePDB(outdir_uni + prefix  + '.pdb.gz', unique_vdms[(cg, chidres, aa, vdm_id)][0])
 
     ### Write summary file.
-    df = pd.read_csv(outdir + target.getTitle() + '_summary.tsv', sep = '\t')
+    df = pd.read_csv(outdir + target.getTitle() + '_' + str(i) + '_summary.tsv', sep = '\t')
     df_group = df.groupby(['file', 'lig'])
 
     df_score = df_group[['score']].sum()
 
-    df_score.to_csv(outdir + target.getTitle() + '_sum_score.tsv', sep = '\t')
+    df_score.to_csv(outdir + target.getTitle() + '_' + str(i) + '_sum_score.tsv', sep = '\t')
 
     scores = []
     for g_name, g in df_group:
@@ -170,7 +170,7 @@ def write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict, para):
             score += gg[['score']].max()
         scores.append((g_name, score.sum()))
 
-    with open(outdir + target.getTitle() + '_sum_score_rmdu.tsv', 'w') as f:
+    with open(outdir + target.getTitle() + '_' + str(i) +  '_sum_score_rmdu.tsv', 'w') as f:
         f.write('file\tlig\tscore\n')
         for s in scores:
             f.write('\t'.join([str(x) for x in s[0]]) + '\t' +  str(s[1]) + '\n')
@@ -182,10 +182,10 @@ def run_all(file, workdir, path_to_database, ideal_ala_coords, lig_path, para):
     time_tag = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') 
 
     target_path = workdir + file
-    outdir = workdir + '1ogx_tts_result/output_' + para.task_type + '_'+ file + '_' + time_tag + '/'
+    outdir = workdir + para.task_type  + '_result/output_' + '_'+ file + '_' + time_tag + '/'
     os.makedirs(outdir, exist_ok=True)
 
-    target = search_lig_indep.prepare_rosetta_target(outdir, target_path, para.predefined_win_filters)
+    target, chidres2ind = search_lig_indep.prepare_rosetta_target(outdir, target_path, para.predefined_win_filters)
     if para.task_type == 'search_2ndshell':
         ligs = extract_2ndshell_cgs(outdir, target, para.predefined_win_filters)
     else:
@@ -200,12 +200,12 @@ def run_all(file, workdir, path_to_database, ideal_ala_coords, lig_path, para):
 
     outdir_all = outdir + 'vdms_output_all/'
     os.makedirs(outdir_all, exist_ok=True)
-
+    print('number of ligs: {}'.format(len(ligs)))
     for i in range(len(ligs)):
         lig = ligs[i]
-        lig_vdm_dict = run_search(target, lig, path_to_database, ideal_ala_coords, para, para.lig_cgs[i])
+        lig_vdm_dict = run_search(target, lig, path_to_database, ideal_ala_coords, para, para.lig_cgs[i], chidres2ind)
         print('lig_vdm_dict size {}'.format(len(list(lig_vdm_dict.keys()))))
-        write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict, para)
+        write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict, i, para)
 
     return
 

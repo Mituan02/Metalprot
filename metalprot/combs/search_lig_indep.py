@@ -13,20 +13,20 @@ from scipy.sparse import lil_matrix
 import shutil
 
 
-def prepare_rosetta_target(outdir, target_path, designed_site = [15, 19, 27]):
+def prepare_rosetta_target(outdir, target_path, designed_site = [('A', 15), ('A', 19), ('A', 27)]):
     '''
     Or searching rosetta 1st round designed target backbone. 
     All aas are mutated into gly except the metal binding ones.
     '''
     target = pr.parsePDB(target_path)
 
-    resindices, target_index_dict = prody_ext.transfer2resindices(target, designed_site)
+    resindices, chidres2ind, ind2chidres = prody_ext.transfer2resindices(target, designed_site)
 
     pdb_gly = prody_ext.target_to_all_gly_ala(target, target.getTitle() + '_gly.pdb', resindices, aa= 'GLY', keep_no_protein = True )
     
     pr.writePDB(outdir + pdb_gly.getTitle() + '.pdb', pdb_gly)
 
-    return pdb_gly
+    return pdb_gly, chidres2ind
 
 
 def load_new_vdm(path_to_database, cg, aa):
@@ -138,7 +138,7 @@ def filter_db(df_vdm, use_enriched = True, use_abple = True, abple = 'A'):
     return df_vdm
 
 
-def search_lig_at_cg_aa_resnum(target, resnum, pos, abple, ligs, input_dict, cg, df_vdm, ideal_ala_coords, rmsd = 0.7, filter_hb = False, filter_cc = False):
+def search_lig_at_cg_aa_resnum(target, chidres, chidres2ind, pos, abple, ligs, input_dict, cg, df_vdm, ideal_ala_coords, rmsd = 0.7, filter_hb = False, filter_cc = False):
     
     results = []
 
@@ -175,7 +175,7 @@ def search_lig_at_cg_aa_resnum(target, resnum, pos, abple, ligs, input_dict, cg,
                         ag = df2ag(v)
                         tf_rev.apply(ag)
 
-                        if clash_filter_protein_single(target, resnum, ag) or clash_filter_lig(ligs[u], ag):
+                        if clash_filter_protein_single(target, chidres, chidres2ind, ag) or clash_filter_lig(ligs[u], ag):
                             #print('filtered')
                             continue
                         results.append((cg_id, u, rmsd, ag, ind, v['C_score_ABPLE_' + abple].values[0], None, v[['contact_hb']].any()[0], v[['contact_cc']].any()[0]))
@@ -242,13 +242,13 @@ def clash_filter_proteins(targets, dist_cut = 2.2):
     return False
 
 
-def clash_filter_protein_single(target, resnum, vdm, dist_cut = 2.7):
+def clash_filter_protein_single(target, chidres, chidres2ind, vdm, dist_cut = 2.7):
     '''
     # clashing: any atom close to the bb let's say dist <= dist_cut
 
     The bb here should contain 'N CA C O of any aa, the sc of binding aa, Metal'
     '''
-    target_coords = target.select('heavy and not resnum ' + str(resnum)).getCoords()
+    target_coords = target.select('heavy and not resindex ' + str(chidres2ind[chidres])).getCoords()
     vdm_sel = vdm.select('heavy and sc and chain X and resnum 10') #For Gly, it can be None.
     if not vdm_sel:
         return True

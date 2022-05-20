@@ -20,11 +20,11 @@ def get_file_path(on_wynton):
             ideal_alanine_bb_only = pickle.load(f)
         ideal_ala_coords = np.array(ideal_alanine_bb_only[['c_x', 'c_y', 'c_z']])
 
-        path_to_database='/mnt/e/DesignData/Combs/Combs2_database/'
+        path_to_database='/mnt/e/DesignData/Combs/Combs2_database/vdMs/'
 
         #workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/'
-        workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/_rosetta_2ndRound/output_F55D_sel/'
-
+        #workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/_rosetta_2ndRound/output_F55D_sel/'
+        workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta_16-20-28/_rosetta_tts_r2_876/output_F55D_sel/'
         lig_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/tts_fe_rdkit.pdb'
 
     return workdir, path_to_database, ideal_ala_coords, lig_path
@@ -34,7 +34,7 @@ task_type = 'search_2ndshell'
 
 ### Target strcture 
 #predefined_win_filters = [19]
-predefined_win_filters = [15, 19, 27]
+predefined_win_filters = [('A', 15), ('A', 19), ('A', 27)]
 lig_cgs = [['hid', 'hie'], ['hid', 'hie'], ['coo']]
 #lig_cgs = [['hid', 'hie']]
 
@@ -44,7 +44,10 @@ use_abple=True
 
 
 ### Search ligands paramters.
-predefined_resnums = [11, 12, 16, 20, 24, 28, 30, 31, 35, 37, 39, 46, 52, 55, 56, 60, 65, 67, 69, 83, 85, 87, 98, 100, 102, 104, 106, 112, 115, 117, 119]
+predefined_resnums = [('A', 11), ('A', 12), ('A', 16), ('A', 20), ('A', 24), ('A', 28), 
+        ('A', 30), ('A', 31), ('A', 35),('A', 37), ('A', 39), ('A', 46), ('A', 52), ('A', 55), 
+        ('A', 56), ('A', 60), ('A', 65), ('A', 67), ('A', 69), ('A', 83), ('A', 85), ('A', 87), 
+        ('A', 98), ('A', 100), ('A', 102), ('A', 104), ('A', 106), ('A', 112), ('A', 115), ('A', 117), ('A', 119)]
 #predefined_resnums = [12, 16, 20, 60, 65, 67, 69, 83, 85, 87, 102]
 
 

@@ -53,12 +53,14 @@ def extract_vdm(coredir, outdir, aas):
 
 workdir = "/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/"
 workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/_Seq_core_2ndshell_date_reps/'
+workdir = '/mnt/e/DesignData/DL/_Seq_core_date_reps/'
 
 outdir = workdir + '20211209_vdm_reps/'
 outdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/20220128_1stshell/'
+outdir = '/mnt/e/DesignData/DL/20220511_vdm_reps/'
 os.makedirs(outdir, exist_ok = True)
 
 #aas = ['HIS', 'GLU', 'ASP', 'CYS']
-aas = ['HIS', 'GLU', 'ASP']
+aas = ['HIS', 'GLU', 'ASP', 'CYS']
 
 extract_vdm(workdir, outdir, aas)

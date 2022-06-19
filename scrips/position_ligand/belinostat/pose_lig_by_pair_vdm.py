@@ -334,7 +334,7 @@ def run_local():
 def run_wynton():
     workdir = '/wynton/home/degradolab/lonelu/DesignData/Metalloenzyme/'
 
-    path_to_database='/wynton/home/degradolab/lonelu/DesignData/vdMs/'
+    path_to_database='/wynton/home/degradolab/lonelu/DesignData/Database/vdMs/'
 
     lig = pr.parsePDB(workdir + 'meo_50g_amber14eht_md_out/50g_md_0.pdb')
 

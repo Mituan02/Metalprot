@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #$ -S /bin/bash
-#$ -o /wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/logfiles
-#$ -e /wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/logfiles
+#$ -o /wynton/home/degradolab/lonelu/Log
+#$ -e /wynton/home/degradolab/lonelu/Log
 #$ -cwd
 #$ -r y
 #$ -j y

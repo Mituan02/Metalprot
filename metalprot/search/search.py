@@ -1,22 +1,18 @@
 import os
 import numpy as np
 import itertools
-from numpy.core.defchararray import multiply
 import prody as pr
 import datetime
 import math
 import string
 
-from ..basic import hull
-from ..basic import utils
+from ..basic import constant, hull, utils, vdmer
 from ..basic.filter import Search_filter
 from .graph import Graph
 from .comb_info import CombInfo
-from ..basic import constant
 
 from sklearn.neighbors import NearestNeighbors
 import multiprocessing as mp
-from multiprocessing.dummy import Pool as ThreadPool
 
 
 def supperimpose_target_bb(_target, _vdm, win, align_sel='name N CA C'):
@@ -38,6 +34,8 @@ def supperimpose_target_bb(_target, _vdm, win, align_sel='name N CA C'):
     transform.apply(_vdm.query)
     if _vdm.metal_atomgroup:
         transform.apply(_vdm.metal_atomgroup)  
+    if _vdm.metalcontact_atomgroup:
+        transform.apply(_vdm.metalcontact_atomgroup)  
 
     return True
 
@@ -121,6 +119,12 @@ class Search_vdM:
         else:
             self.geo_o_struct = constant.tetrahydra_geo_o
 
+        if self.search_filter.filter_based_geometry_structure:
+            aa_aa_pair, metal_aa_pair, angle_pair = vdmer.pair_wise_geometry_matrix(self.geo_struct)
+            min_mc = np.min(aa_aa_pair[np.triu_indices(aa_aa_pair.shape[0], k=1)]) - self.search_filter.aa_aa_tol
+            max_mc = np.max(aa_aa_pair) + self.search_filter.aa_aa_tol
+            self.search_filter.pair_aa_aa_dist_range = [min_mc, max_mc]
+            print(min_mc, max_mc)
         
         #neighbor parallel mechanism-----------
         self.parallel = parallel

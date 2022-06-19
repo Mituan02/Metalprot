@@ -4,9 +4,6 @@ import numpy as np
 
 def get_file_path(on_wynton):
     if on_wynton:
-        with open('/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/metalprot/constants/ideal_alanine_bb_only.pkl', 'rb') as f:
-            ideal_alanine_bb_only = pickle.load(f)
-        ideal_ala_coords = np.array(ideal_alanine_bb_only[['c_x', 'c_y', 'c_z']])
 
         path_to_database='/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/'
 
@@ -16,9 +13,6 @@ def get_file_path(on_wynton):
         lig_path = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe/tts_fe_rdkit.pdb'
 
     else:
-        with open('/mnt/e/GitHub_Design/Metalprot/metalprot/constants/ideal_alanine_bb_only.pkl', 'rb') as f:
-            ideal_alanine_bb_only = pickle.load(f)
-        ideal_ala_coords = np.array(ideal_alanine_bb_only[['c_x', 'c_y', 'c_z']])
 
         path_to_database='/mnt/e/DesignData/Combs/Combs2_database/vdMs/'
 
@@ -27,7 +21,7 @@ def get_file_path(on_wynton):
         workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta_16-20-28/_rosetta_tts_r2_876/output_F55D_sel/'
         lig_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/tts_fe_rdkit.pdb'
 
-    return workdir, path_to_database, ideal_ala_coords, lig_path
+    return workdir, path_to_database, lig_path
 
 
 task_type = 'search_2ndshell'
@@ -60,7 +54,7 @@ load_cg_aa_vdm_dict = {
 rmsd = 1.0
 
 #TO DO: rename the atoms
-vdm_cg_aa_cc_dict = {
+vdm_cg_aa_atommap_dict = {
     ('coo_0'):{
         'cg' : 'coo',
         'lgd_sel' : ['CB', 'CG', 'OD1', 'OD2'],

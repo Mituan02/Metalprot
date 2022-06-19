@@ -2,7 +2,6 @@ import prody as pr
 import itertools
 import numpy as np
 from numpy.core.fromnumeric import argmin
-from prody.atomic import pointer
 from .utils import get_ABPLE
 from . import constant 
 
@@ -110,9 +109,8 @@ def adjust_metal_bond_lenght(pdb_prody, bond_length_diff):
     return
 
 
-
 class VDM:
-    def __init__(self, query, id = -1, clu_rank = -1, score = 0, clu_num = 0, max_clu_num = 0, clu_total_num = 0, clu_member_ids= None, metal_atomgroup = None, win = None, path = None):
+    def __init__(self, query, id = -1, clu_rank = -1, score = 0, clu_num = 0, max_clu_num = 0, clu_total_num = 0, clu_member_ids= None, metal_atomgroup = None, metalcontact_atomgroup = None, sc_atomgroup = None, sc_atomgroup_ids = None, win = None, path = None):
         '''
         Note that the query or the metal_atomgroup are prody object, which may be transformed during the searching.
         '''
@@ -130,6 +128,9 @@ class VDM:
         # cluster member info
         self.clu_member_ids = clu_member_ids
         self.metal_atomgroup = metal_atomgroup
+        self.metalcontact_atomgroup = metalcontact_atomgroup
+        self.sc_atomgroup = sc_atomgroup
+        self.sc_atomgroup_ids = sc_atomgroup_ids
         self.candidate_inds = None 
 
         # search info
@@ -176,6 +177,15 @@ class VDM:
 
     def get_metal_mem_coords(self):
         return self.metal_atomgroup.getCoords()
+    
+    def get_metalcontact_mem_coords(self):
+        return self.metalcontact_atomgroup.getCoords()
+
+    def get_sc_mem_coords_and_ids(self):
+        '''
+        The sc_atomgroup here is used for clashing filter. It doesn't contain CB.
+        '''
+        return self.sc_atomgroup.getCoords(), self.sc_atomgroup_ids
 
     def get_contact_coord(self):
         atm = get_contact_atom(self.query)           
@@ -196,7 +206,15 @@ class VDM:
         metal_atomgroup = None
         if self.metal_atomgroup:
             metal_atomgroup = self.metal_atomgroup.copy()
-        return VDM(self.query.copy(), self.id, self.clu_rank, self.score, self.clu_num, self.max_clu_num, self.clu_total_num, self.clu_member_ids, metal_atomgroup, self.win, self.path)
+        metalcontact_atomgroup = None
+        if self.metalcontact_atomgroup:
+            metalcontact_atomgroup = self.metalcontact_atomgroup.copy()
+        sc_atomgroup = None
+        sc_atomgroup_ids = None
+        if self.sc_atomgroup:
+            sc_atomgroup = self.sc_atomgroup.copy()
+            sc_atomgroup_ids = self.sc_atomgroup_ids.copy()
+        return VDM(self.query.copy(), self.id, self.clu_rank, self.score, self.clu_num, self.max_clu_num, self.clu_total_num, self.clu_member_ids, metal_atomgroup, metalcontact_atomgroup, sc_atomgroup, sc_atomgroup_ids, self.win, self.path)
     
     def writepdb(self, outpath):
         pr.writePDB(outpath, self.query)

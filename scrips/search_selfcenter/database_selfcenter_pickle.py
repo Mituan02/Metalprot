@@ -6,7 +6,7 @@ The database should be selfcentered.
 all_vdms = [vdm]
 all_metal_vdm = vdm with all member metal position.
 centroid_query_dict = [clu_key:vdm id] for example '(HIS, 1234): 4567' 
-
+where the clu_key includes the (AA, cluster_rank) and the vdm id ranked by name.
 '''
 
 import os
@@ -14,21 +14,29 @@ import prody as pr
 from metalprot.search import extract_vdm
 from metalprot.basic import prody_ext
 import pickle
+import numpy as np
 
 '''
 python /mnt/e/GitHub_Design/Metalprot/scrips/search_selfcenter/database_selfcenter_pickle.py
 '''
 
+'''General ZN database path'''
 query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/'
-query_dir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/'
-query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/20220128_1stshell/20220128_selfcenter/'
+'''FE_Mn_CO database path'''
+#query_dir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/'
+'''2nd shell database path'''
+#query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/20220128_1stshell/20220128_selfcenter/'
 
 centroid_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['AAMetalPhiPsi', 'cluster'], file_name_not_includes=['@', 'CYS'], score_cut = 0, clu_num_cut = 0)
 
-query_dir = '/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/20211015_AAext3/'
-centroid_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['AAA', 'cluster'], file_name_not_includes=['@', 'CYS'], score_cut = 0, clu_num_cut = 0)
+'''AAext3 Zn database path'''
+# query_dir = '/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/20211015_AAext3/'
+# centroid_querys = extract_vdm.extract_all_centroid(query_dir, summary_name = '_summary.txt', file_name_includes = ['AAA', 'cluster'], file_name_not_includes=['@', 'CYS'], score_cut = 0, clu_num_cut = 0)
 
+outdir = query_dir + 'pickle_noCYS/'
+os.makedirs(outdir, exist_ok= True)
 
+'''Start the function.'''
 centroid_query_dict = {}
 for i in range(len(centroid_querys)):
     splits = centroid_querys[i].query.getTitle().split('_')
@@ -45,6 +53,9 @@ all_vdms = []
 cluster_centroid_dict = {}
 
 all_coords = []
+all_contact_coords = []
+all_sc_coords = []
+all_sc_coords_inds = []
 
 max_clu_num = 0
 for query_id in range(len(centroid_querys)):
@@ -58,7 +69,10 @@ for query_id in range(len(centroid_querys)):
 
     #obtain all member metal coords.
     all_coords.append(query.get_metal_coord())
-
+    all_contact_coords.append(query.get_contact_coord())
+    all_sc_coords.extend([x.getCoords() for x in query.query.select('heavy and sc and not name CB')])
+    all_sc_coords_inds.extend(query_id for x in query.query.select('heavy and sc and not name CB'))
+    
     cluster_coords = []
     selfcenter_cluster_queryid = []
 
@@ -83,6 +97,7 @@ for query_id in range(len(centroid_querys)):
         cluster_coords.append(q.get_metal_coord())
         selfcenter_cluster_queryid.append(id)
 
+    query.query = query.query.toAtomGroup() #This solve an issue of pickle as it change the prody readin as CKtree
     query.id = query_id
     query.clu_rank = int(query.query.getTitle().split('_')[3]) 
     query.max_clu_num = max_clu_num
@@ -95,16 +110,9 @@ for query_id in range(len(centroid_querys)):
 
 
 all_metal_vdm.metal_atomgroup = prody_ext.transfer2pdb(all_coords)
-
-'''
-#plot the coords of all metals.
-points = all_metal_vdm.get_metal_mem_coords()
-hull.write2pymol(points, query_dir, 'align_' + all_metal_vdm.query.getTitle())
-'''
-
-#query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20210624/20210916_2017_2018_selfcenter_alignBB/'
-outdir = query_dir + 'pickle_noCYS/'
-os.makedirs(outdir, exist_ok= True)
+all_metal_vdm.metalcontact_atomgroup = prody_ext.transfer2pdb(all_contact_coords)
+#all_metal_vdm.sc_atomgroup = prody_ext.transfer2pdb(all_sc_coords)
+#all_metal_vdm.sc_atomgroup_ids = np.array(all_sc_coords_inds)
 
 with open(outdir + 'all_metal_vdm.pkl', 'wb') as f:
     pickle.dump(all_metal_vdm, f)
@@ -115,5 +123,35 @@ with open(outdir + 'AAMetalPhiPsi.pkl', 'wb') as f:
 with open(outdir + 'cluster_centroid_dict.pkl', 'wb') as f:
     pickle.dump(cluster_centroid_dict, f)
 
+'''
+#plot the coords of all metals.
+import pickle
+from metalprot.basic import prody_ext
+query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS/'
 
+with open(query_dir + 'all_metal_vdm.pkl', 'rb') as f:
+    all_metal_vdm = pickle.load(f)
 
+points = all_metal_vdm.get_metal_mem_coords()[0:4]
+prody_ext.write2pymol(points, query_dir, 'align_' + all_metal_vdm.query.getTitle())
+
+points_mc = all_metal_vdm.get_metalcontact_mem_coords()[0:4]
+prody_ext.write2pymol(points_mc, query_dir, 'align_mc_' + all_metal_vdm.query.getTitle())
+'''
+
+def debug_pickle(instance):
+    """
+    :return: Which attribute from this object can't be pickled?
+    """
+    attribute = None
+
+    for k in instance.__dict__.keys():
+        v = instance.__dict__[k]
+        try:
+            pickle.dumps(v)
+        except:
+            print(k)
+            attribute = k
+            break
+
+    return attribute

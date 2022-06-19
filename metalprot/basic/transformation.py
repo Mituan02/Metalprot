@@ -1,12 +1,51 @@
 __all__ = ['get_rot_trans']
 
 import numpy as np
+from numba import jit
 
-def get_rot_trans(mob_coords, targ_coords):
-    mob_coords_com = mob_coords.mean(0)
-    targ_coords_com = targ_coords.mean(0)
+
+# def get_rot_trans(mob_coords, targ_coords):
+#     mob_coords_com = mob_coords.mean(0)
+#     targ_coords_com = targ_coords.mean(0)
+#     mob_coords_cen = mob_coords - mob_coords_com
+#     targ_coords_cen = targ_coords - targ_coords_com
+#     cov_matrix = np.dot(mob_coords_cen.T, targ_coords_cen)
+#     U, S, Wt = np.linalg.svd(cov_matrix)
+#     R = np.dot(U, Wt)
+#     if np.linalg.det(R) < 0.:
+#         Wt[-1] *= -1
+#         R = np.dot(U, Wt)
+#     return R, mob_coords_com, targ_coords_com
+
+@jit(nopython=True)
+def mean_numba(a, weights=None):
+    """weight should be normalized"""
+    N = a.shape[1]
+    M = a.shape[0]
+    if weights is None:
+        weights = np.ones(M) / M
+    if weights.shape[0] != M:
+        raise Exception('Weights must be same size as coordinates')
+    res = np.zeros(N)
+    for i in range(N):
+        res[i] = 0
+        for j in range(M):
+            res[i] += a[j, i]*weights[j]
+    return res
+
+
+@jit(nopython=True, cache=True)
+def get_rot_trans(mob_coords, targ_coords, weights=None):
+    mob_coords_com = mean_numba(mob_coords, weights=weights)
+    targ_coords_com = mean_numba(targ_coords, weights=weights)
     mob_coords_cen = mob_coords - mob_coords_com
     targ_coords_cen = targ_coords - targ_coords_com
+    M = mob_coords.shape[0]
+    if weights is None:
+        weights = np.ones(M) / M
+    for i in range(M):
+        mob_coords_cen[i, :] = mob_coords_cen[i, :] * weights[i]
+        targ_coords_cen[i, :] = targ_coords_cen[i, :] * weights[i]
     cov_matrix = np.dot(mob_coords_cen.T, targ_coords_cen)
     U, S, Wt = np.linalg.svd(cov_matrix)
     R = np.dot(U, Wt)
@@ -14,6 +53,15 @@ def get_rot_trans(mob_coords, targ_coords):
         Wt[-1] *= -1
         R = np.dot(U, Wt)
     return R, mob_coords_com, targ_coords_com
+
+
+@jit(nopython=True, cache=True)
+def apply_transform_to_coords_cols(R, mob_coords_com, targ_coords_com, coords_cols):
+    new_coords_cols = np.zeros(coords_cols.shape)
+    for i in range(0, coords_cols.shape[1], 3):
+        new_coords_cols[:, i:i + 3] = np.dot(coords_cols[:, i:i + 3] - mob_coords_com, R) + targ_coords_com
+    return new_coords_cols
+
 
 def get_rot(mob_coords, targ_coords):
     cov_matrix = np.dot(mob_coords.T, targ_coords)

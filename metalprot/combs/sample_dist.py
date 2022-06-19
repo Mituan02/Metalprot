@@ -17,11 +17,10 @@ def prepare_ligand_info(ligand, sel_cg_names):
     Prepare ligand info.
     ligand: prody atomgroup object.
     '''
-    cg_count = sel_cg_names.shape[0]
     ligand_cg_dist_dict = {}
-    for i, j in itertools.combinations(range(cg_count), 2):
+    for i, j in itertools.combinations(range(sel_cg_names.shape[0]), 2):
         ligand_cg_dist_dict[(i, j)] = []
-        for ind in range(cg_count):
+        for ind in range(sel_cg_names.shape[1]):
             ni = sel_cg_names[i][ind]
             nj = sel_cg_names[j][ind]
             dist = pr.calcDistance(ligand.select('name ' + ni), ligand.select('name ' + nj))
@@ -167,6 +166,7 @@ def filter_position_mask(count, df_contact_dict, cg_count = 3):
         pos_matrix[i] = poss_ind == poss_ind[i]
     return ~pos_matrix
 
+
 def modify_adj_matrix(keys, adj_matrix_dict, pos_matrix, label_matrix_dict = None):
     '''
     adj_matrix_dict has key ((0, 1), 0)
@@ -239,8 +239,6 @@ def get_path_order_matrix(df_contact_dict, count, cg_count = 3):
             path_order_matrix[2,j] = True
     return path_order_matrix
             
-
-
 
 def run_calc_paths(m_adj_matrix_dict, count, path_order_matrix):
     '''

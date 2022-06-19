@@ -4,9 +4,6 @@ import numpy as np
 
 def get_file_path(on_wynton):
     if on_wynton:
-        with open('/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/metalprot/constants/ideal_alanine_bb_only.pkl', 'rb') as f:
-            ideal_alanine_bb_only = pickle.load(f)
-        ideal_ala_coords = np.array(ideal_alanine_bb_only[['c_x', 'c_y', 'c_z']])
 
         path_to_database='/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/'
 
@@ -15,9 +12,6 @@ def get_file_path(on_wynton):
         lig_path = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe/tts_fe_adj.pdb'
 
     else:
-        with open('/mnt/e/GitHub_Design/Metalprot/metalprot/constants/ideal_alanine_bb_only.pkl', 'rb') as f:
-            ideal_alanine_bb_only = pickle.load(f)
-        ideal_ala_coords = np.array(ideal_alanine_bb_only[['c_x', 'c_y', 'c_z']])
 
         path_to_database='/mnt/e/DesignData/Combs/Combs2_database/'
         
@@ -25,7 +19,7 @@ def get_file_path(on_wynton):
 
         lig_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/tts_fe_adj.pdb'
 
-    return workdir, path_to_database, ideal_ala_coords, lig_path
+    return workdir, path_to_database, lig_path
 
 
 task_type = 'search_unknow'
@@ -53,7 +47,8 @@ lig_name = 'TTS'
 predefined_resnums = [11, 12, 16, 24, 30, 31, 35, 37, 39, 46, 52, 55, 56, 60, 65, 67, 69, 83, 85, 87, 98, 100, 102, 104, 106, 112, 115, 117, 119]
 
 load_cg_aa_vdm_dict = {
-    'coo': [('AGKNQRSTY', True, False)], # (aas, filter_hb, filter_cc)
+    # (aas, filter_hb, filter_cc)
+    'coo': [('AGKNQRSTY', True, False)], 
     'bb_cco': [('AGKNQRSTY', True, False)],
     'phenol': [('AGDEKNQRST', True, False), ('FWY', False, True)],
     'ph': [('FWY', False, True)]
@@ -61,7 +56,7 @@ load_cg_aa_vdm_dict = {
 
 rmsd = 0.6
 
-input_dict = {
+vdm_cg_aa_atommap_dict = {
     ('coo_0'):{
         'cg' : 'coo',
         'lgd_sel' : ['C8', 'C9', 'O3', 'O4'],

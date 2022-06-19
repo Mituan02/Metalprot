@@ -137,3 +137,7 @@ tetrahydra_geo = pr.parsePDB(Path(__file__).parent.parent / 'constants/tetrahydr
 tetrahydra_geo_o = pr.parsePDB(Path(__file__).parent.parent / 'constants/Zn_Tet_O.pdb')
 
 ideal_ala = pr.parsePDB(Path(__file__).parent.parent / 'constants/ideal_ala.pdb')
+
+with open(Path(__file__).parent.parent / 'constants/ideal_alanine_bb_only.pkl', 'rb') as f:
+    ideal_alanine_bb_only = pickle.load(f)
+ideal_ala_coords = np.array(ideal_alanine_bb_only[['c_x', 'c_y', 'c_z']])

@@ -38,7 +38,7 @@ def extract_2ndshell_cgs(outdir, target, win_filters):
     return cgs
 
 
-def run_search(target, ligs, path_to_database, ideal_ala_coords, para, lig_cg, chidres2ind):
+def run_search(target, ligs, path_to_database, para, lig_cg, chidres2ind):
     '''
     cg = 'phenol'
     resnum = 102
@@ -65,7 +65,7 @@ def run_search(target, ligs, path_to_database, ideal_ala_coords, para, lig_cg, c
                     abple = abples[pos.getResindices()[0]]
                     df_vdm_filter = search_lig_indep.filter_db(df_vdm, use_enriched = para.use_enriched, use_abple=para.use_abple, abple=abple)        
 
-                    results = search_lig_indep.search_lig_at_cg_aa_resnum(target, chidres, chidres2ind, pos, abple, ligs, para.vdm_cg_aa_cc_dict, cg, df_vdm_filter, ideal_ala_coords, para.rmsd, cg_aa_vdms[1], cg_aa_vdms[2])
+                    results = search_lig_indep.search_lig_at_cg_aa_resnum(target, chidres, chidres2ind, pos, abple, ligs, para.vdm_cg_aa_atommap_dict, cg, df_vdm_filter, constant.ideal_ala_coords, para.rmsd, cg_aa_vdms[1], cg_aa_vdms[2])
 
                     for cg_id, lig_id, _rmsd, vdm_ag, vdm_id, score, v, contact_hb, contact_cc in results:
                         prefix = 'Lig-' + str(lig_id) + '_' + cg + '_' + chidres[0] + str(chidres[1]) + '_' + aa + '_rmsd_' + str(round(_rmsd, 2)) + '_v_' + str(round(score, 1)) + '_'       
@@ -178,7 +178,7 @@ def write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict, i, para):
 
 
 
-def run_all(file, workdir, path_to_database, ideal_ala_coords, lig_path, para):
+def run_all(file, workdir, path_to_database, lig_path, para):
     time_tag = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') 
 
     target_path = workdir + file
@@ -203,7 +203,7 @@ def run_all(file, workdir, path_to_database, ideal_ala_coords, lig_path, para):
     print('number of ligs: {}'.format(len(ligs)))
     for i in range(len(ligs)):
         lig = ligs[i]
-        lig_vdm_dict = run_search(target, lig, path_to_database, ideal_ala_coords, para, para.lig_cgs[i], chidres2ind)
+        lig_vdm_dict = run_search(target, lig, path_to_database, constant.ideal_ala_coords, para, para.lig_cgs[i], chidres2ind)
         print('lig_vdm_dict size {}'.format(len(list(lig_vdm_dict.keys()))))
         write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict, i, para)
 
@@ -217,7 +217,7 @@ def main():
     para = importlib.machinery.SourceFileLoader('para', path).load_module()
     print(path)
     print('Task: ' + para.task_type)
-    workdir, path_to_database, ideal_ala_coords, lig_path = para.get_file_path(on_wynton)
+    workdir, path_to_database, lig_path = para.get_file_path(on_wynton)
     print('on_wynton: ' + str(on_wynton))
 
     pdb_files = sorted([fp for fp in os.listdir(workdir) if fp[0] != '.' and '.pdb' in fp])
@@ -227,7 +227,7 @@ def main():
         return
     print(pdb_files[ind])
     
-    run_all(pdb_files[ind], workdir,  path_to_database, ideal_ala_coords, lig_path, para)
+    run_all(pdb_files[ind], workdir,  path_to_database, lig_path, para)
     return
 
 

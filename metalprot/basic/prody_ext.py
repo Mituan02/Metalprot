@@ -276,6 +276,69 @@ def target_to_all_gly_ala(target, title, win_no_mutation = [], aa = 'ALA', keep_
     ag.setOccupancies(occu)
     return ag
 
+def target_mutation(target, title, win_to_mutation = [], aa = 'ALA', keep_no_protein = False):
+    '''
+    For the prody object target, mutate the selected aa into ala or gly. 
+    Currently only work for ala or gly as their sidechains are more defined.
+    '''
+    ag = pr.AtomGroup(title)
+    coords = []
+    chids = []
+    names = []
+    resnames = []
+    resnums = []
+    betas = []
+    occu = []
+
+    if aa == 'GLY':
+        bb_sel = 'name N CA C O H'
+    if aa == 'ALA':
+        bb_sel = 'name N CA C O H CB'
+    
+    for i in target.select('protein and name C').getResindices():
+        if i not in win_to_mutation:
+            c = target.select('resindex ' + str(i))
+        else:
+            try:
+                if aa == 'GLY':
+                    c = target.select('resindex ' + str(i)  + ' ' + bb_sel)
+                    c.setResnames(['GLY' for i in range(len(c))])
+                elif aa == 'ALA':
+                    '''
+                    Add CB for gly in original structure.
+                    '''
+                    ala = constant.ideal_ala.copy()
+                    pr.calcTransformation(ala.select('name N CA C'), c.select('name N CA C')).apply(ala)
+                    ala.setChids([c.getChids()[0] for x in range(len(ala))])
+                    ala.setResnums([c.getResnums()[0] for x in range(len(ala))])
+                    c = ala.select(bb_sel)
+            except:
+                print('Failed mutation at resindex {}'.format(i))
+                c = target.select('resindex ' + str(i))
+        coords.extend(c.getCoords())
+        chids.extend(c.getChids())
+        names.extend(c.getNames())
+        resnames.extend(c.getResnames())
+        resnums.extend(c.getResnums())
+        betas.extend([0 for x in range(len(c))])
+        occu.extend([0 for x in range(len(c))])
+    if keep_no_protein:
+        x = target.select('not protein')
+        coords.extend(x.getCoords())
+        chids.extend(x.getChids())
+        names.extend(x.getNames())
+        resnames.extend(x.getResnames())
+        resnums.extend(x.getResnums())
+        betas.extend([0 for x in range(len(x))])
+        occu.extend([0 for x in range(len(x))])
+    ag.setCoords(np.array(coords))
+    ag.setChids(chids)
+    ag.setNames(names)
+    ag.setResnames(resnames)
+    ag.setResnums(resnums)
+    ag.setBetas(betas)
+    ag.setOccupancies(occu)
+    return ag
 
 def mutate_vdm_target_into_ag(target, resind_vdm_dict, title, write_metal = True, contact_resind = 1):
     '''
@@ -377,7 +440,7 @@ def combine_ags(ags, title, ABCchids = None):
     chid_ind = 0
     for _ag_all in ags:
         for cd in np.unique(_ag_all.getChids()):
-            print(cd)
+            #print(cd)
             chid = ABCchids[chid_ind]
             chid_ind += 1
             if cd == None:

@@ -10,8 +10,7 @@ import prody as pr
 import pickle
 import pandas as pd
 import numpy as np
-from metalprot.basic import constant
-from metalprot.basic import utils
+from metalprot.basic import constant, utils
 from metalprot.combs import search_lig_indep
 from metalprot.combs import position_ligand
 from sklearn.neighbors import NearestNeighbors
@@ -38,7 +37,7 @@ def extract_2ndshell_cgs(outdir, target, win_filters):
     return cgs
 
 
-def run_search(target, ligs, path_to_database, para, lig_cg, chidres2ind):
+def run_search(target, ligs, path_to_database, para, lig_cg):
     '''
     cg = 'phenol'
     resnum = 102
@@ -49,40 +48,41 @@ def run_search(target, ligs, path_to_database, para, lig_cg, chidres2ind):
 
     #summaries = []
     lig_vdm_dict = {}
-    for cg in para.load_cg_aa_vdm_dict.keys():
+    for cg_id in para.vdm_cg_aa_atommap_dict.keys():
+        cg = para.vdm_cg_aa_atommap_dict[cg_id]['cg']
         if para.task_type == 'search_2ndshell' and cg not in lig_cg:
             print('cg {} is not for the 2ndshell of aa {}.'.format(cg, lig_cg))
             continue
-        for cg_aa_vdms in para.load_cg_aa_vdm_dict[cg]:
-            for a in cg_aa_vdms[0]:
-                aa = constant.inv_one_letter_code[a]
-                #df_vdm, df_gr, df_score = load_new_vdm(path_to_database, cg, aa)
-                df_vdm = search_lig_indep.load_old_vdm(path_to_database, cg, aa)
 
-                for chidres in para.predefined_resnums:
-                    print('Searching: ' + cg + ' ' + aa + ' ' + chidres[0] + str(chidres[1]))
-                    pos = target.select('chid ' + chidres[0] + ' and resnum ' + str(chidres[1]))
-                    abple = abples[pos.getResindices()[0]]
-                    df_vdm_filter = search_lig_indep.filter_db(df_vdm, use_enriched = para.use_enriched, use_abple=para.use_abple, abple=abple)        
+        for a in para.vdm_cg_aa_atommap_dict[cg_id]['aas']:
+            aa = constant.inv_one_letter_code[a]
+            #df_vdm, df_gr, df_score = load_new_vdm(path_to_database, cg, aa)
+            df_vdm = search_lig_indep.load_old_vdm(path_to_database, cg, aa)
 
-                    results = search_lig_indep.search_lig_at_cg_aa_resnum(target, chidres, chidres2ind, pos, abple, ligs, para.vdm_cg_aa_atommap_dict, cg, df_vdm_filter, constant.ideal_ala_coords, para.rmsd, cg_aa_vdms[1], cg_aa_vdms[2])
+            for chidres in para.predefined_resnums:
+                print('Searching: ' + cg + ' ' + aa + ' ' + chidres[0] + str(chidres[1]))
+                pos = target.select('chid ' + chidres[0] + ' and resnum ' + str(chidres[1]))
+                abple = abples[pos.getResindices()[0]]
+                df_vdm_filter = search_lig_indep.filter_db(df_vdm, use_enriched = para.use_enriched, use_abple=para.use_abple, abple=abple)        
 
-                    for cg_id, lig_id, _rmsd, vdm_ag, vdm_id, score, v, contact_hb, contact_cc in results:
-                        prefix = 'Lig-' + str(lig_id) + '_' + cg + '_' + chidres[0] + str(chidres[1]) + '_' + aa + '_rmsd_' + str(round(_rmsd, 2)) + '_v_' + str(round(score, 1)) + '_'       
+                results = search_lig_indep.search_lig_at_cg_aa_resnum(target, chidres, pos, abple, ligs, para.vdm_cg_aa_atommap_dict, cg_id, df_vdm_filter, constant.ideal_ala_coords, para.rmsd, cg_aa_vdms[1], cg_aa_vdms[2])
 
-                        #pr.writePDB(outdir_all + prefix + str(vdm_id) + '.pdb.gz', vdm_ag)
-                        #summaries.append((cg, aa, resnum, cg_id, lig_id, _rmsd, vdm_id, score))
+                for cg_id, lig_id, _rmsd, vdm_ag, vdm_id, score, v, contact_hb, contact_cc in results:
+                    prefix = 'Lig-' + str(lig_id) + '_' + cg + '_' + chidres[0] + str(chidres[1]) + '_' + aa + '_rmsd_' + str(round(_rmsd, 2)) + '_v_' + str(round(score, 1)) + '_'       
 
-                        vdm_ag.setTitle(prefix + str(vdm_id))                       
-                        if lig_id in lig_vdm_dict.keys():
-                            lig_vdm_dict[lig_id].append((vdm_ag, (cg, aa, chidres, cg_id, lig_id, _rmsd, vdm_id, score, v, contact_hb, contact_cc)))
-                        else:
-                            lig_vdm_dict[lig_id] = [(vdm_ag, (cg, aa, chidres, cg_id, lig_id, _rmsd, vdm_id, score, v, contact_hb, contact_cc))]
+                    #pr.writePDB(outdir_all + prefix + str(vdm_id) + '.pdb.gz', vdm_ag)
+                    #summaries.append((cg, aa, resnum, cg_id, lig_id, _rmsd, vdm_id, score))
 
-                        
-                del [[df_vdm]]
-                gc.collect()
-                df_vdm = pd.DataFrame()
+                    vdm_ag.setTitle(prefix + str(vdm_id))                       
+                    if lig_id in lig_vdm_dict.keys():
+                        lig_vdm_dict[lig_id].append((vdm_ag, (cg, aa, chidres, cg_id, lig_id, _rmsd, vdm_id, score, v, contact_hb, contact_cc)))
+                    else:
+                        lig_vdm_dict[lig_id] = [(vdm_ag, (cg, aa, chidres, cg_id, lig_id, _rmsd, vdm_id, score, v, contact_hb, contact_cc))]
+
+                    
+            del [[df_vdm]]
+            gc.collect()
+            df_vdm = pd.DataFrame()
         
     return lig_vdm_dict
 
@@ -203,7 +203,7 @@ def run_all(file, workdir, path_to_database, lig_path, para):
     print('number of ligs: {}'.format(len(ligs)))
     for i in range(len(ligs)):
         lig = ligs[i]
-        lig_vdm_dict = run_search(target, lig, path_to_database, constant.ideal_ala_coords, para, para.lig_cgs[i], chidres2ind)
+        lig_vdm_dict = run_search(target, lig, path_to_database, constant.ideal_ala_coords, para, para.lig_cgs[i])
         print('lig_vdm_dict size {}'.format(len(list(lig_vdm_dict.keys()))))
         write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict, i, para)
 

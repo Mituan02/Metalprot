@@ -21,9 +21,9 @@ python /mnt/e/GitHub_Design/Metalprot/scrips/search_selfcenter/database_selfcent
 '''
 
 '''General ZN database path'''
-query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/'
+#query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/'
 '''FE_Mn_CO database path'''
-#query_dir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/'
+query_dir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/'
 '''2nd shell database path'''
 #query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/20220128_1stshell/20220128_selfcenter/'
 

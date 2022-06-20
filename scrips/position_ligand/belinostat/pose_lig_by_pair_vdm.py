@@ -9,6 +9,7 @@ Please check metalprot.combs.sample_dist.py
 
 import sys
 import os
+from nbformat import write
 import pandas as pd
 import numpy as np
 import prody as pr
@@ -40,6 +41,7 @@ class Para:
             'cg' : 'ph',
             'lgd_sel' : ['C7', 'C8', 'C15', 'C13'],
             'correspond_resname' : 'PHE',
+            'represent_name' : 'CZ',
             'correspond_names' : ['CG', 'CD1', 'CD2', 'CZ'],
             'aas' : 'F',
             'filter_hb' : False,
@@ -49,6 +51,7 @@ class Para:
             'cg' : 'ph',
             'lgd_sel' : ['C7', 'C8', 'C15', 'C13'],
             'correspond_resname' : 'PHE',
+            'represent_name' : 'CZ',
             'correspond_names' : ['CG', 'CD2', 'CD1', 'CZ'],
             'aas' : 'F',
             'filter_hb' : False,
@@ -58,6 +61,7 @@ class Para:
             'cg' : 'ph',
             'lgd_sel' : ['C7', 'C8', 'C15', 'C13'],
             'correspond_resname' : 'PHE',
+            'represent_name' : 'CG',
             'correspond_names' : ['CD1', 'CG', 'CE1', 'CE2'],
             'aas' : 'F',
             'filter_hb' : False,
@@ -67,6 +71,7 @@ class Para:
             'cg' : 'ph',
             'lgd_sel' : ['C7', 'C8', 'C15', 'C13'],
             'correspond_resname' : 'PHE',
+            'represent_name' : 'CG',
             'correspond_names' : ['CD1', 'CE1', 'CG', 'CE2'],
             'aas' : 'F',
             'filter_hb' : False,
@@ -76,6 +81,7 @@ class Para:
             'cg' : 'ph',
             'lgd_sel' : ['C7', 'C8', 'C15', 'C13'],
             'correspond_resname' : 'PHE',
+            'represent_name' : 'CZ',
             'correspond_names' : ['CE1', 'CD1', 'CZ', 'CD2'],
             'aas' : 'F',
             'filter_hb' : False,
@@ -85,6 +91,7 @@ class Para:
             'cg' : 'ph',
             'lgd_sel' : ['C7', 'C8', 'C15', 'C13'],
             'correspond_resname' : 'PHE',
+            'represent_name' : 'CZ',
             'correspond_names' : ['CE1', 'CZ', 'CD1', 'CD2'],
             'aas' : 'F',
             'filter_hb' : False,
@@ -94,6 +101,7 @@ class Para:
             'cg' : 'ph',
             'lgd_sel' : ['C7', 'C8', 'C15', 'C13'],
             'correspond_resname' : 'PHE',
+            'represent_name' : 'CZ',
             'correspond_names' : ['CZ', 'CE1', 'CE2', 'CG'],
             'aas' : 'F',
             'filter_hb' : False,
@@ -103,6 +111,7 @@ class Para:
             'cg' : 'ph',
             'lgd_sel' : ['C7', 'C8', 'C15', 'C13'],
             'correspond_resname' : 'PHE',
+            'represent_name' : 'CZ',
             'correspond_names' : ['CZ', 'CE2', 'CE1', 'CG'],
             'aas' : 'F',
             'filter_hb' : False,
@@ -112,6 +121,7 @@ class Para:
             'cg' : 'ph',
             'lgd_sel' : ['C7', 'C8', 'C15', 'C13'],
             'correspond_resname' : 'PHE',
+            'represent_name' : 'CZ',
             'correspond_names' : ['CE2', 'CZ', 'CD2', 'CD1'],
             'aas' : 'F',
             'filter_hb' : False,
@@ -121,6 +131,7 @@ class Para:
             'cg' : 'ph',
             'lgd_sel' : ['C7', 'C8', 'C15', 'C13'],
             'correspond_resname' : 'PHE',
+            'represent_name' : 'CZ',
             'correspond_names' : ['CE2', 'CD2', 'CZ', 'CD1'],
             'aas' : 'F',
             'filter_hb' : False,
@@ -130,6 +141,7 @@ class Para:
             'cg' : 'ph',
             'lgd_sel' : ['C7', 'C8', 'C15', 'C13'],
             'correspond_resname' : 'PHE',
+            'represent_name' : 'CG',
             'correspond_names' : ['CD2', 'CE2', 'CG', 'CE1'],
             'aas' : 'F',
             'filter_hb' : False,
@@ -139,6 +151,7 @@ class Para:
             'cg' : 'ph',
             'lgd_sel' : ['C7', 'C8', 'C15', 'C13'],
             'correspond_resname' : 'PHE',
+            'represent_name' : 'CG',
             'correspond_names' : ['CD2', 'CG', 'CE2', 'CE1'],
             'aas' : 'F',
             'filter_hb' : False,
@@ -151,13 +164,13 @@ class Para:
             'cg' : 'conh2',
             'lgd_sel' : ['O3', 'C12', 'N2', 'C11'],
             'correspond_resname' : 'ASN',
+            'represent_name' : 'CG',
             'correspond_names' : ['CB', 'CG', 'OD1', 'ND2'],
             'aas' : 'STYH', #'HDE' is also provide good hb but we want to get rid of confusing the metal binding.
             'filter_hb' : True,
             'filter_cc' : False
         },  
     }
-
 
 
 def _calc_lig_sel_dist(lig, key_a, key_b, para):
@@ -214,7 +227,7 @@ def _get_labels_and_vdm_coords(target, chidres, vdm_cg_aa_atommap_dict, cg_key, 
 
     df_vdm_filter_filter.loc[:, ['c_x', 'c_y', 'c_z']] = tf.apply(df_vdm_filter_filter[['c_x', 'c_y', 'c_z']].to_numpy())
 
-    labels, vdm_coords = search_lig_indep.get_vdm_labels_coords_4old_vdm_db(df_vdm_filter_filter, vdm_cg_aa_atommap_dict[cg_key]['correspond_resname'], vdm_cg_aa_atommap_dict[cg_key]['correspond_names'])
+    labels, vdm_coords = search_lig_indep.get_vdm_labels_coords_4old_vdm_db(df_vdm_filter_filter, vdm_cg_aa_atommap_dict[cg_key]['correspond_resname'], vdm_cg_aa_atommap_dict[cg_key]['represent_name'], vdm_cg_aa_atommap_dict[cg_key]['correspond_names'])
     
     return labels, vdm_coords, df_vdm_filter_filter
 
@@ -258,11 +271,11 @@ def _lig_on_pair_vdms(lig, para, lig_sel_coords, adj_matrix_pair, labels_a, vdm_
             _lig = lig.copy()
             tf = pr.calcTransformation(lig_sel_coords, np.array(coords))
             tf.apply(_lig)
-            lig_la_lbs.append(labels_a.iloc[r], labels_b.iloc[c], _lig)
+            lig_la_lbs.append((labels_a.iloc[r], labels_b.iloc[c], _lig))
     return lig_la_lbs
 
 
-def _search_select_pair_vdm(workdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b):
+def _search_select_pair_vdm(outdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b):
     #>>> For the selected key, get the dists of a pair of ligand cgs.
     dists, lig_sel_coords = _calc_lig_sel_dist(lig, key_a, key_b, para)
 
@@ -276,7 +289,7 @@ def _search_select_pair_vdm(workdir, target, lig, para, path_to_database, key_a,
 
             adj_matrix_pair = _get_pair_vdms_adj_matrix(dists, labels_a, vdm_coords_a, labels_b, vdm_coords_b, para)
             
-            # with open(workdir + '_summary.txt', 'a') as f:
+            # with open(outdir + '_summary.txt', 'a') as f:
             #     f.write('----------------------------------------------------------\n')
             #     f.write('pos: ({}, {}) key_a: {}, key_b: {}, aa_a:{}, aa_b {}, matrix sum: {}\n'.format(chidres_a, chidres_b, key_a, key_b, aa_a, aa_b, adj_matrix_pair.sum()))
 
@@ -286,12 +299,17 @@ def _search_select_pair_vdm(workdir, target, lig, para, path_to_database, key_a,
             print('pos: ({}, {}) key_a: {}, key_b: {}, aa_a:{}, aa_b {}, matrix sum: {}, lig_la_lbs: {}\n'.format(chidres_a, chidres_b, key_a, key_b, aa_a, aa_b, adj_matrix_pair.sum(), len(lig_la_lbs)))
             
             if len(lig_la_lbs)>0:
-                title = '_'.join([key_a, key_b, chidres_a, chidres_b]) + '_summary.txt'
-                with open(workdir + title, 'a') as f:
-                    f.write('lig_la_lbs {}\n'.format(len(lig_la_lbs)))
+                title = '_'.join([key_a, key_b, chidres_a[0], str(chidres_a[1]), chidres_b[0], str(chidres_b[0])]) + '_summary.txt'
+                with open(outdir + title, 'a') as f:
+                    for la, lb, lig in lig_la_lbs:
+                        la_str = '_'.join([str(x) for x in la])
+                        lb_str = '_'.join([str(x) for x in lb])
+                        f.write(target.getTitle() + '\t' + lig.getTitle() + '\t' + la_str + '\t' + lb_str + '\n')
+                        pr.writePDB(outdir + 'Lig_' + la_str + lb_str, lig)
 
 
-def _select_chidres_keys(workdir, target, lig, para, path_to_database):
+
+def _select_chidres_keys(target, lig, para, path_to_database):
     abples, phipsi = utils.seq_get_ABPLE(target)
 
     select_chidres_keys = []
@@ -326,7 +344,7 @@ def run_local():
 
     para = Para()
 
-    select_chidres_keys = _select_chidres_keys(workdir, target, lig, para, path_to_database)
+    select_chidres_keys = _select_chidres_keys(target, lig, para, path_to_database)
     for key_a, key_b, chidres_a, chidres_b, abple_a, abple_b in select_chidres_keys:
         _search_select_pair_vdm(workdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b)
     return
@@ -340,18 +358,43 @@ def run_wynton():
 
     target = pr.parsePDB(workdir + 'targets/01_f63440_nick_ala.pdb')
 
+    outdir = workdir + 'results/' 
+    os.makedirs(outdir)
+
     para = Para()
 
-    select_chidres_keys = _select_chidres_keys(workdir, target, lig, para, path_to_database)
+    select_chidres_keys = _select_chidres_keys(target, lig, para, path_to_database)
 
     ind = int(sys.argv[1]) -1
 
     key_a, key_b, chidres_a, chidres_b, abple_a, abple_b = select_chidres_keys[ind]
-    _search_select_pair_vdm(workdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b)
+    _search_select_pair_vdm(outdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b)
+    return
+
+def run_wynton_multifile():
+    workdir = '/wynton/home/degradolab/lonelu/DesignData/Metalloenzyme/'
+
+    path_to_database='/wynton/home/degradolab/lonelu/DesignData/Database/vdMs/'
+
+    ligs = [pr.parsePDB(workdir + 'meo_50g_amber14eht_md_out/' + x) for x in os.listdir(workdir + 'meo_50g_amber14eht_md_out/') if '.pdb' in x]
+
+    targets = [pr.parsePDB(workdir + 'targets/' + x) for x in os.listdir(workdir + 'targets/') if '.pdb' in x]
+    
+    para = Para()
+
+    ind = int(sys.argv[1]) -1
+    select_chidres_keys = _select_chidres_keys(targets[0], ligs[0], para, path_to_database)
+    key_a, key_b, chidres_a, chidres_b, abple_a, abple_b = select_chidres_keys[ind]
+    for target in targets:
+        for lig in ligs:           
+            outdir = workdir + 'results_' + target.getTitle() + '_' + lig.getTitle() + '/'
+            os.makedirs(outdir, exist_ok = True)
+            _search_select_pair_vdm(outdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b)
+
     return
 
 if __name__=='__main__':
-    run_wynton()
+    run_wynton_multifile()
 
 def _test_case():
     '''

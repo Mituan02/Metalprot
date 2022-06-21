@@ -235,12 +235,12 @@ def run_wynton():
 
     para = Para()
 
-    select_chidres_keys = search_lig_indep_inpair.select_chidres_keys(target, lig, para, path_to_database)
+    select_chidres_keys = search_lig_indep_inpair._select_chidres_keys(target, lig, para, path_to_database)
 
     ind = int(sys.argv[1]) -1
 
     key_a, key_b, chidres_a, chidres_b, abple_a, abple_b = select_chidres_keys[ind]
-    search_lig_indep_inpair._search_select_pair_vdm(outdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b)
+    search_lig_indep_inpair.search_select_pair_vdm(outdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b)
     return
 
 def run_wynton_multifile():

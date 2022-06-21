@@ -3,15 +3,15 @@ The script here is for the development of the pose_lig_by_pair_vdm.py.
 Use ABLE (6w70.pdb) as an example.
 Use the run_verify_vdMs() function to find the solution vdMs to prove the existance of the vdMs.
 '''
-
+import os
 import sys
 import prody as pr
+import datetime
 
-sys.path.append(r'/mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/belinostat/')
-import pose_lig_by_pair_vdm as plby
+#sys.path.append(r'/mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/belinostat/')
 
-from metalprot.basic import constant, utils
-from metalprot.combs import search_lig_indep
+from metalprot.basic import utils
+from metalprot.combs import search_lig_indep_wrap, search_lig_indep_inpair
 
 '''
 python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/belinostat/pose_lig_by_pair_vdm_dev.py
@@ -85,38 +85,12 @@ def run_local():
 
     para = Para()
 
-    select_chidres_keys = plby._select_chidres_keys(workdir, target, lig, para, path_to_database)
+    outdir = workdir + 'output_pair-search_' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S') 
+    os.makedirs(outdir, exist_ok = True)
+
+    select_chidres_keys = search_lig_indep_inpair._select_chidres_keys(target, lig, para, path_to_database)
     for key_a, key_b, chidres_a, chidres_b, abple_a, abple_b in select_chidres_keys:
-        plby._search_select_pair_vdm(workdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b)
-    return
-
-
-def _verify_vdMs(workdir, target, chidres, para, abples, path_to_database, lig, vdm_cg_aa_atommap_dict):
-    for cg_id in vdm_cg_aa_atommap_dict.keys():
-
-        pos = target.select('chid ' + chidres[0] + ' and resnum ' + str(chidres[1]))
-        abple = abples[pos.getResindices()[0]]
-
-        for a in vdm_cg_aa_atommap_dict[cg_id]['aas']:
-            aa = constant.inv_one_letter_code[a]
-
-            df_vdms = search_lig_indep.load_old_vdm(path_to_database, vdm_cg_aa_atommap_dict[cg_id]['cg'], aa)
-            df_vdm_filter = search_lig_indep.filter_db(df_vdms, use_enriched = para.use_enriched, use_abple=para.use_abple, abple=abple)   
-
-            ligs = [lig]
-            ideal_ala_coords = constant.ideal_ala_coords
-            results = search_lig_indep.search_lig_at_cg_aa_resnum(target, chidres, pos, abple, ligs, vdm_cg_aa_atommap_dict, cg_id, df_vdm_filter, ideal_ala_coords, para.rmsd, True, False)
-            print(len(results))
-
-            if len(results) <= 0:
-                continue
-
-            cg = vdm_cg_aa_atommap_dict[cg_id]['cg']
-            for cg_id, lig_id, _rmsd, vdm_ag, vdm_id, score, v, contact_hb, contact_cc in results:
-                prefix = 'Lig-' + str(lig_id) + '_' + cg + '_' + chidres[0] + str(chidres[1]) + '_' + aa + '_rmsd_' + str(round(_rmsd, 2)) + '_v_' + str(round(score, 1)) + '_'       
-
-                vdm_ag.setTitle(prefix + '_' + vdm_ag.getTitle())            
-                pr.writePDB(workdir + vdm_ag.getTitle(), vdm_ag)  
+        search_lig_indep_inpair.search_select_pair_vdm(outdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b)
     return
 
 def run_verify_vdMs():
@@ -124,6 +98,9 @@ def run_verify_vdMs():
     For a protein bind to ligand, check the vdMs that satisfy the binding. 
     '''
     workdir = '/mnt/e/DesignData/Metalloenzyme/6w70_vdM/'
+
+    outdir = workdir + 'output_verify-vdM_' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S') 
+    os.makedirs(outdir, exist_ok = True)
 
     path_to_database='/mnt/e/DesignData/Combs/Combs2_database/vdMs/'
 
@@ -135,9 +112,9 @@ def run_verify_vdMs():
 
     abples, phipsi = utils.seq_get_ABPLE(target)
 
-    _verify_vdMs(workdir, target, para.predefined_resnums[0], para, abples, path_to_database, lig, para.vdm_cg_aa_atommap_dict_a)
+    search_lig_indep_wrap.verify_vdMs(outdir, target, para.predefined_resnums[0], para, abples, path_to_database, lig, para.vdm_cg_aa_atommap_dict_a)
 
-    _verify_vdMs(workdir, target, para.predefined_resnums[1], para, abples, path_to_database, lig, para.vdm_cg_aa_atommap_dict_b)
+    search_lig_indep_wrap.verify_vdMs(outdir, target, para.predefined_resnums[1], para, abples, path_to_database, lig, para.vdm_cg_aa_atommap_dict_b)
 
     return
 

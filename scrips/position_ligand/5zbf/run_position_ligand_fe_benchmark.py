@@ -5,7 +5,7 @@ Benchmark metal + ligand bindin protein.
 from metalprot.search import search_selfcenter
 from metalprot.basic import filter, prody_ext
 import metalprot.basic.constant as constant
-from metalprot.combs import position_ligand, search_ligand
+from metalprot.combs import __search_ligand, position_ligand
 import pickle
 import time
 import prody as pr
@@ -15,7 +15,7 @@ import sys
 sys.path.append(r'/wynton/home/degradolab/lonelu/GitHub_Design/Combs2')
 import combs2
 
-from metalprot.combs import search_cg_vdms as metalprot_scv
+from metalprot.combs import __search_cg_vdms as metalprot_scv
 import pandas as pd
 import shutil
 

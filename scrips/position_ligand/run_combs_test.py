@@ -2,7 +2,7 @@ import sys
 sys.path.append(r'/wynton/home/degradolab/lonelu/GitHub_Design/Combs2')
 import combs2
 
-from metalprot.combs import search_cg_vdms as metalprot_scv
+from metalprot.combs import __search_cg_vdms as metalprot_scv
 import prody as pr
 import pandas as pd
 import os

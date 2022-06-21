@@ -6,7 +6,7 @@ For wynton submit. Please put all protein backbone in one folder and the folder 
 from metalprot.search import search_selfcenter
 from metalprot.basic import filter
 import metalprot.basic.constant as constant
-from metalprot.combs import position_ligand, search_ligand
+from metalprot.combs import __search_ligand, position_ligand
 import pickle
 import time
 import prody as pr
@@ -16,7 +16,7 @@ import sys
 sys.path.append(r'/wynton/home/degradolab/lonelu/GitHub_Design/Combs2')
 import combs2
 
-from metalprot.combs import search_cg_vdms as metalprot_scv
+from metalprot.combs import __search_cg_vdms as metalprot_scv
 import pandas as pd
 import shutil
 
@@ -68,7 +68,7 @@ def run_ligand(ss, lig, lig_connects, geo_sels, ro1, ro2, rest1, rest2, ideal_ge
     '''
     all_ligs = position_ligand.generate_rotated_ligs(lig, [ro1, ro2], [rest1, rest2], [5, 5])
 
-    search_ligands = search_ligand.prepare_search_ligand(ss.workdir + 'represents_combs/', ideal_geo_o_path)
+    search_ligands = __search_ligand.prepare_search_ligand(ss.workdir + 'represents_combs/', ideal_geo_o_path)
 
     for sl in search_ligands:
         sl.generate_ligands(all_ligs, ss.target, lig_connects, geo_sels, clash_dist = clash_dist)
@@ -91,7 +91,7 @@ def run_ligand_rdkit(ss, lig_smile, total, rig, lig_connects, geo_sels, ideal_ge
         pr.writePDB(outdir + 'with_metals/' + lig_m.getTitle(), lig_m)
     shutil.rmtree(outdir)
 
-    search_ligands = search_ligand.prepare_search_ligand(ss.workdir + 'represents_combs/', ideal_geo_o_path)
+    search_ligands = __search_ligand.prepare_search_ligand(ss.workdir + 'represents_combs/', ideal_geo_o_path)
 
     for sl in search_ligands:
         sl.generate_ligands(all_ligs, ss.target, lig_connects, geo_sels, clash_dist = clash_dist)

@@ -211,14 +211,14 @@ def run_local():
     target = pr.parsePDB(workdir + 'targets/01_f63440_nick_ala.pdb')
 
     outdir = workdir + 'results/' 
-    os.makedirs(outdir)
+    os.makedirs(outdir, exist_ok = True)
 
     para = Para()
 
     select_chidres_keys = search_lig_indep_inpair._select_chidres_keys(target, lig, para, path_to_database)
-    
-    for key_a, key_b, chidres_a, chidres_b, abple_a, abple_b in select_chidres_keys:
-        search_lig_indep_inpair.search_select_pair_vdm(outdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b)
+    print(len(select_chidres_keys))
+    #for key_a, key_b, chidres_a, chidres_b, abple_a, abple_b in select_chidres_keys:
+    #    search_lig_indep_inpair.search_select_pair_vdm(outdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b)
     return
 
 def run_wynton():
@@ -231,7 +231,7 @@ def run_wynton():
     target = pr.parsePDB(workdir + 'targets/01_f63440_nick_ala.pdb')
 
     outdir = workdir + 'results/' 
-    os.makedirs(outdir)
+    os.makedirs(outdir, exist_ok = True)
 
     para = Para()
 
@@ -267,7 +267,8 @@ def run_wynton_multifile():
 
 if __name__=='__main__':
     #run_wynton_multifile()
-    run_local()
+    run_wynton()
+    #run_local()
 
 
 

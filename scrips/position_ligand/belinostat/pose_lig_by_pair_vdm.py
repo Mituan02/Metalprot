@@ -176,10 +176,10 @@ class Para:
     vdm_cg_aa_atommap_dict_a ={
         ('coo_0'):{
             'cg' : 'coo',
-            'lgd_sel' : ['CG', 'OD1', 'OD2'],
+            'lgd_sel' : ['S', 'O1', 'O2'],
             'correspond_resname' : 'ASP',
             'represent_name' : 'CG',
-            'correspond_names' : ['S', 'O1', 'O2'],
+            'correspond_names' : ['CG', 'OD1', 'OD2'],
             'aas' : 'STYH', #'HDE' is also provide good hb but we want to get rid of confusing the metal binding.
             'filter_hb' : True,
             'filter_cc' : False
@@ -217,8 +217,8 @@ def run_local():
 
     select_chidres_keys = search_lig_indep_inpair._select_chidres_keys(target, lig, para, path_to_database)
     print(len(select_chidres_keys))
-    #for key_a, key_b, chidres_a, chidres_b, abple_a, abple_b in select_chidres_keys:
-    #    search_lig_indep_inpair.search_select_pair_vdm(outdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b)
+    for key_a, key_b, chidres_a, chidres_b, abple_a, abple_b in select_chidres_keys:
+        search_lig_indep_inpair.search_select_pair_vdm(outdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b)
     return
 
 def run_wynton():
@@ -267,8 +267,8 @@ def run_wynton_multifile():
 
 if __name__=='__main__':
     #run_wynton_multifile()
-    run_wynton()
-    #run_local()
+    #run_wynton()
+    run_local()
 
 
 

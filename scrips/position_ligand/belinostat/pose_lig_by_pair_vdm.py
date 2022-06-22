@@ -21,7 +21,7 @@ from metalprot.basic import constant, utils
 from metalprot.combs import search_lig_indep, search_lig_indep_inpair
 
 '''
-python /mnt/e/Github_Design/Metalprot/scrips/position_ligand/belinostat/pose_lig_by_pair_vdm.py
+python /mnt/e/Github_Design/Metalprot/scrips/position_ligand/belinostat/pose_lig_by_pair_vdm.py local
 
 '''
 class Para:
@@ -35,7 +35,7 @@ class Para:
     use_enriched = True
     use_abple=True
 
-    rmsd = 0.6
+    rmsd = 0.75
 
     # vdm_cg_aa_atommap_dict_a = {
     #     ('ph_0'):{
@@ -173,19 +173,81 @@ class Para:
     #     },
     # }
 
-    vdm_cg_aa_atommap_dict_a ={
-        ('coo_0'):{
-            'cg' : 'coo',
-            'lgd_sel' : ['S', 'O1', 'O2'],
-            'correspond_resname' : 'ASP',
-            'represent_name' : 'CG',
-            'correspond_names' : ['CG', 'OD1', 'OD2'],
-            'aas' : 'STYH', #'HDE' is also provide good hb but we want to get rid of confusing the metal binding.
+    # vdm_cg_aa_atommap_dict_a ={
+    #     ('coo_0'):{
+    #         'cg' : 'coo',
+    #         'lgd_sel' : ['S', 'O1', 'O2'],
+    #         'correspond_resname' : 'ASP',
+    #         'represent_name' : 'CG',
+    #         'correspond_names' : ['CG', 'OD1', 'OD2'],
+    #         'aas' : 'STYH', #'HDE' is also provide good hb but we want to get rid of confusing the metal binding.
+    #         'filter_hb' : True,
+    #         'filter_cc' : False
+    #     },         
+    # }
+
+    vdm_cg_aa_atommap_dict_a = {
+        ('bb_cco_0'):{
+            'cg' : 'bb_cco',
+            'lgd_sel' : ['C7', 'S', 'O1'],
+            'correspond_resname' : 'GLY',
+            'represent_name' : 'CA',
+            'correspond_names' : ['CA', 'C', 'O'],
+            'aas' : 'STYHQN',
             'filter_hb' : True,
             'filter_cc' : False
-        },         
+        },
+        ('bb_cco_1'):{
+            'cg' : 'bb_cco',
+            'lgd_sel' : ['C7', 'S', 'O1'],
+            'correspond_resname' : 'ALA',
+            'represent_name' : 'CA',
+            'correspond_names' : ['CA', 'C', 'O'],
+            'aas' : 'STYHQN',
+            'filter_hb' : True,
+            'filter_cc' : False
+        },
+        ('bb_cco_2'):{
+            'cg' : 'bb_cco',
+            'lgd_sel' : ['C7', 'S', 'O1'],
+            'correspond_resname' : 'PRO',
+            'represent_name' : 'CA',
+            'correspond_names' : ['CA', 'C', 'O'],
+            'aas' : 'STYHQN',
+            'filter_hb' : True,
+            'filter_cc' : False
+        },
+        ('bb_cco_3'):{
+            'cg' : 'bb_cco',
+            'lgd_sel' : ['C7', 'S', 'O2'],
+            'correspond_resname' : 'GLY',
+            'represent_name' : 'CA',
+            'correspond_names' : ['CA', 'C', 'O'],
+            'aas' : 'STYHQN',
+            'filter_hb' : True,
+            'filter_cc' : False
+        },
+        ('bb_cco_4'):{
+            'cg' : 'bb_cco',
+            'lgd_sel' : ['C7', 'S', 'O2'],
+            'correspond_resname' : 'ALA',
+            'represent_name' : 'CA',
+            'correspond_names' : ['CA', 'C', 'O'],
+            'aas' : 'STYHQN',
+            'filter_hb' : True,
+            'filter_cc' : False
+        },
+        ('bb_cco_5'):{
+            'cg' : 'bb_cco',
+            'lgd_sel' : ['C7', 'S', 'O2'],
+            'correspond_resname' : 'PRO',
+            'represent_name' : 'CA',
+            'correspond_names' : ['CA', 'C', 'O'],
+            'aas' : 'STYHQN',
+            'filter_hb' : True,
+            'filter_cc' : False
+        },
     }
-
 
     vdm_cg_aa_atommap_dict_b = {
         ('conh2_0'):{
@@ -194,7 +256,7 @@ class Para:
             'correspond_resname' : 'ASN',
             'represent_name' : 'CG',
             'correspond_names' : ['OD1', 'CG', 'ND2'],
-            'aas' : 'STYH', #'HDE' is also provide good hb but we want to get rid of confusing the metal binding.
+            'aas' : 'STYHQN', #'HDE' is also provide good hb but we want to get rid of confusing the metal binding.
             'filter_hb' : True,
             'filter_cc' : False
         },  
@@ -217,8 +279,8 @@ def run_local():
 
     select_chidres_keys = search_lig_indep_inpair._select_chidres_keys(target, lig, para, path_to_database)
     print(len(select_chidres_keys))
-    for key_a, key_b, chidres_a, chidres_b, abple_a, abple_b in select_chidres_keys:
-        search_lig_indep_inpair.search_select_pair_vdm(outdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b)
+    # for key_a, key_b, chidres_a, chidres_b, abple_a, abple_b in select_chidres_keys:
+    #     search_lig_indep_inpair.search_select_pair_vdm(outdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b)
     return
 
 def run_wynton():
@@ -237,7 +299,7 @@ def run_wynton():
 
     select_chidres_keys = search_lig_indep_inpair._select_chidres_keys(target, lig, para, path_to_database)
 
-    ind = int(sys.argv[1]) -1
+    ind = int(sys.argv[2]) -1
 
     key_a, key_b, chidres_a, chidres_b, abple_a, abple_b = select_chidres_keys[ind]
     search_lig_indep_inpair.search_select_pair_vdm(outdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b)
@@ -254,7 +316,7 @@ def run_wynton_multifile():
     
     para = Para()
 
-    ind = int(sys.argv[1]) -1
+    ind = int(sys.argv[2]) -1
     select_chidres_keys = search_lig_indep_inpair._select_chidres_keys(targets[0], ligs[0], para, path_to_database)
     key_a, key_b, chidres_a, chidres_b, abple_a, abple_b = select_chidres_keys[ind]
     for target in targets:
@@ -266,9 +328,12 @@ def run_wynton_multifile():
     return
 
 if __name__=='__main__':
-    #run_wynton_multifile()
-    #run_wynton()
-    run_local()
+    if sys.argv[1] == 'wynton_multi': 
+        run_wynton_multifile()
+    elif sys.argv[1] == 'wynton_single': 
+        run_wynton()
+    elif sys.argv[1] == 'local':
+        run_local()
 
 
 

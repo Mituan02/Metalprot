@@ -26,7 +26,7 @@ hostname
 conda activate env_conda
 export OMP_NUM_THREADS=1
 
-python pose_lig_by_pair_vdm.py $SGE_TASK_ID
+python pose_lig_by_pair_vdm.py wynton_single $SGE_TASK_ID
 
 qstat -j $JOB_ID                                  # This is useful for debugging and usage purposes,
                                                   # e.g. "did my job exceed its memory request?"

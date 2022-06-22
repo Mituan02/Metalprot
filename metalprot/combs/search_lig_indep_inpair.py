@@ -118,7 +118,7 @@ def _lig_on_pair_vdms(lig, para, lig_sel_coords, adj_matrix_pair, labels_a, vdm_
 def search_select_pair_vdm(outdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b):
     #>>> For the selected key, get the dists of a pair of ligand cgs.
     dists, lig_sel_coords = _calc_lig_sel_dist(lig, key_a, key_b, para)
-
+    #print(dists)
     for _aa_a in para.vdm_cg_aa_atommap_dict_a[key_a]['aas']:
         aa_a = constant.inv_one_letter_code[_aa_a]
         labels_a, vdm_coords_a, df_vdm_filter_filter_a = _get_labels_and_vdm_coords(target, chidres_a, para.vdm_cg_aa_atommap_dict_a, key_a, abple_a, aa_a, para, path_to_database)

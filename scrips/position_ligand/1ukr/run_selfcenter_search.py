@@ -104,7 +104,7 @@ def run_wynton():
 
     para = Para()
 
-    pdb_files = sorted([fp for fp in os.listdir(para.workdir) if fp[0] != '.' and '.pdb' in fp])
+    pdb_files = sorted([fp for fp in os.listdir(workdir) if fp[0] != '.' and '.pdb' in fp])
 
     ind = int(sys.argv[1]) -1
     if ind > len(pdb_files) -1:

@@ -145,7 +145,7 @@ def run_search(target, ligs, path_to_database, para, predefined_chidres, lig_cg_
     lig_vdm_dict = {}
     for cg_id in para.vdm_cg_aa_atommap_dict.keys():
         cg = para.vdm_cg_aa_atommap_dict[cg_id]['cg']
-        if para.task_type == 'search_2ndshell' and cg not in lig_cg_2ndshell:
+        if para.task_type == 'search_2ndshell' and para.vdm_cg_aa_atommap_dict[cg_id]['correspond_resname'] != constant.inv_one_letter_code[lig_cg_2ndshell[0]] and cg not in lig_cg_2ndshell[1]:
             print('cg {} is not for the 2ndshell of aa {}.'.format(cg, lig_cg_2ndshell))
             continue
 

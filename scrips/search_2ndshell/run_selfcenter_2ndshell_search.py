@@ -72,7 +72,7 @@ ss =  search_selfcenter.Search_selfcenter(target_path,  outdir, all_querys, clus
 #ss.run_selfcenter_search()
 search_selfcenter.run_search_selfcenter(ss)
 
-from metalprot.search import search_2ndshell
+from metalprot.search import __search_2ndshell
 
 _2nd_query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/20220116_selfcenter_bb2ndshell_notconnect/pickle_noCYS/'
 
@@ -86,7 +86,7 @@ print(len(all_2ndshell_vdms))
 ss.secondshell_vdms = all_2ndshell_vdms
 len(list(ss.best_aa_comb_dict))
 
-search_2ndshell.run_search_2ndshell(ss.best_aa_comb_dict, ss.target, ss.secondshell_vdms, allInOne2ndShellVdm, rmsd_2ndshell = 1.0)
+__search_2ndshell.run_search_2ndshell(ss.best_aa_comb_dict, ss.target, ss.secondshell_vdms, allInOne2ndShellVdm, rmsd_2ndshell = 1.0)
 
-search_2ndshell.write_2ndshell(ss, ss.workdir, ss.best_aa_comb_dict)
+__search_2ndshell.write_2ndshell(ss, ss.workdir, ss.best_aa_comb_dict)
 

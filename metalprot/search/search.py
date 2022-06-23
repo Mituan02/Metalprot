@@ -79,7 +79,7 @@ class Search_vdM:
     def __init__(self, target_pdb, workdir, vdms, cluster_centroid_dict, all_metal_vdm, 
     num_contact_vdms = [3], metal_metal_dist = 0.45, win_filtered = [], 
     validateOriginStruct = False, search_filter = None, geometry_path= None, geometry_o_path = None, parallel = False, density_radius = 0.6,
-    secondshell_vdms = None, rmsd_2ndshell = 0.5, allowed_aa_combinations = [],
+    search_2ndshell = False, secondshell_vdms = None, rmsd_2ndshell = 0.5, allowed_aa_combinations = [],
     output_wincomb_overlap = False, eval_density = False, eval_mmdist = False):
         self.time_tag = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') 
         if workdir:
@@ -97,7 +97,6 @@ class Search_vdM:
         self.num_contact_vdms = num_contact_vdms
 
         self._resnum_filtered = win_filtered
-
 
         self.target_abple, self.phipsi = utils.seq_get_ABPLE(self.target)
 
@@ -137,16 +136,18 @@ class Search_vdM:
 
         #NearestNeighbor_pairwise dist strategy. Will be deprecated.
         self.neighbor_pair_dict = dict() # {(33, 37): [xs-33 near 37 coords]}
-        self.neighbor_comb_dict = dict() # { (wins, ids), (comb, combinfo)}
+        
+        self.neighbor_comb_dict = dict() # { wins: (wins, ids), (comb, combinfo)}
         # exp. {((0, 1, 2, 3)(0, 0, 0, 0)): {(0:[1, 3, 4], 1:[2, 3, 4], 2: [2, 6, 7], 3:[1, 2, 3]), combinfo}} Please check neighbor_win2comb()
       
         #NearestNeighbor_graph strategy.
 
 
         #secondshell----------------------------
+        self.search_2ndshell = search_2ndshell
         self.secondshell_vdms = secondshell_vdms
         self.rmsd_2ndshell = rmsd_2ndshell
-
+        
         #For multi scoring----------------------
         self.aa_num_dict = None
         self.aa_vdm_info_dict = {
@@ -186,17 +187,14 @@ class Search_vdM:
         # reschain + resnum to resindex
         target_resnums = self.target.select('name CA').getResnums()
         target_chids = self.target.select('name CA').getChids()
-        self.target_index_dict = {}
+        self.target_ind2chidres = {}
         resnum2ind = {}
         for ind in range(len(target_resnums)):
-            if len(np.unique(target_chids)) != 1:
-                chid_resnum = target_chids[ind] + '-' + str(target_resnums[ind])
-            else:
-                chid_resnum = str(target_resnums[ind])
+            chid_resnum = (target_chids[ind], target_resnums[ind])
             resnum2ind[chid_resnum] = ind
-            self.target_index_dict[ind] = chid_resnum
+            self.target_ind2chidres[ind] = chid_resnum
         print(resnum2ind.keys())
-        self.win_filtered = [resnum2ind[str(rn)] for rn in self._resnum_filtered]
+        self.win_filtered = [resnum2ind[rn] for rn in self._resnum_filtered]
         
         #print('_resnum_filter: {}'.format(self._resnum_filtered))
         #allowed_aa_types example: [[H,H,H], [H,H,E], [H,H,D]]
@@ -400,7 +398,9 @@ class Search_vdM:
         os.makedirs(outdir, exist_ok=True)
 
         with open(outdir + name, 'w') as f:
-            f.write('Wins\tAAs\tvdMIDs\tDensityRadius\tCluScore\tOverlapScore\tOverlapScoreLn\tGeoRmsd\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tclu_nums')
+            f.write('Wins\tAAs\tvdMIDs\tDensityRadius\tCluScore\tOverlapScore\tOverlapScoreLn\tGeoRmsd')
+            f.write('\t2ndShell_Score\t2ndShell_rmsd')
+            f.write('\taa_aa_dists\tmetal_aa_dists\tPair_angles\toverlap#\toverlaps#\tclu_nums')
             f.write('\tpair_aa_aa_dist_ok\tpair_angle_ok\tpair_metal_aa_dist_ok\tvdm_no_clash\topen_site_clash\tproteinABPLEs\tCentroidABPLEs\tproteinPhiPsi\tCentroidPhiPsi')
             if eval:
                 f.write('\teval_min_rmsd\teval_min_vdMs\teval_phi\teval_psi\teval_abple\teval_is_origin\teval_contain_origin')
@@ -415,7 +415,7 @@ class Search_vdM:
                 clu_nums = [c.clu_num for c in info.centroid_dict.values()]
                 #max_clu_nums = [c.max_clu_num for c in info.centroid_dict.values()]
                 
-                f.write('_'.join([self.target_index_dict[x] for x in key[0]]) + '\t')
+                f.write('_'.join([self.target_ind2chidres[x][0] + '-' + str(self.target_ind2chidres[x][1]) for x in key[0]]) + '\t')
                 f.write('_'.join([x[0] for x in key[1]]) + '\t')
                 f.write('_'.join([str(x[1]) for x in key[1]]) + '\t')
 
@@ -424,6 +424,10 @@ class Search_vdM:
                 f.write(str(round(info.overlapScore, 2)) + '\t')
                 f.write(str(round(math.log(info.overlapScore), 2)) + '\t')
                 f.write(str(round(info.geo_rmsd, 3)) + '\t')
+
+                #>>> 2ndshell infos
+                f.write(str(round(info.secondshell_score, 2)) + '\t')
+                f.write(str(round(info.secondshell_rmsd, 2)) + '\t')
                 
                 f.write('||'.join([str(round(d, 2)) for d in info.aa_aa_pair])  + '\t')
                 f.write('||'.join([str(round(d, 2)) for d in info.metal_aa_pair])  + '\t')

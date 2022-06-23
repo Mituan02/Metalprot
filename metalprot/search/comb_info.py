@@ -20,7 +20,7 @@ class CombInfo:
         #Geometry
         self.geometry = None
         self.ideal_geo = None
-        self.geo_rmsd = -10.00
+        self.geo_rmsd = 10.00
         self.aa_aa_pair = None
         self.metal_aa_pair = None
         self.angle_pair = None
@@ -35,7 +35,8 @@ class CombInfo:
 
         #2nd shell vdm
         self.secondshell_dict = {}
-
+        self.secondshell_score = -10.00 
+        self.secondshell_rmsd = 10.0
         #evaluation property for evaluation search
         self.eval_mins = None
         self.eval_min_vdMs = None
@@ -91,4 +92,21 @@ class CombInfo:
         self.aa_aa_pair, self.metal_aa_pair, self.angle_pair  = vdmer.pair_wise_geometry(self.geometry)
         return     
 
+
+    def calc_2ndshell(self):
+        if len(list(self.secondshell_dict.keys())) == 0:
+            return
+
+        min_rmsd = 10.0
+        for key in self.secondshell_dict:
+            max_score = -10.0
+            
+            for ag, info2ds in self.secondshell_dict[key]:
+                if info2ds[7] > max_score:
+                    max_score = info2ds[7]
+                if info2ds[5] < min_rmsd:
+                    min_rmsd = info2ds[5]
+            self.secondshell_score+= max_score
+        self.secondshell_rmsd = min_rmsd
+        return
 

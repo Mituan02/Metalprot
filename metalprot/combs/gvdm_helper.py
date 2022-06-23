@@ -49,7 +49,7 @@ def ligscoords_2_ideal_ala(pos, ligs, ideal_ala_coords):
         _ligs.append(_lig)
     
     tf_rev = pr.calcTransformation(ideal_ala_coords, pos_coords)
-    return _ligs, tf_rev
+    return _ligs, tf_rev, tf
 
 
 def get_vdm_labels_coords_4old_vdm_db(dfa, correspond_resname, represent_name, correspond_names):

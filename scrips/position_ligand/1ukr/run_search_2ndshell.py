@@ -15,23 +15,32 @@ class Para:
 
     #>>> On local path
     path_to_database='/mnt/e/DesignData/Combs/Combs2_database/vdMs/'
-    workdir = '/mnt/e/DesignData/Metalloenzyme/1ukr/'
+    #workdir = '/mnt/e/DesignData/Metalloenzyme/1ukr/'
+    workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
+    #workdir = '/mnt/e/DesignData/ligands/LigandBB/_zn_case/6dwv/'
 
     #>>> There are three type of tasks: 'search_unknow', 'search_eval', or 'search_2ndshell'
     task_type = 'search_2ndshell'
 
     ### Target strcture 
-    predefined_win_filters = [('A', 37), ('A', 66), ('A', 164)]
-    lig_cg_2ndshell = [['coo'], ['hid', 'hie'], ['hid', 'hie']]
+    #predefined_win_filters = [('A', 37), ('A', 66), ('A', 164)]
+    #lig_cg_2ndshell = [['coo'], ['hid', 'hie'], ['hid', 'hie']]
+
+    predefined_win_filters = [('A', 61)]
+    lig_cg_2ndshell = [['hid', 'hie']]
+
+    # predefined_win_filters = [('B', 8), ('B', 10), ('B', 178)]
+    # lig_cg_2ndshell = [['hid', 'hie'],['hid', 'hie'], ['hid', 'hie']]
 
     #>>> vdM database filter.
     use_enriched = True
-    use_abple=True
+    use_abple = True
 
     #>>> Search ligands only with vdMs on the predefined chidres. If task_type is 'search_2ndshell', set it to None.
     predefined_chidres = None
+    predefined_chidres = [('A', 58)]
 
-    rmsd = 0.75
+    rmsd = 3
 
     #TO DO: rename the atoms
     vdm_cg_aa_atommap_dict = {
@@ -47,7 +56,7 @@ class Para:
         },
         ('coo_1'):{
             'cg' : 'coo',
-            'lgd_sel' : ['CB', 'CG', 'OD1', 'OD2'],
+            'lgd_sel' : ['CG', 'CD', 'OE1', 'OE2'],
             'represent_name' : 'OE2',
             'correspond_resname' : 'GLU',
             'correspond_names' : ['CG', 'CD', 'OE1', 'OE2'],
@@ -61,8 +70,9 @@ class Para:
             'represent_name' : 'ND1',
             'correspond_resname' : 'HIS',
             'correspond_names' : ['ND1', 'CE1', 'CG', 'CD2'],
-            'aas' : 'AGDEKNQRST',
-            'filter_hb' : True,
+            #'aas' : 'AGDEKNQRST',
+            'aas' : 'Q',
+            'filter_hb' : False,
             'filter_cc' : False
         },
         ('hie_0'):{
@@ -71,8 +81,9 @@ class Para:
             'represent_name' : 'NE2',
             'correspond_resname' : 'HIS',
             'correspond_names' : ['NE2', 'CE1', 'CD2', 'CG'],
-            'aas' : 'AGDEKNQRST',
-            'filter_hb' : True,
+            #'aas' : 'AGDEKNQRST',
+            'aas' : 'Q',
+            'filter_hb' : False,
             'filter_cc' : False
         }
     }
@@ -111,5 +122,5 @@ def run_local_all():
     return
 
 if __name__=='__main__':
-    #run_local()
-    run_local_all()
+    run_local()
+    #run_local_all()

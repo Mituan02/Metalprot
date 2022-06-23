@@ -160,6 +160,7 @@ def run_search(target, ligs, path_to_database, para, predefined_chidres, lig_cg_
                 abple = abples[pos.getResindices()[0]]
 
                 if abple == 'n': #>>> The abple can be 'n' at the end of a chid.
+                    print('abple is not ABPLE.')
                     continue
 
                 df_vdm_filter = gvdm_helper.filter_db(df_vdm, use_enriched = para.use_enriched, use_abple=para.use_abple, abple=abple)        
@@ -192,7 +193,8 @@ def run_search_2ndshell(file, workdir, outdir, path_to_database, lig_path, para)
 
     target_path = workdir + file
 
-    target, chidres2ind = search_lig_indep.prepare_rosetta_target(outdir, target_path, para.predefined_win_filters)
+    #target, chidres2ind = search_lig_indep.prepare_rosetta_target(outdir, target_path, para.predefined_win_filters)
+    target = pr.parsePDB(target_path)
     
     ligs = search_lig_indep_2ndshell.extract_2ndshell_cgs(outdir, target, para.predefined_win_filters)
 
@@ -209,7 +211,7 @@ def run_search_2ndshell(file, workdir, outdir, path_to_database, lig_path, para)
     for i in range(len(ligs)):
         lig = ligs[i]
         predefined_chidres = para.predefined_chidres
-        if para.task_type == 'search_2ndshell':
+        if not predefined_chidres and para.task_type == 'search_2ndshell':
             predefined_chidres = search_lig_indep_2ndshell.calc_chidres_around_pose(target, para.predefined_win_filters[i], para.predefined_win_filters, dist = 12)
 
         lig_vdm_dict = run_search(target, [lig], path_to_database, para, predefined_chidres, para.lig_cg_2ndshell[i])

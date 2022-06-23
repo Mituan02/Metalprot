@@ -25,25 +25,26 @@ with open(query_dir + 'cluster_centroid_dict.pkl', 'rb') as f:
 
 print(len(all_querys))
 
+path_to_database='/mnt/e/DesignData/Combs/Combs2_database/vdMs/'
 
 ### run Search_struct
 
-workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
-
-outdir = workdir + 'output_selfcenter/'
-
-target_path = workdir + '5od1_zn.pdb'
-
-win_filter = [35,  61,  65]
-
-
-# workdir = '/mnt/e/DesignData/ligands/LigandBB/6dwv/'
+# workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
 
 # outdir = workdir + 'output_selfcenter/'
 
-# target_path = workdir + '6dwv_core.pdb'
+# target_path = workdir + '5od1_zn.pdb'
 
-# win_filter = []
+# win_filter = [('A',35),  ('A', 61),  ('A', 65)]
+
+
+workdir = '/mnt/e/DesignData/ligands/LigandBB/_zn_case/6dwv/'
+
+outdir = workdir + 'output_selfcenter/'
+
+target_path = workdir + '6dwv.pdb'
+
+win_filter = [('B', 8), ('B', 10), ('B', 178)]
 
 
 # workdir = '/mnt/e/DesignData/ligands/LigandBB/8adh/'
@@ -98,7 +99,7 @@ win_filter = [35,  61,  65]
 geometry_path = None
 #geometry_path = workdir + 'tetrahydral_geo.pdb'
 
-metal_metal_dist = 0.6
+metal_metal_dist = 0.45
 
 num_contact_vdms = [3]
 
@@ -115,13 +116,15 @@ _filter = filter.Search_filter(filter_abple = False, filter_phipsi = True, max_p
 
 
 ss =  search_selfcenter.Search_selfcenter(target_path,  outdir, all_querys, cluster_centroid_dict, query_all_metal, 
-    num_contact_vdms, metal_metal_dist, win_filter, validateOriginStruct = True, search_filter= _filter, geometry_path = None,
-    density_radius = 0.6, allowed_aa_combinations = allowed_aa_combinations, output_wincomb_overlap=True)
+    num_contact_vdms, metal_metal_dist, win_filter, validateOriginStruct = True, 
+    search_filter= _filter, geometry_path = None, density_radius = 0.6, 
+    search_2ndshell = True, secondshell_vdms = path_to_database, rmsd_2ndshell = 1.2,
+    allowed_aa_combinations = allowed_aa_combinations, output_wincomb_overlap=True)
 
 #ss.run_selfcenter_search()
 search_selfcenter.run_search_selfcenter(ss)
 
-ss.write_for_combs()
+#ss.write_for_combs()
 
 end_time = time.time()
 print(end_time - start_time, "seconds")

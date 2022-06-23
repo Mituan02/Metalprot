@@ -135,13 +135,30 @@ def search_lig_at_cg_aa_resnum(target, chidres, pos, abple, ligs, vdm_cg_aa_atom
     
     results = []
 
-    _ligs, tf_rev = gvdm_helper.ligscoords_2_ideal_ala(pos, ligs, ideal_ala_coords)
+    _ligs, tf_rev, tf = gvdm_helper.ligscoords_2_ideal_ala(pos, ligs, ideal_ala_coords)
+
+    #<<< Debug
+    # outdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/search_2ndshell_result/'
+    # _target = target.copy()
+    # tf.apply(_target)
+    # pr.writePDB(outdir + '_target.pdb', _target)
+    # pr.writePDB(outdir + '_lig.pdb', _ligs[0])
+    #>>>
 
     #print(input_dict[cg_id]['lgd_sel'])
     #print(_ligs)
     ligand_coords = get_ligand_coords(_ligs, vdm_cg_aa_atommap_dict[cg_id]['lgd_sel'])
 
     labels, vdm_coords = gvdm_helper.get_vdm_labels_coords_4old_vdm_db(df_vdm, vdm_cg_aa_atommap_dict[cg_id]['correspond_resname'], vdm_cg_aa_atommap_dict[cg_id]['represent_name'], vdm_cg_aa_atommap_dict[cg_id]['correspond_names'])
+
+    #<<< Debgu
+    # for i in range(labels.shape[0]):
+    #     x = labels.iloc[i]
+    #     v = df_vdm[(df_vdm['CG'] == x['CG']) & (df_vdm['rota'] == x['rota']) & (df_vdm['probe_name'] == x['probe_name'])]
+    #     title = '-'.join([str(_s) for _s in (x['CG'], x['rota'], x['probe_name'])])
+    #     ag = gvdm_helper.df2ag(v, title)
+    #     pr.writePDB(outdir + title + '.pdb', ag)
+    #>>>
 
     if vdm_coords.shape[0] <=0 or vdm_coords.shape[0] != labels.shape[0]:
         print('cg_id not working: {}'.format(cg_id))
@@ -166,7 +183,7 @@ def search_lig_at_cg_aa_resnum(target, chidres, pos, abple, ligs, vdm_cg_aa_atom
                     tf_rev.apply(ag)
 
                     if clash_filter_protein_single(target, chidres, ag) or clash_filter_lig(ligs[u], ag):
-                        #print('filtered')
+                        print('filtered clash_filter_protein_single, clash_filter_lig')
                         continue
                     results.append((cg_id, u, rmsd, ag, ind, v['C_score_ABPLE_' + abple].values[0], None, v[['contact_hb']].any()[0], v[['contact_cc']].any()[0]))
             except:

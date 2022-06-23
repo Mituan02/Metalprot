@@ -6,9 +6,11 @@ The pairwise neighbor method will be removed in the future.
 '''
 import os
 import itertools
+import ssl
 import prody as pr
 import math
 import numpy as np
+from scipy.fftpack import ss_diff
 
 from ..basic import utils
 from ..basic import prody_ext
@@ -21,6 +23,7 @@ from .graph import Graph
 from .comb_info import CombInfo
 from .find_path_by_matrix import neighbor_generate_nngraph, calc_adj_matrix_paths
 from ..basic.filter import Search_filter
+from . import search_2ndshell
 
 class Search_selfcenter(Search_vdM):
     '''
@@ -139,150 +142,6 @@ class Search_selfcenter(Search_vdM):
         return      
 
 
-    def selfcenter_write_info(self, key, info, path_tag = '', end_tag = ''):
-        '''
-        Write output.
-        Too many output, May need optimization. 
-        '''
-        if not self.search_filter.write_filtered_result and info.after_search_filtered:
-            return
-            
-        outpath = path_tag + 'win_' + '-'.join([self.target_index_dict[k] for k in key[0]]) + '/'
-        outdir = self.workdir + outpath
-        if not os.path.exists(outdir):
-            os.mkdir(outdir)
-        tag = 'W_' + '-'.join([self.target_index_dict[k] for k in key[0]]) + '_' + '-'.join([k[0] for k in key[1]]) + '_' + '-'.join([str(k[1]) for k in key[1]])
-        # Write geometry       
-        pr.writePDB(outdir + tag +'_geo.pdb', info.geometry) 
-
-        #Write Centroid and all metal coords in the cluster
-        for w in key[0]:
-            centroid = info.centroid_dict[w]
-            pdb_path = outdir + tag + '_w_' + str(w)  + end_tag + '.pdb'
-            pr.writePDB(pdb_path, centroid.query)
-
-            if self.output_wincomb_overlap:
-                clu_allmetal_coords = centroid.get_metal_mem_coords()
-                prody_ext.write2pymol(clu_allmetal_coords, outdir, tag + '_w_' + self.target_index_dict[w] +'_points.pdb')  
-        
-        #Write overlap
-        if not info.overlap_ind_dict:
-            return
-
-        if self.output_wincomb_overlap:
-            for w in key[0]:
-                metal_coords = []
-
-                candidate_ids = info.overlap_ind_dict[w]
-                #print(len(candidate_ids))
-                centroid = info.centroid_dict[w]
-                clu_allmetal_coords = centroid.get_metal_mem_coords()
-                for cid in candidate_ids:
-                    #print(len(clu_allmetal_coords[cid]))
-                    metal_coords.append(clu_allmetal_coords[cid])
-
-                prody_ext.write2pymol(metal_coords, outdir, tag + '_w_' + str(w) +'_overlaps.pdb')  
-                
-        volume = 4.0/3.0 * math.pi * (self.density_radius**3)
-        total = sum([len(info.overlap_ind_dict[w]) for w in key[0]])
-        info.volume = volume
-        info.volPerMetal = total/volume
-        return 
-
-
-    def selfcenter_write_win(self, comb_dict, path_tag = ''):
-        '''
-        Write output.
-        Too many output, May need optimization. 
-        '''
-        print('selfcenter search neighbor_write')
-        for key in comb_dict.keys(): 
-            info = comb_dict[key]
-            self.selfcenter_write_info(key, info, path_tag = path_tag, end_tag = '_' + info.tag)
-        return   
-        
-
-    def selfcenter_get_write_represents(self, comb_dict):
-        '''
-        Here is different from the parent class.
-        Here we only want to write the 'best' comb in each win_comb with same aa_comb.
-        '''
-        print('selfcenter-write-represents.')
-        win_clu_2_win_aas = {}
-
-        for key in comb_dict.keys():  
-            info = comb_dict[key]
-            if not self.search_filter.write_filtered_result and info.after_search_filtered:
-                continue
-            wins = key[0]
-            aas = tuple([c[0] for c in key[1]])
-            if (wins, aas) in win_clu_2_win_aas.keys():
-                win_clu_keys = win_clu_2_win_aas[(wins, aas)]
-                if comb_dict[win_clu_keys['BestOPscore']].overlapScore < comb_dict[key].overlapScore:
-                    win_clu_2_win_aas[(wins, aas)]['BestOPscore'] = key
-                if comb_dict[win_clu_keys['BestGeo']].geo_rmsd > comb_dict[key].geo_rmsd:
-                    win_clu_2_win_aas[(wins, aas)]['BestGeo'] = key
-                if comb_dict[win_clu_keys['BestCluscore']].cluScore < comb_dict[key].cluScore:
-                    win_clu_2_win_aas[(wins, aas)]['BestCluscore'] = key
-            else:
-                #Here, trying to find the best one with overlap score, rmsd and cluster score.
-                win_clu_2_win_aas[(wins, aas)] = {}
-                win_clu_2_win_aas[(wins, aas)]['BestOPscore'] = key
-                win_clu_2_win_aas[(wins, aas)]['BestGeo'] = key
-                win_clu_2_win_aas[(wins, aas)]['BestCluscore'] = key
-
-        for key in win_clu_2_win_aas.keys():
-            for k in win_clu_2_win_aas[key].keys():
-                win_clu_key = win_clu_2_win_aas[key][k]
-                # Here the 'self.best_aa_comb_dict' is used to write summary.tsv file.
-                if win_clu_key in self.best_aa_comb_dict.keys():
-                    self.best_aa_comb_dict[win_clu_key].tag += '_' + k
-                else:
-                    self.best_aa_comb_dict[win_clu_key] = comb_dict[win_clu_key]            
-                    self.best_aa_comb_dict[win_clu_key].tag = k
-
-        for key in self.best_aa_comb_dict.keys():
-            if 'BestOPscore' not in self.best_aa_comb_dict[key].tag:
-                continue
-            tag = 'W_' + '-'.join([self.target_index_dict[k] for k in key[0]]) + '_' + '-'.join([k[0] for k in key[1]]) + '_' + '-'.join([str(k[1]) for k in key[1]])
-            ag = prody_ext.combine_vdm_into_ag(self.best_aa_comb_dict[key].centroid_dict.values(), tag, self.best_aa_comb_dict[key].geometry, self.best_aa_comb_dict[key].overlapScore, self.best_aa_comb_dict[key].cluScore)
-            pdb_path = self.outdir_represent + tag 
-            pr.writePDB(pdb_path + '.pdb', ag)    
-            # # If the ideal geometry is not used as a filter before. 
-            # if self.best_aa_comb_dict[key].geo_rmsd < 0: 
-            #     ideal_geometry, rmsd = Search_filter.get_min_geo(self.best_aa_comb_dict[key].geometry, self.geo_struct)
-            #     self.best_aa_comb_dict[key].geo_rmsd = rmsd
-            #     self.best_aa_comb_dict[key].ideal_geo = ideal_geometry
-            if self.best_aa_comb_dict[key].ideal_geo:
-                pdb_path_idealgeo = self.outdir_represent + tag + '_idealgeo_' + str(round(self.best_aa_comb_dict[key].geo_rmsd, 2)) + '.pdb'
-                pr.writePDB(pdb_path_idealgeo, self.best_aa_comb_dict[key].ideal_geo)                     
-
-        return
-
-
-    def write_for_combs(self):
-        for key in self.best_aa_comb_dict.keys():
-            if 'BestOPscore' not in self.best_aa_comb_dict[key].tag:
-                continue
-            tag = 'W_' + '-'.join([self.target_index_dict[k] for k in key[0]]) + '_' + '-'.join([k[0] for k in key[1]]) + '_' + '-'.join([str(k[1]) for k in key[1]])
-
-            pdb_path = self.workdir + 'represents_combs/' + tag 
-            os.makedirs(self.workdir + 'represents_combs/', exist_ok = True)
-            if self.best_aa_comb_dict[key].ideal_geo:
-                pdb_path_idealgeo = pdb_path + '_idealgeo_' + str(round(self.best_aa_comb_dict[key].geo_rmsd, 2)) + '.pdb'
-                pr.writePDB(pdb_path_idealgeo, self.best_aa_comb_dict[key].ideal_geo)                     
-            
-            ag_new = prody_ext.combine_vdm_target_into_ag(self.target, self.best_aa_comb_dict[key].centroid_dict, True, self.best_aa_comb_dict[key].geometry, tag, aa = '')
-            pr.writePDB(pdb_path + '_all_vdms.pdb', ag_new)
-
-            #ag_ala = prody_ext.target_to_all_gly_ala(self.target, pdb_path + 'all_ala.pdb', [], aa = 'ALA')
-            #pr.writePDB(pdb_path + '_allala.pdb', ag_ala)
-
-            ag_gly = prody_ext.combine_vdm_target_into_ag(self.target, self.best_aa_comb_dict[key].centroid_dict, True, self.best_aa_comb_dict[key].geometry, tag, aa = 'GLY')      
-            #ag_gly = prody_ext.target_to_all_gly_ala(self.target, pdb_path + 'all_gly.pdb', [], aa = 'GLY')
-            pr.writePDB(pdb_path + '_allgly.pdb', ag_gly)
-
-
     def selfcenter_analysis_comb(self, win_comb, comb_dict):
         '''
         For each win_comb, extract_vdMs, calc geometrys, and filter by genometry.
@@ -301,28 +160,30 @@ class Search_selfcenter(Search_vdM):
         self.selfcenter_calc_density(comb_dict, self.density_radius)
         self.neighbor_calc_comb_score(comb_dict)
             
-        
+        return comb_dict
+
+    
+    def selfcenter_write(self, win_comb, comb_dict):
         if len([comb_dict.keys()]) <= 0:
-            return comb_dict
+            return
 
         self.selfcenter_get_write_represents(comb_dict)
 
         self.selfcenter_write_win(self.best_aa_comb_dict)
 
-        outpath = 'win_' + '-'.join([self.target_index_dict[w] for w in win_comb]) + '/'
+        outpath = 'win_' + '-'.join([self.target_ind2chidres[w][0] + '-' + str(self.target_ind2chidres[w][1]) for w in win_comb]) + '/'
         outdir = self.workdir + outpath  
         
         if not self.search_filter.write_filtered_result:
             if len([key for key in comb_dict.keys() if not comb_dict[key].after_search_filtered]) > 0:
-                self.neighbor_write_summary(outdir, self.best_aa_comb_dict, name = '_summary_' + '_'.join([self.target_index_dict[w] for w in win_comb]) + '_' + self.target.getTitle() + '.tsv')
+                self.neighbor_write_summary(outdir, self.best_aa_comb_dict, name = '_summary_' + '_'.join([self.target_ind2chidres[w][0] + '-' + str(self.target_ind2chidres[w][1]) for w in win_comb]) + '_' + self.target.getTitle() + '.tsv')
         else:
             if len(comb_dict)>0:
-                self.neighbor_write_summary(outdir, self.best_aa_comb_dict, name = '_summary_' + '_'.join([self.target_index_dict[w] for w in win_comb]) + '_' + self.target.getTitle() + '.tsv')
+                self.neighbor_write_summary(outdir, self.best_aa_comb_dict, name = '_summary_' + '_'.join([self.target_ind2chidres[w][0] + '-' + str(self.target_ind2chidres[w][1]) for w in win_comb]) + '_' + self.target.getTitle() + '.tsv')
+        return
 
-        return comb_dict
-
-
-    def run_search_selfcenter(self):
+    
+    def run_search_selfcenter_depre20220622(self):
         '''
         ss: Search_selfcenter.
         First, Find paths with the matrix method in 'find_path_by_matrix'.
@@ -370,455 +231,182 @@ class Search_selfcenter(Search_vdM):
         for win_comb in win_comb_dict.keys():
             comb_dict = win_comb_dict[win_comb]
             _comb_dict = self.selfcenter_analysis_comb(win_comb, comb_dict)
-            self.neighbor_comb_dict.update(_comb_dict)
-
+            #self.neighbor_comb_dict.update(_comb_dict)
+            self.neighbor_comb_dict[win_comb] = _comb_dict
         #self.neighbor_write_summary(self.workdir, self.best_aa_comb_dict, name = '_summary_' + self.target.getTitle() + '_' + self.time_tag + '.tsv')
 
         #self.neighbor_write_log()
 
         return
 
-    #region functions plan to be deprecated
+#>>> Writing Functions.
 
-    def comb_overlap(self, comb_dict):
+    def selfcenter_write_info(self, key, info, path_tag = '', end_tag = ''):
         '''
-        For each path, calc the overlap.
+        Write output.
+        Too many output, May need optimization. 
         '''
-        for key in comb_dict.keys():
+        if not self.search_filter.write_filtered_result and info.after_search_filtered:
+            return
             
-            if not self.search_filter.write_filtered_result and comb_dict[key].after_search_filtered:
-                continue
+        outpath = path_tag + 'win_' + '-'.join([self.target_ind2chidres[k][0] + '-' + str(self.target_ind2chidres[k][1]) for k in key[0]]) + '/'
+        outdir = self.workdir + outpath
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+        tag = 'W_' + '-'.join([self.target_ind2chidres[k][0] + '-' + str(self.target_ind2chidres[k][1]) for k in key[0]]) + '_' + '-'.join([k[0] for k in key[1]]) + '_' + '-'.join([str(k[1]) for k in key[1]])
+        # Write geometry       
+        pr.writePDB(outdir + tag +'_geo.pdb', info.geometry) 
 
-            win_comb = key[0]
+        #Write Centroid and all metal coords in the cluster
+        for w in key[0]:
+            centroid = info.centroid_dict[w]
+            pdb_path = outdir + tag + '_w_' + str(w)  + end_tag + '.pdb'
+            pr.writePDB(pdb_path, centroid.query)
 
-            pair_dict = {}
+            if self.output_wincomb_overlap:
+                clu_allmetal_coords = centroid.get_metal_mem_coords()
+                prody_ext.write2pymol(clu_allmetal_coords, outdir, tag + '_w_' + self.target_ind2chidres[w][0] + '-' + str(self.target_ind2chidres[w][1]) +'_points.pdb')  
+        
+        #Write overlap
+        if not info.overlap_ind_dict:
+            return
 
-            len_s = []
-            for w in win_comb:
-                ns = comb_dict[key].centroid_dict[w].get_metal_mem_coords()
-                len_s.append(len(ns))
+        if self.output_wincomb_overlap:
+            for w in key[0]:
+                metal_coords = []
 
-            for wx, wy in itertools.combinations(win_comb, 2):
+                candidate_ids = info.overlap_ind_dict[w]
+                #print(len(candidate_ids))
+                centroid = info.centroid_dict[w]
+                clu_allmetal_coords = centroid.get_metal_mem_coords()
+                for cid in candidate_ids:
+                    #print(len(clu_allmetal_coords[cid]))
+                    metal_coords.append(clu_allmetal_coords[cid])
 
-                n_x = comb_dict[key].centroid_dict[wx].get_metal_mem_coords()
-                n_y = comb_dict[key].centroid_dict[wy].get_metal_mem_coords()
-                # print('-------------------')
-                # print(wx)
-                # print(wy)
-                x_in_y, x_has_y = self.calc_pairwise_neighbor(n_x, n_y, self.density_radius)
-                y_in_x, y_has_x = self.calc_pairwise_neighbor(n_y, n_x, self.density_radius)
-
-                #if x_has_y and y_has_x: 
-                pair_dict[(wx, wy)] = x_in_y
-                pair_dict[(wy, wx)] = y_in_x
-
-            graph = Graph(win_comb, len_s)
-
-            graph.calc_pair_connectivity(pair_dict)
-
-            graph.get_paths()
-
-            overlap_ind_dict = {} 
-            overlap_query_id_dict = {} # {win:[overlap ids]} need to get {win:[query ids]} 
-
-            for path in graph.all_paths:
-                for i in range(len(win_comb)):
-                    w = win_comb[i]
-                    value = list(comb_dict[key].centroid_dict[w].clu_member_ids)[path[i]]
-
-                    if self.search_filter.selfcenter_filter_member_phipsi:
-                        phix, psix = self.phipsi[w]
-                        if (not utils.filter_phipsi(phix, self.vdms[value].phi, self.search_filter.max_phipsi_val)) or (not utils.filter_phipsi(psix, self.vdms[value].psi, self.search_filter.max_phipsi_val)):
-                            continue
-
-                    if w in overlap_query_id_dict.keys():
-                        overlap_ind_dict[w].add(path[i])
-                        overlap_query_id_dict[w].add(value)
-                    else:
-                        overlap_ind_dict[w] = set()
-                        overlap_ind_dict[w].add(path[i])
-                        overlap_query_id_dict[w] = set()
-                        overlap_query_id_dict[w].add(value)
-
-            #TO DO: there is a bug here. The filter_phipsi filter the centroid vdM?
-            if len(overlap_ind_dict.keys()) != len(win_comb):
-                continue
-            
-            comb_dict[key].overlap_ind_dict = overlap_ind_dict
-            comb_dict[key].overlap_query_id_dict = overlap_query_id_dict 
-
-        return
-
-
-    def selfcenter_redu(self, comb_dict):
-        '''
-        Here we try to remove any solution have seen in a better solution. The comb is in the overlap of a better comb.
-        '''
-        comb_dict_filter = {}
-
-        comb_dict_sorted = {k: v for k, v in sorted(comb_dict.items(), key=lambda item: sum(item[1].overlaps), reverse = True)}
-
-        #sum(list(comb_dict_sorted.values())[0].totals)
-
-        if len(list(comb_dict_sorted.keys())) <= 0:
-            return comb_dict_filter
-
-        #print('comb_dict len: '.format(len(list(comb_dict_sorted.keys()))))
-
-        best_keys = []
-
-        for key in comb_dict_sorted:
-            info = comb_dict_sorted[key]
-
-            if len(best_keys) <= 0:
-                if (self.search_filter.after_search_filter_geometry or self.search_filter.after_search_filter_qt_clash) and info.after_search_filtered:
-                    continue
-                else:
-                    best_keys.append(key)
-                    continue
-
-            if (self.search_filter.after_search_filter_geometry or self.search_filter.after_search_filter_qt_clash) and info.after_search_filtered:
-                continue
-
-            if key in best_keys:
-                continue
-            
-            #TO DO: how could the info.overlap_query_id_dict be None?
-            if not info.overlap_query_id_dict:
-                continue
-
-            seen = []
-            for bkey in best_keys:
-                binfo = comb_dict_sorted[bkey]
-
-                seen_here = []
-                for w in key[0]:
-                    id = info.centroid_dict[w].id
-                    if id not in binfo.overlap_query_id_dict[w]:
-                        seen_here.append(False)
-                    else:
-                        seen_here.append(True)
-                if all(seen_here):
-                    seen.append(True)
-                    break
-                else:
-                    seen.append(False)
+                prody_ext.write2pymol(metal_coords, outdir, tag + '_w_' + str(w) +'_overlaps.pdb')  
                 
-            if not any(seen):
-                best_keys.append(key)
-
-        
-        for key in best_keys:
-            comb_dict_filter[key] = comb_dict[key]
-
-        return comb_dict_filter
-
-    #endregion
+        volume = 4.0/3.0 * math.pi * (self.density_radius**3)
+        total = sum([len(info.overlap_ind_dict[w]) for w in key[0]])
+        info.volume = volume
+        info.volPerMetal = total/volume
+        return 
 
 
-    #region Pairwise-neighbor search, Plan to be deprecated. 
-
-    def run_selfcenter_search(self):
+    def selfcenter_write_win(self, comb_dict, path_tag = ''):
         '''
-        All functions need to run the neighbor search.
+        Write output.
+        Too many output, May need optimization. 
         '''
-        print('run-selfcenter-neighbor-search')
-
-        #TO DO: where should I apply filters: win filter, query_metal filter, phipsi, etc.
-        self.neighbor_generate_query_dict()
-
-        self.neighbor_generate_pair_dict()
-
-        self.selfcenter_search_wins(self.parallel)
-
-        self.neighbor_write_summary(self.workdir, self.best_aa_comb_dict, name = '_summary_' + self.target.getTitle() + '_' + self.time_tag + '.tsv')
-
-        self.neighbor_write_log()
-
-        return
+        print('selfcenter search neighbor_write')
+        for key in comb_dict.keys(): 
+            info = comb_dict[key]
+            self.selfcenter_write_info(key, info, path_tag = path_tag, end_tag = '_' + info.tag)
+        return   
 
 
-    def selfcenter_search_wins(self, parallel):
+    def selfcenter_get_write_represents(self, comb_dict):
         '''
-        The combinations of positions are extracted from all possible positions with pairs.
+        Here we write the 'best' comb in each win_comb with same aa_comb.
         '''
-        win_combs = self.neighbor_get_win_combs()
-        print('Search win_combs: {}'.format(len(win_combs)))
-        if len(win_combs) <= 0:
-            return
+        print('selfcenter-write-represents.')
+        win_clu_2_win_aas = {}
 
-        if parallel:
-            num_cores = int(mp.cpu_count() - 1)
-            print('pool: {}'.format(num_cores))
-            pool = ThreadPool(num_cores)
-            results = pool.map(self.selfcenter_run_comb, win_combs)
-            pool.close()
-            pool.join()
-            for r in results: 
-                self.neighbor_comb_dict.update(r)
-        else:
-            for win_comb in win_combs:
-                print(win_comb)      
-                comb_dict = self.selfcenter_run_comb(win_comb)
-                self.neighbor_comb_dict.update(comb_dict)
-        return
+        for key in comb_dict.keys():  
+            info = comb_dict[key]
+            if not self.search_filter.write_filtered_result and info.after_search_filtered:
+                continue
 
+            #>>> Here is where is 2ndshell infomation is extracted.
+            if self.search_2ndshell:
+                comb_dict[key].calc_2ndshell()
 
-    def selfcenter_run_comb(self, win_comb):
-        # try:
-        print('selfcenter-run at: ' + ','.join([str(w) for w in win_comb]))
-        comb_dict = self.selfcenter_construct_comb(win_comb)
-        if len([comb_dict.keys()]) <= 0:
-            return comb_dict
-            
-        _target = self.target.copy()
-        
-        self.neighbor_extract_query(_target, comb_dict)
+            wins = key[0]
+            aas = tuple([c[0] for c in key[1]])
+            if (wins, aas) in win_clu_2_win_aas.keys():
+                win_clu_keys = win_clu_2_win_aas[(wins, aas)]
+                if comb_dict[win_clu_keys['BestOPscore']].overlapScore < comb_dict[key].overlapScore:
+                    win_clu_2_win_aas[(wins, aas)]['BestOPscore'] = key
+                if comb_dict[win_clu_keys['BestGeo']].geo_rmsd > comb_dict[key].geo_rmsd:
+                    win_clu_2_win_aas[(wins, aas)]['BestGeo'] = key
+                if comb_dict[win_clu_keys['BestCluscore']].cluScore < comb_dict[key].cluScore:
+                    win_clu_2_win_aas[(wins, aas)]['BestCluscore'] = key
+                if self.search_2ndshell and comb_dict[win_clu_keys['Best2ShScore']].secondshell_score < comb_dict[key].secondshell_score:
+                    win_clu_2_win_aas[(wins, aas)]['Best2ShScore'] = key
+                if self.search_2ndshell and comb_dict[win_clu_keys['Best2ShRmsd']].secondshell_rmsd > comb_dict[key].secondshell_rmsd:
+                    win_clu_2_win_aas[(wins, aas)]['Best2ShRmsd'] = key
 
-        self.neighbor_calc_geometry(comb_dict)
-        self.neighbor_aftersearch_filt(_target, comb_dict) 
-
-        #self.comb_overlap(comb_dict)
-        '''
-        self.log += 'key\tradius\toverlap\tvolume\tdensity\tov1\tov2\tov3\ttotal_clu\tclu1\tclu2\tclu3\tf_total\tf_max\tf_avg\tf_median\n'
-        for radius in range(20, 105, 5):
-            self.selfcenter_calc_density(comb_dict, radius/100)
-        '''
-        self.selfcenter_calc_density(comb_dict, self.density_radius)
-        self.neighbor_calc_comb_score(comb_dict)
-            
-        
-        if len([comb_dict.keys()]) <= 0:
-            return comb_dict
-
-        self.selfcenter_write_win(comb_dict)
-        
-        self.selfcenter_get_write_represents(comb_dict)
-
-        outpath = 'win_' + '-'.join([str(w) for w in win_comb]) + '/'
-        outdir = self.workdir + outpath  
-        
-        if not self.search_filter.write_filtered_result:
-            if len([key for key in comb_dict.keys() if not comb_dict[key].after_search_filtered]) > 0:
-                self.neighbor_write_summary(outdir, comb_dict, name = '_summary_' + '_'.join([str(w) for w in win_comb]) + '_' + self.target.getTitle() + '.tsv')
-        else:
-            if len(comb_dict)>0:
-                self.neighbor_write_summary(outdir, comb_dict, name = '_summary_' + '_'.join([str(w) for w in win_comb]) + '_' + self.target.getTitle() + '.tsv')
-
-        comb_dict = self.selfcenter_redu(comb_dict)
-
-        return comb_dict
-        # except:
-
-        #     self.log += 'Error in win_comb: ' + '-'.join([str(w) for w in win_comb]) + '\n'
-        #     return {}
-
-
-    def selfcenter_construct_comb(self, win_comb):
-        '''
-        win_comb: [0, 1, 2, 3]
-
-        cluster_dict: {(0, 0, 0, 0): {0:[1, 3, 4], 1:[2, 3, 4], 2: [2, 6, 7], 3:[1, 2, 3]}}
-        The key is win, the value is list of index, each represent one metal coord exist in all other wins' metal.
-        
-        self.neighbor_comb_dict
-        # { (wins, ids), (comb, combinfo)}
-        # {((0, 1, 2, 3)(0, 0, 0, 0)): {(0:[1, 3, 4], 1:[2, 3, 4], 2: [2, 6, 7], 3:[1, 2, 3]), combinfo}}
-
-
-        As we calculate all metals at the same time. 
-        We need to extract vdm representations.
-        '''
-        print('selfcenter_construct comb: {}'.format(win_comb))
-
-        comb_dict = dict()
-
-        for x, y in itertools.combinations(win_comb, 2):
-            if (x, y) not in self.neighbor_pair_dict.keys():
-                return comb_dict
-        
-        graph = Graph(win_comb, len(self.vdms))
-
-        graph.calc_pair_connectivity(self.neighbor_pair_dict)
-
-        graph.get_paths()
-
-        print('graph.paths len {}'.format(len(graph.all_paths)))
-
-        #TO DO: Here is a temp method to solve extream solutions. Mostly happened in 4 CYS binding cores.
-        # if len(graph.all_paths) > 10000:
-        #     print('Too many paths to be considered so far.')
-        #     graph.all_paths = graph.all_paths[0:10001]
-
-        # path represent the id of each metal vdM.
-        for path in graph.all_paths:
-            
-            clu_key = tuple([self.vdms[p].get_cluster_key() for p in path])
-
-            comb = dict()
-            for i in range(len(win_comb)):
-                comb[win_comb[i]] = [path[i]]
-
-            combinfo = CombInfo()
-            combinfo.comb = comb 
-            comb_dict[(tuple(win_comb), clu_key)] = combinfo
-
-        return comb_dict
-
-    #endregion
-
-
-    #region temp parallel neighbor search, Plan to be deprecated. 
-
-
-    def run_selfcenter_search2(self):
-        '''
-        All functions need to run the neighbor search.
-        '''
-        print('run-selfcenter-neighbor-search')
-
-        #TO DO: where should I apply filters: win filter, query_metal filter, phipsi, etc.
-        self.neighbor_generate_query_dict()
-
-        self.neighbor_generate_pair_dict()
-
-        if self.parallel:
-            self.selfcenter_search_wins_pool2()
-        else:
-            self.selfcenter_search_wins(self.parallel)
-
-        self.selfcenter_extract_query2(self.target, self.neighbor_comb_dict)
-
-        if self.parallel:
-            self.selfcenter_search_key_pool2()
-
-        self.neighbor_write_summary(self.workdir, self.best_aa_comb_dict, name = '_summary_' + self.target.getTitle() + '_' + self.time_tag + '.tsv')
-
-        self.neighbor_write_log()
-
-        return
-
-
-    def selfcenter_search_wins_pool2(self):
-        '''
-        multithread.
-        '''
-        win_combs = self.neighbor_get_win_combs()
-        print('multithread search win_combs: {}'.format(len(win_combs)))
-        if len(win_combs) <= 0:
-            return
-        num_cores = int(mp.cpu_count() - 1)
-        print('pool: {}'.format(num_cores))
-        # pool = mp.Pool(num_cores)
-        # results = [pool.apply_async(self.neighbor_construct_comb, args=win_comb) for win_comb in win_combs]
-        # results = [p.get() for p in results]
-        pool = ThreadPool(num_cores)
-        results = pool.map(self.selfcenter_run_comb2, win_combs)
-        pool.close()
-        pool.join()
-        for r in results: 
-            if r:
-                self.neighbor_comb_dict.update(r)
-        return
-
-
-    def selfcenter_run_comb2(self, win_comb):
-        print('selfcenter-run at: ' + ','.join([str(w) for w in win_comb]))
-        comb_dict = self.selfcenter_construct_comb(win_comb)
-        return comb_dict
-
-
-    def selfcenter_extract_query2(self, _target, comb_dict):
-        '''
-        for each (comb, combinfo), we extract candidate querys and add it in combinfo.
-        '''
-        print('selfcenter_extract_query2')
-        for wins, clu_key in comb_dict.keys():
-            for i in range(len(wins)):
-                win = wins[i]
-                comb_dict[(wins, clu_key)].query_dict[win] = []
-
-                clu = clu_key[i]
-                centroid_id = self.cluster_centroid_dict[clu]
-                centroid = self.vdms[centroid_id].copy()
-                supperimpose_target_bb(_target, centroid, win)
-                comb_dict[(wins, clu_key)].centroid_dict[win] = centroid
-
-                for id in comb_dict[(wins, clu_key)].comb[win]:
-                    _query = self.vdms[id].copy()
-
-                    supperimpose_target_bb(_target, _query, win)
-                    comb_dict[(wins, clu_key)].query_dict[win].append(_query)
-        
-        self.neighbor_calc_geometry(comb_dict)
-        self.neighbor_aftersearch_filt(_target, comb_dict)
-
-        return
-
-
-    def selfcenter_search_key_pool2(self):
-        wins_dict = {}
-        for win_comb, clu_key in self.neighbor_comb_dict.keys():
-            if win_comb in wins_dict:
-                wins_dict[win_comb].append((win_comb, clu_key))
             else:
-                wins_dict[win_comb] = [(win_comb, clu_key)]
+                #Here, trying to find the best one with overlap score, rmsd and cluster score.
+                win_clu_2_win_aas[(wins, aas)] = {}
+                win_clu_2_win_aas[(wins, aas)]['BestOPscore'] = key
+                win_clu_2_win_aas[(wins, aas)]['BestGeo'] = key
+                win_clu_2_win_aas[(wins, aas)]['BestCluscore'] = key
+                win_clu_2_win_aas[(wins, aas)]['Best2ShScore'] = key
+                win_clu_2_win_aas[(wins, aas)]['Best2ShRmsd'] = key
 
-        num_cores = int(mp.cpu_count() - 1)
-        print('pool: {}'.format(num_cores))
-        # pool = mp.Pool(num_cores)
-        # results = [pool.apply_async(self.neighbor_construct_comb, args=win_comb) for win_comb in win_combs]
-        # results = [p.get() for p in results]
-        pool = ThreadPool(num_cores)
-        results = pool.map(self.selfcenter_run_combkey2, wins_dict.values())
-        pool.close()
-        pool.join()
-        for r in results: 
-            self.neighbor_comb_dict.update(r)
+        for key in win_clu_2_win_aas.keys():
+            for k in win_clu_2_win_aas[key].keys():
+                win_clu_key = win_clu_2_win_aas[key][k]
+                # Here the 'self.best_aa_comb_dict' is used to write summary.tsv file.
+                if win_clu_key in self.best_aa_comb_dict.keys():
+                    self.best_aa_comb_dict[win_clu_key].tag += '_' + k
+                else:
+                    self.best_aa_comb_dict[win_clu_key] = comb_dict[win_clu_key]            
+                    self.best_aa_comb_dict[win_clu_key].tag = k
+
+        for key in self.best_aa_comb_dict.keys():
+            if not ('BestOPscore' in self.best_aa_comb_dict[key].tag or 'Best2ShScore' in self.best_aa_comb_dict[key].tag or 'Best2ShRmsd' in self.best_aa_comb_dict[key].tag):
+                continue
+            tag = 'W_' + '-'.join([self.target_ind2chidres[k][0] + '-' + str(self.target_ind2chidres[k][1]) for k in key[0]]) + '_' + '-'.join([k[0] for k in key[1]]) + '_' + '-'.join([str(k[1]) for k in key[1]])
+            ag = prody_ext.combine_vdm_into_ag(self.best_aa_comb_dict[key].centroid_dict.values(), tag, self.best_aa_comb_dict[key].geometry, self.best_aa_comb_dict[key].overlapScore, self.best_aa_comb_dict[key].cluScore)
+            pdb_path = self.outdir_represent + tag + '_' + self.best_aa_comb_dict[key].tag
+            pr.writePDB(pdb_path + '.pdb', ag)    
+            # # If the ideal geometry is not used as a filter before. 
+            # if self.best_aa_comb_dict[key].geo_rmsd < 0: 
+            #     ideal_geometry, rmsd = Search_filter.get_min_geo(self.best_aa_comb_dict[key].geometry, self.geo_struct)
+            #     self.best_aa_comb_dict[key].geo_rmsd = rmsd
+            #     self.best_aa_comb_dict[key].ideal_geo = ideal_geometry
+            if self.best_aa_comb_dict[key].ideal_geo:
+                pdb_path_idealgeo = self.outdir_represent + tag + '_idealgeo_' + str(round(self.best_aa_comb_dict[key].geo_rmsd, 2)) + '.pdb'
+                pr.writePDB(pdb_path_idealgeo, self.best_aa_comb_dict[key].ideal_geo)   
+           
+           #>>> Write secondshell
+            for lig_key in self.best_aa_comb_dict[key].secondshell_dict.keys():
+                for ag, _infos in self.best_aa_comb_dict[key].secondshell_dict[lig_key]:
+                    _chidres = self.target_ind2chidres[lig_key[0]] 
+                    _2ShTag =  _chidres[0] + str(_chidres[1]) + '_' + '_'.join([_infos[0], _infos[1], _infos[2][0], str(_infos[2][1]), str(round(_infos[5], 2)), str(round(_infos[7], 2))])
+                    pr.writePDB(self.outdir_represent + tag + '_' + _2ShTag, ag)
+        return
 
 
-    def selfcenter_run_combkey2(self, wins_dict_values):
-        comb_dict = {}
-        for win_comb, clu_key in wins_dict_values:
-            comb_dict[(win_comb, clu_key)] = self.neighbor_comb_dict[(win_comb, clu_key)]
+    def write_for_combs(self):
+        '''
+        The function here is to write structures for COMBS search.
+        '''
+        for key in self.best_aa_comb_dict.keys():
+            if 'BestOPscore' not in self.best_aa_comb_dict[key].tag:
+                continue
+            tag = 'W_' + '-'.join([self.target_ind2chidres[k][0] + '-' + str(self.target_ind2chidres[k][1]) for k in key[0]]) + '_' + '-'.join([k[0] for k in key[1]]) + '_' + '-'.join([str(k[1]) for k in key[1]])
 
-        if len([comb_dict.keys()]) <= 0:
-            return comb_dict
+            pdb_path = self.workdir + 'represents_combs/' + tag 
+            os.makedirs(self.workdir + 'represents_combs/', exist_ok = True)
+            if self.best_aa_comb_dict[key].ideal_geo:
+                pdb_path_idealgeo = pdb_path + '_idealgeo_' + str(round(self.best_aa_comb_dict[key].geo_rmsd, 2)) + '.pdb'
+                pr.writePDB(pdb_path_idealgeo, self.best_aa_comb_dict[key].ideal_geo)                     
             
-        _target = self.target.copy()
+            ag_new = prody_ext.combine_vdm_target_into_ag(self.target, self.best_aa_comb_dict[key].centroid_dict, True, self.best_aa_comb_dict[key].geometry, tag, aa = '')
+            pr.writePDB(pdb_path + '_all_vdms.pdb', ag_new)
 
-        #self.comb_overlap(comb_dict)
-        self.selfcenter_calc_density(comb_dict, self.density_radius)
-        self.neighbor_calc_comb_score(comb_dict)
+            #ag_ala = prody_ext.target_to_all_gly_ala(self.target, pdb_path + 'all_ala.pdb', [], aa = 'ALA')
+            #pr.writePDB(pdb_path + '_allala.pdb', ag_ala)
 
-        
-        if len([comb_dict.keys()]) <= 0:
-            return comb_dict
-
-        self.selfcenter_write_win(comb_dict)
-        
-        self.selfcenter_get_write_represents(comb_dict)
-
-        outpath = 'win_' + '-'.join([str(w) for w in win_comb]) + '/'
-        outdir = self.workdir + outpath  
-        
-        if not self.search_filter.write_filtered_result:
-            if len([key for key in comb_dict.keys() if not comb_dict[key].after_search_filtered]) > 0:
-                self.neighbor_write_summary(outdir, comb_dict, name = '_summary_' + '_'.join([self.target_index_dict[w] for w in win_comb]) + '_' + self.target.getTitle() + '.tsv')
-        else:
-            self.neighbor_write_summary(outdir, comb_dict, name = '_summary_' + '_'.join([self.target_index_dict[w] for w in win_comb]) + '_' + self.target.getTitle() + '.tsv')
-
-        comb_dict = self.selfcenter_redu(comb_dict)
-
-        return comb_dict
-        # except:
-
-        #     self.log += 'Error in win_comb: ' + '-'.join([str(w) for w in win_comb]) + '\n'
-        #     return {}
+            ag_gly = prody_ext.combine_vdm_target_into_ag(self.target, self.best_aa_comb_dict[key].centroid_dict, True, self.best_aa_comb_dict[key].geometry, tag, aa = 'GLY')      
+            #ag_gly = prody_ext.target_to_all_gly_ala(self.target, pdb_path + 'all_gly.pdb', [], aa = 'GLY')
+            pr.writePDB(pdb_path + '_allgly.pdb', ag_gly)    
+        return 
 
 
-    #endregion 
-
+#>>> run search.
 
 def run_search_selfcenter(ss):
     '''
@@ -869,8 +457,19 @@ def run_search_selfcenter(ss):
     for win_comb in win_comb_dict.keys():
         comb_dict = win_comb_dict[win_comb]
         _comb_dict = ss.selfcenter_analysis_comb(win_comb, comb_dict)
-        ss.neighbor_comb_dict.update(_comb_dict)
+        #ss.neighbor_comb_dict.update(_comb_dict)
+        ss.neighbor_comb_dict[win_comb] = _comb_dict
 
+    if ss.search_2ndshell:
+        para = search_2ndshell.Para()
+        para.rmsd = ss.rmsd_2ndshell
+        search_2ndshell.run_search_2ndshell(ss.target, ss.neighbor_comb_dict, ss.target_ind2chidres, ss._resnum_filtered, ss.secondshell_vdms, para)
+
+
+    for win_comb in ss.neighbor_comb_dict.keys():
+        comb_dict = ss.neighbor_comb_dict[win_comb]
+        ss.selfcenter_write(win_comb, comb_dict)
+    
     ss.neighbor_write_summary(ss.workdir, ss.best_aa_comb_dict, name = '_summary_' + ss.target.getTitle() + '_' + ss.time_tag + '.tsv')
 
     ss.neighbor_write_log()

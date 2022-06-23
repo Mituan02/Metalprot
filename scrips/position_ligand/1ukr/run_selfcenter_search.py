@@ -17,9 +17,6 @@ python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/1ukr/run_selfcenter
 class Para():
 
     win_filter = [('A',37), ('A',66), ('A', 164)]
-    #win_filters = [[16, 20, 28] for i in range(3)]
-    #win_filters = [[] for i in range(len(pdb_files))]
-    #win_filters = predefined_win_filters
 
     geometry_path = None
     #geometry_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/fe_geo.pdb'

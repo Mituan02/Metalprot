@@ -121,6 +121,7 @@ ss =  search_selfcenter.Search_selfcenter(target_path,  outdir, all_querys, clus
     search_2ndshell = True, secondshell_vdms = path_to_database, rmsd_2ndshell = 1.2,
     allowed_aa_combinations = allowed_aa_combinations, output_wincomb_overlap=True)
 
+
 #ss.run_selfcenter_search()
 search_selfcenter.run_search_selfcenter(ss)
 

@@ -10,7 +10,7 @@ from metalprot.basic import filter
 import pickle
 
 '''
-python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/1ukr/run_selfcenter_search.py 
+python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/1ukr/run_selfcenter_search.py local
 
 '''
 
@@ -106,7 +106,7 @@ def run_wynton():
 
     pdb_files = sorted([fp for fp in os.listdir(workdir) if fp[0] != '.' and '.pdb' in fp])
 
-    ind = int(sys.argv[1]) -1
+    ind = int(sys.argv[2]) -1
     if ind > len(pdb_files) -1:
         return
     target_path = workdir + pdb_files[ind]
@@ -118,5 +118,7 @@ def run_wynton():
 
 
 if __name__=='__main__':
-    run_wynton()
-    #run_local()
+    if sys.argv[1] == 'wynton': 
+        run_wynton()
+    elif sys.argv[1] == 'local':
+        run_local()

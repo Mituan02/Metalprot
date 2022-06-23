@@ -38,7 +38,11 @@ def lgd_sel_coord(lgd, lgd_sel):
     '''
     coords = []
     for lsa in lgd_sel:
-        coords.extend(lgd.select('name ' + lsa).getCoords().flatten())
+        try:
+            coords.extend(lgd.select('name ' + lsa).getCoords().flatten())
+        except:
+            print(lgd.getNames())
+            print(lgd_sel)
     return coords
 
 

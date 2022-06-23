@@ -27,6 +27,7 @@ class Para:
             'correspond_resname' : 'ASP',
             'correspond_names' : ['CB', 'CG', 'OD1', 'OD2'],
             'aas' : 'AGKNQRSTY',
+            #'aas': 'A',
             'filter_hb' : True,
             'filter_cc' : False
         },
@@ -37,6 +38,7 @@ class Para:
             'correspond_resname' : 'GLU',
             'correspond_names' : ['CG', 'CD', 'OE1', 'OE2'],
             'aas' : 'AGKNQRSTY',
+            #'aas': 'A',
             'filter_hb' : True,
             'filter_cc' : False
         },

@@ -145,7 +145,8 @@ def run_search(target, ligs, path_to_database, para, predefined_chidres, lig_cg_
     lig_vdm_dict = {}
     for cg_id in para.vdm_cg_aa_atommap_dict.keys():
         cg = para.vdm_cg_aa_atommap_dict[cg_id]['cg']
-        if para.task_type == 'search_2ndshell' and para.vdm_cg_aa_atommap_dict[cg_id]['correspond_resname'] != constant.inv_one_letter_code[lig_cg_2ndshell[0]] and cg not in lig_cg_2ndshell[1]:
+
+        if para.task_type == 'search_2ndshell' and (para.vdm_cg_aa_atommap_dict[cg_id]['correspond_resname'] != constant.inv_one_letter_code[lig_cg_2ndshell[0]] or cg not in lig_cg_2ndshell[1]):
             print('cg {} is not for the 2ndshell of aa {}.'.format(cg, lig_cg_2ndshell))
             continue
 
@@ -155,7 +156,7 @@ def run_search(target, ligs, path_to_database, para, predefined_chidres, lig_cg_
             df_vdm = gvdm_helper.load_old_vdm(path_to_database, cg, aa)
 
             for chidres in predefined_chidres:
-                print('Searching: ' + cg + ' ' + aa + ' ' + chidres[0] + str(chidres[1]))
+                print('Searching: ' + cg_id + ' ' + aa + ' ' + chidres[0] + str(chidres[1]))
                 pos = target.select('chid ' + chidres[0] + ' and resnum ' + str(chidres[1]))
                 abple = abples[pos.getResindices()[0]]
 

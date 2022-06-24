@@ -1,5 +1,4 @@
 import os
-from re import T
 import sys
 import prody as pr
 import numpy as np
@@ -8,25 +7,29 @@ import numpy as np
 from metalprot.search import search_selfcenter
 from metalprot.basic import filter
 import pickle
-import importlib.machinery
+
 
 '''
-python run_selfcenter_search.py 
-'''
+python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/run_selfcenter_search.py local
 
+'''
 
 class Para():
 
-    win_filter = [('A',15), ('A',19), ('A', 27)]
-    #win_filters = [[16, 20, 28] for i in range(3)]
-    #win_filters = [[] for i in range(len(pdb_files))]
-    #win_filters = predefined_win_filters
+    #win_filter = [('A',15), ('A',19), ('A', 27)]
+
+    resnums = [3, 7, 10, 14, 17, 18, 21, 24, 25, 
+        51, 54, 58, 61, 65, 68, 69, 72, 77, 81, 84, 88, 91, 92, 95, 99, 
+        125, 128, 132, 135, 139, 142, 146]
+    #resnums = [3, 7, 72, 77]
+
+    win_filter = [('A', x) for x in resnums]
 
     geometry_path = None
     geometry_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/fe_geo.pdb'
 
 
-    metal_metal_dist = 0.75
+    metal_metal_dist = 0.6
 
     num_contact_vdms = [3]
 
@@ -74,7 +77,7 @@ def run(target_path, query_dir, outdir, win_filter, para, path_to_database):
 
 
 def run_local():
-    #>>> Local
+
     #query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS/'
     query_dir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/pickle_noCYS/'
     #workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/_rosetta_3rdRound/output_55F_newlop/output_55F_newlop_sel/eval/'
@@ -82,7 +85,7 @@ def run_local():
     
     path_to_database='/mnt/e/DesignData/Combs/Combs2_database/vdMs/'
 
-    pdb_file = ''
+    pdb_file = '01_f63440_nick_ala.pdb'
 
     para = Para()
 
@@ -90,22 +93,24 @@ def run_local():
     win_filter = para.win_filter
     outdir = para.workdir + 'output_' + pdb_file.split('.')[0] + '_/'
     
-    run(target_path, para.query_dir, outdir, win_filter, para, path_to_database)
+    run(target_path, query_dir, outdir, win_filter, para, path_to_database)
 
 
 def run_wynton():
-    #>>> On Wynton
+
     #query_dir = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/database/pickle_all_fe_220119/'
     query_dir = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/database/pickle_noCYS_mn_fe_co_220119/'
-    workdir = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/ntf2_fe/family_3vsy/'
+    
+    #workdir = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/ntf2_fe/family_3vsy/'
+    workdir = '/wynton/home/degradolab/lonelu/DesignData/Metalloenzyme/HelixFe/'
 
     path_to_database='/wynton/home/degradolab/lonelu/DesignData/Database/vdMs/'
 
     para = Para()
 
-    pdb_files = sorted([fp for fp in os.listdir(para.workdir) if fp[0] != '.' and '.pdb' in fp])
+    pdb_files = sorted([fp for fp in os.listdir(workdir) if fp[0] != '.' and '.pdb' in fp])
 
-    ind = int(sys.argv[1]) -1
+    ind = int(sys.argv[2]) -1
     if ind > len(pdb_files) -1:
         return
     target_path = workdir + pdb_files[ind]
@@ -117,5 +122,9 @@ def run_wynton():
 
 
 if __name__=='__main__':
-    #run_wynton()
-    run_local()
+    if sys.argv[1] == 'wynton': 
+        run_wynton()
+    elif sys.argv[1] == 'local':
+        run_local()
+
+

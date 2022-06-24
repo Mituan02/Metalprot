@@ -73,7 +73,7 @@ def run(target_path, query_dir, outdir, win_filter, para, path_to_database):
 
 
 def run_local():
-    #>>> Local
+
     query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS/'
     #query_dir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/pickle_noCYS/'
 
@@ -93,10 +93,10 @@ def run_local():
 
 
 def run_wynton():
-    #>>> On Wynton
     #query_dir = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/database/pickle_all_fe_220119/'
     #query_dir = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/database/pickle_noCYS_mn_fe_co_220119/'
     query_dir = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/20211013_selfcenter/pickle_noCYS/'
+    
     #workdir = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/ntf2_fe/family_3vsy/'
     workdir = '/wynton/home/degradolab/lonelu/DesignData/Metalloenzyme/HelixZn/'
 

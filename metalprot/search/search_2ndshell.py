@@ -14,9 +14,9 @@ class Para:
     rmsd = 0.75
     
     aa_cg_2ndshell_dict = {
-            'D':[('coo')],
-            'E':[('coo')],
-            'H':['hid']
+            'D':['coo'],
+            'E':['coo'],
+            'H':['hid', 'hie']
         }
 
     vdm_cg_aa_atommap_dict = {
@@ -27,7 +27,7 @@ class Para:
             'correspond_resname' : 'ASP',
             'correspond_names' : ['CB', 'CG', 'OD1', 'OD2'],
             'aas' : 'AGKNQRSTY',
-            #'aas': 'A',
+            #'aas': 'H',
             'filter_hb' : True,
             'filter_cc' : False
         },
@@ -38,7 +38,7 @@ class Para:
             'correspond_resname' : 'GLU',
             'correspond_names' : ['CG', 'CD', 'OE1', 'OE2'],
             'aas' : 'AGKNQRSTY',
-            #'aas': 'A',
+            #'aas': 'H',
             'filter_hb' : True,
             'filter_cc' : False
         },
@@ -134,11 +134,13 @@ def run_search_2ndshell(target, neighbor_comb_dict, target_ind2chidres, resnum_f
         for lig_id in lig_vdm_dict.keys():
             lig_key = lig_keys[lig_id]
             comb_keys = contact_aa_lig_dict[lig_key][1]
-            for win_comb in neighbor_comb_dict.keys():
-                for comb_key in comb_keys:
+            for comb_key in comb_keys:
+                for win_comb in neighbor_comb_dict.keys():
                     _the_chid_res = [target_ind2chidres[x] for x in comb_key[0]]
                     for _vdm in lig_vdm_dict[lig_id]:
                         if _vdm[1][2] in _the_chid_res:
+                            continue
+                        if comb_key not in neighbor_comb_dict[win_comb].keys():
                             continue
                         if lig_key not in neighbor_comb_dict[win_comb][comb_key].secondshell_dict.keys():
                             neighbor_comb_dict[win_comb][comb_key].secondshell_dict[lig_key] = [_vdm]

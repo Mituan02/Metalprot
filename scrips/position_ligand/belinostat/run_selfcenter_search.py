@@ -14,10 +14,11 @@ python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/belinostat/run_self
 '''
 
 class Para():
-
+     
     resnums = [3, 7, 10, 14, 17, 18, 21, 24, 25, 
         51, 54, 58, 61, 65, 68, 69, 72, 77, 81, 84, 88, 91, 92, 95, 99, 
         125, 128, 132, 135, 139, 142, 146]
+    #resnums = [3, 7, 72, 77]
 
     win_filter = [('A', x) for x in resnums]
 
@@ -76,7 +77,7 @@ def run_local():
     query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS/'
     #query_dir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/pickle_noCYS/'
 
-    workdir = '/mnt/e/DesignData/Metalloenzyme/targets/'
+    workdir = '/mnt/e/DesignData/Metalloenzyme/belinostat/targets/'
     
     path_to_database='/mnt/e/DesignData/Combs/Combs2_database/vdMs/'
 

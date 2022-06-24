@@ -41,7 +41,7 @@ def calc_all_chidres_around_pose(target, predefined_win_filters, dist = 15):
     '''
     resinds = set()
     for chidres in predefined_win_filters:
-        _resinds = target.select('name CA and within ' + str(dist) + ' of (name CG and chid ' + chidres[0] + ' and resnum ' + str(chidres[1]) + ')').getResindices()
+        _resinds = target.select('name CA and within ' + str(dist) + ' of (name CA and chid ' + chidres[0] + ' and resnum ' + str(chidres[1]) + ')').getResindices()
         for ind in _resinds:
             resinds.add(ind)
 

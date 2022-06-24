@@ -27,7 +27,7 @@ class Para():
 
     geometry_path = None
     geometry_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/fe_geo.pdb'
-
+    #geometry_path = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/20220116_selfcenter_fe/fe_geo.pdb'
 
     metal_metal_dist = 0.6
 
@@ -82,6 +82,7 @@ def run_local():
     query_dir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/pickle_noCYS/'
     #workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta/output_sel/_rosetta_3rdRound/output_55F_newlop/output_55F_newlop_sel/eval/'
     workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta_16-20-28/_rosetta_tts_r3_876/output_55F_newlop2/metalprot_eval/'
+    workdir = '/mnt/e/DesignData/Metalloenzyme/HelixFe/'
     
     path_to_database='/mnt/e/DesignData/Combs/Combs2_database/vdMs/'
 
@@ -91,15 +92,17 @@ def run_local():
 
     target_path = workdir + pdb_file
     win_filter = para.win_filter
-    outdir = para.workdir + 'output_' + pdb_file.split('.')[0] + '_/'
+    outdir = workdir + 'output_' + pdb_file.split('.')[0] + '_/'
     
     run(target_path, query_dir, outdir, win_filter, para, path_to_database)
+
+    return 
 
 
 def run_wynton():
 
     #query_dir = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/database/pickle_all_fe_220119/'
-    query_dir = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/database/pickle_noCYS_mn_fe_co_220119/'
+    query_dir = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/20220116_selfcenter_fe/pickle_noCYS/'
     
     #workdir = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/ntf2_fe/family_3vsy/'
     workdir = '/wynton/home/degradolab/lonelu/DesignData/Metalloenzyme/HelixFe/'

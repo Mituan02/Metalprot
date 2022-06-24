@@ -1,22 +1,14 @@
 '''
-The script is to design ligand-metal binding enzyme using the vdM idea. 
-Specially, here is to search the combs vdM library without using Combs2.
+The script is to design ligand-metal binding enzyme using the vdM database. 
+The ligand is superimposed on the metal with all possible conformers. 
+And the ligs (different conformers) are then searched against the vdM database.
 '''
 
 import os
 import sys
-import pdb
-import prody as pr
-import pickle
-import pandas as pd
-import numpy as np
-from metalprot.basic import constant, utils
+from metalprot.basic import constant
 from metalprot.combs import search_lig_indep, search_lig_indep_wrap, search_lig_indep_2ndshell 
-from metalprot.combs import position_ligand
-from sklearn.neighbors import NearestNeighbors
-from scipy.sparse import lil_matrix
-import gc
-import shutil
+
 import datetime
 import importlib.machinery
 

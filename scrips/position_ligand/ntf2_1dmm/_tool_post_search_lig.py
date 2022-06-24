@@ -1,3 +1,7 @@
+'''
+After searching the ligs, wrap the summary files for easier check. 
+'''
+
 import os
 import pandas as pd
 

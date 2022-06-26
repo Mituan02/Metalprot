@@ -26,8 +26,8 @@ class Para():
     win_filter = [('A', x) for x in resnums]
 
     geometry_path = None
-    geometry_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/fe_geo.pdb'
-    #geometry_path = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/20220116_selfcenter_fe/fe_geo.pdb'
+    geometry_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/fe_geo_o.pdb'
+    #geometry_path = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/20220116_selfcenter_fe/fe_geo_o.pdb'
 
     metal_metal_dist = 0.6
 

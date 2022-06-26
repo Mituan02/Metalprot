@@ -463,3 +463,38 @@ def combine_ags(ags, title, ABCchids = None):
     ag.setResnames(resnames)
     ag.setResnums(resnums)
     return ag
+
+def combine_ags_into_one_chain(ags, title):
+    
+    ag = pr.AtomGroup(title)
+    coords = []
+    chids = []
+    names = []
+    resnames = []
+    resnums = []
+    resnum = 1
+    for _ag_all in ags:
+        for cd in np.unique(_ag_all.getChids()):
+            #print(cd)
+            chid = 'A'
+
+            if cd == None:
+                _ag = _ag_all
+            else:
+                _ag = _ag_all.select('chid ' + cd)
+                
+            for i in np.unique(_ag.getResindices()):
+                c = _ag.select('resindex ' + str(i))
+                coords.extend(c.getCoords())
+                chids.extend([chid for x in range(len(c))])
+                names.extend(c.getNames())
+                resnames.extend(c.getResnames())
+                resnums.extend([resnum for x in range(len(c))])
+                resnum += 1
+
+    ag.setCoords(np.array(coords))
+    ag.setChids(chids)
+    ag.setNames(names)
+    ag.setResnames(resnames)
+    ag.setResnums(resnums)
+    return ag

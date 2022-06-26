@@ -6,36 +6,283 @@ And the ligs (different conformers) are then searched against the vdM database.
 
 import os
 import sys
-from metalprot.basic import constant
-from metalprot.combs import search_lig_indep, search_lig_indep_wrap, search_lig_indep_2ndshell 
+from metalprot.combs import search_lig_indep, search_lig_indep_wrap 
 
+import prody as pr
 import datetime
-import importlib.machinery
 
 '''
-python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/run_search_lig_indep.py 0 /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/search_lig_paras_rdkit.py 7
+python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/run_search_lig_indep.py local 1
 
-python run_search_lig_indep.py 0 search_lig_paras_eval.py 7
-python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/run_search_lig_indep.py 0 /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/search_2ndshell_paras.py 5
 '''
 
+#>>> Parameters
+class ParaLig:
+    #>>> Ligand generation
+    ro1 = ['C8', 'C7']
+    rest1 = ['H7', 'C9', 'O1', 'O3', 'O2', 'FE1']
+    ro2 = ['C7', 'C6']
+    rest2 = ['H5', 'H6', 'H7', 'C8', 'C9', 'O1', 'O3', 'O2', 'FE1']
+    rot_degree = [8, 8]
+    interMolClashSets = [(['O1'], ['C1', 'C5']), (['O2'], ['C1', 'C5', 'C6'])]
 
-### Run Search ligands.
+    #>>> Ligand superimpose
+    lig_connects = [['O1','O3', 'FE1'], ['O3','O1', 'FE1']]
+    #geo_sel = 'chid X and name FE1 O2 O3'
+    geo_sel = 'chid X and name O1 O3 FE1'
+    clash_dist = 3.0
+    lig_name = 'TTS'
 
-def run_all(file, workdir, path_to_database, lig_path, para):
+
+class Para:
+
+    ### TaskType
+    task_type = 'search_unknow' #>>> 'search_unknow', 'search_eval', 'search_exists'
+
+    #>>> ntf2_1dmm
+    #predefined_win_filters = [15, 19, 27]
+    #predefined_resnums = [11, 12, 15, 16, 19, 24, 27, 30, 31, 35, 37, 39, 43, 46, 52, 55, 56, 59, 60, 65, 67, 69, 83, 89, 98, 102, 104, 106, 112, 115, 117, 119]
+    
+    #>>> Helix6a
+    predefined_win_filters = [('A',85), ('A',87), ('A',100)]
+    predefined_resnums = [7, 17, 21, 58, 61, 62, 65, 68, 69, 72, 77, 78, 80, 81, 84, 85, 88, 89, 91, 92, 95, 132, 135, 138, 142]
+    
+    predefined_chidres = [('A', x) for x in predefined_resnums]
+
+    #>>> Database para
+    use_enriched = True
+    use_abple=True
+    rmsd = 0.75
+
+    vdm_cg_aa_atommap_dict = {
+        ('coo_0'):{
+            'cg' : 'coo',
+            'lgd_sel' : ['C8', 'C9', 'O3', 'O2'],
+            'represent_name' : 'OD2',
+            'correspond_resname' : 'ASP',
+            'correspond_names' : ['CB', 'CG', 'OD1', 'OD2'],
+            'aas' : 'GAWSTYNQDEKRH',
+            'filter_hb' : True,
+            'filter_cc' : False
+        },
+        ('coo_1'):{
+            'cg' : 'coo',
+            'lgd_sel' : ['C8', 'C9', 'O3', 'O2'],
+            'represent_name' : 'OD2',
+            'correspond_resname' : 'ASP',
+            'correspond_names' : ['CB', 'CG', 'OD2', 'OD1'],
+            'aas' : 'GAWSTYNQDEKRH',
+            'filter_hb' : True,
+            'filter_cc' : False
+        },    
+        ('coo_2'):{
+            'cg' : 'coo',
+            'lgd_sel' : ['C8', 'C9', 'O3', 'O2'],
+            'represent_name' : 'OE2',
+            'correspond_resname' : 'GLU',
+            'correspond_names' : ['CG', 'CD', 'OE1', 'OE2'],
+            'aas' : 'GAWSTYNQDEKRH',
+            'filter_hb' : True,
+            'filter_cc' : False
+        },
+        ('coo_3'):{
+            'cg' : 'coo',
+            'lgd_sel' : ['C8', 'C9', 'O3', 'O2'],
+            'represent_name' : 'OE2',
+            'correspond_resname' : 'GLU',
+            'correspond_names' : ['CG', 'CD', 'OE2', 'OE1'],
+            'aas' : 'GAWSTYNQDEKRH',
+            'filter_hb' : True,
+            'filter_cc' : False
+        },
+        ('phenol_0'):{
+            'cg' : 'phenol',
+            'lgd_sel' : ['C2', 'C3', 'C4', 'O4'],
+            'represent_name' : 'OH',
+            'correspond_resname' : 'TYR',
+            'correspond_names' : ['CE1', 'CZ', 'CE2', 'OH'],
+            'aas' : 'GAWSTYNQDEKRH',
+            'filter_hb' : True,
+            'filter_cc' : False
+        },
+        ('phenol_1'):{
+            'cg' : 'phenol',
+            'lgd_sel' : ['C2', 'C3', 'C4', 'O4'],
+            'represent_name' : 'OH',
+            'correspond_resname' : 'TYR',
+            'correspond_names' : ['CE2', 'CZ', 'CE1', 'OH'],
+            'aas' : 'GAWSTYNQDEKRH',
+            'filter_hb' : True,
+            'filter_cc' : False
+        },
+        ('bb_cco_0'):{
+            'cg' : 'bb_cco',
+            'lgd_sel' : ['C8', 'C9', 'O2'],
+            'represent_name' : 'O',
+            'correspond_resname' : 'GLY',
+            'correspond_names' : ['CA', 'C', 'O'],
+            'aas' : 'GAWSTYNQDEKRH',
+            'filter_hb' : True,
+            'filter_cc' : False
+        },
+        ('bb_cco_1'):{
+            'cg' : 'bb_cco',
+            'lgd_sel' : ['C8', 'C9', 'O2'],
+            'represent_name' : 'O',
+            'correspond_resname' : 'ALA',
+            'correspond_names' : ['CA', 'C', 'O'],
+            'aas' : 'GAWSTYNQDEKRH',
+            'filter_hb' : True,
+            'filter_cc' : False
+        },
+        ('bb_cco_2'):{
+            'cg' : 'bb_cco',
+            'lgd_sel' : ['C8', 'C9', 'O2'],
+            'represent_name' : 'O',
+            'correspond_resname' : 'PRO',
+            'correspond_names' : ['CA', 'C', 'O'],
+            'aas' : 'GAWSTYNQDEKRH',
+            'filter_hb' : True,
+            'filter_cc' : False
+        },
+        ('ph_0'):{
+            'cg' : 'ph',
+            'lgd_sel' : ['C1', 'C2', 'C6', 'C4'],
+            'represent_name' : 'CG',
+            'correspond_resname' : 'PHE',
+            'correspond_names' : ['CG', 'CD1', 'CD2', 'CZ'],
+            'aas' : 'FWY',
+            'filter_hb' : False,
+            'filter_cc' : True
+        },
+        ('ph_1'):{
+            'cg' : 'ph',
+            'lgd_sel' : ['C1', 'C2', 'C6', 'C4'],
+            'represent_name' : 'CG',
+            'correspond_resname' : 'PHE',
+            'correspond_names' : ['CG', 'CD2', 'CD1', 'CZ'],
+            'aas' : 'FWY',
+            'filter_hb' : False,
+            'filter_cc' : True
+        },
+        ('ph_2'):{
+            'cg' : 'ph',
+            'lgd_sel' : ['C1', 'C2', 'C6', 'C4'],
+            'represent_name' : 'CG',
+            'correspond_resname' : 'PHE',
+            'correspond_names' : ['CD1', 'CG', 'CE1', 'CE2'],
+            'aas' : 'FWY',
+            'filter_hb' : False,
+            'filter_cc' : True
+        },
+        ('ph_3'):{
+            'cg' : 'ph',
+            'lgd_sel' : ['C1', 'C2', 'C6', 'C4'],
+            'represent_name' : 'CG',
+            'correspond_resname' : 'PHE',
+            'correspond_names' : ['CD1', 'CE1', 'CG', 'CE2'],
+            'aas' : 'FWY',
+            'filter_hb' : False,
+            'filter_cc' : True
+        },
+        ('ph_4'):{
+            'cg' : 'ph',
+            'lgd_sel' : ['C1', 'C2', 'C6', 'C4'],
+            'represent_name' : 'CG',
+            'correspond_resname' : 'PHE',
+            'correspond_names' : ['CE1', 'CD1', 'CZ', 'CD2'],
+            'aas' : 'FWY',
+            'filter_hb' : False,
+            'filter_cc' : True
+        },
+        ('ph_5'):{
+            'cg' : 'ph',
+            'lgd_sel' : ['C1', 'C2', 'C6', 'C4'],
+            'represent_name' : 'CG',
+            'correspond_resname' : 'PHE',
+            'correspond_names' : ['CE1', 'CZ', 'CD1', 'CD2'],
+            'aas' : 'FWY',
+            'filter_hb' : False,
+            'filter_cc' : True
+        },
+        ('ph_6'):{
+            'cg' : 'ph',
+            'lgd_sel' : ['C1', 'C2', 'C6', 'C4'],
+            'represent_name' : 'CG',
+            'correspond_resname' : 'PHE',
+            'correspond_names' : ['CZ', 'CE1', 'CE2', 'CG'],
+            'aas' : 'FWY',
+            'filter_hb' : False,
+            'filter_cc' : True
+        },
+        ('ph_7'):{
+            'cg' : 'ph',
+            'lgd_sel' : ['C1', 'C2', 'C6', 'C4'],
+            'represent_name' : 'CG',
+            'correspond_resname' : 'PHE',
+            'correspond_names' : ['CZ', 'CE2', 'CE1', 'CG'],
+            'aas' : 'FWY',
+            'filter_hb' : False,
+            'filter_cc' : True
+        },
+        ('ph_8'):{
+            'cg' : 'ph',
+            'lgd_sel' : ['C1', 'C2', 'C6', 'C4'],
+            'represent_name' : 'CG',
+            'correspond_resname' : 'PHE',
+            'correspond_names' : ['CE2', 'CZ', 'CD2', 'CD1'],
+            'aas' : 'FWY',
+            'filter_hb' : False,
+            'filter_cc' : True
+        },
+        ('ph_9'):{
+            'cg' : 'ph',
+            'lgd_sel' : ['C1', 'C2', 'C6', 'C4'],
+            'represent_name' : 'CG',
+            'correspond_resname' : 'PHE',
+            'correspond_names' : ['CE2', 'CD2', 'CZ', 'CD1'],
+            'aas' : 'FWY',
+            'filter_hb' : False,
+            'filter_cc' : True
+        },
+        ('ph_10'):{
+            'cg' : 'ph',
+            'lgd_sel' : ['C1', 'C2', 'C6', 'C4'],
+            'represent_name' : 'CG',
+            'correspond_resname' : 'PHE',
+            'correspond_names' : ['CD2', 'CE2', 'CG', 'CE1'],
+            'aas' : 'FWY',
+            'filter_hb' : False,
+            'filter_cc' : True
+        },
+        ('ph_11'):{
+            'cg' : 'ph',
+            'lgd_sel' : ['C1', 'C2', 'C6', 'C4'],
+            'represent_name' : 'CG',
+            'correspond_resname' : 'PHE',
+            'correspond_names' : ['CD2', 'CG', 'CE2', 'CE1'],
+            'aas' : 'FWY',
+            'filter_hb' : False,
+            'filter_cc' : True
+        }
+    }
+
+
+#>>> Run Search ligands.
+
+def run_all(file, workdir, path_to_database, lig_path, para, para_lig):
     time_tag = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') 
 
     target_path = workdir + file
     outdir = workdir + para.task_type  + '_result/output_' + '_'+ file + '_' + time_tag + '/'
     os.makedirs(outdir, exist_ok=True)
 
+    target = pr.parsePDB(target_path)
+
+    ligs = search_lig_indep_wrap.prepare_ligs(outdir, target, task_type = para.task_type, lig_path = lig_path, para_lig = para_lig)
+    
     target, chidres2ind = search_lig_indep.prepare_rosetta_target(outdir, target_path, para.predefined_win_filters)
     
-    if para.task_type == 'search_2ndshell':
-        ligs = search_lig_indep_2ndshell.extract_2ndshell_cgs(outdir, target, para.predefined_win_filters)
-    else:
-        ligs = search_lig_indep.prepare_ligs(outdir, target, lig_path, para)
-
     print('Filtered Ligs: ' + str(len(ligs)))
     if len(ligs) <= 0:
         return
@@ -46,36 +293,56 @@ def run_all(file, workdir, path_to_database, lig_path, para):
     outdir_all = outdir + 'vdms_output_all/'
     os.makedirs(outdir_all, exist_ok=True)
     print('number of ligs: {}'.format(len(ligs)))
-    for i in range(len(ligs)):
-        lig = ligs[i]
-        lig_vdm_dict = search_lig_indep_wrap.run_search(target, lig, path_to_database, constant.ideal_ala_coords, para, para.lig_cgs[i])
-        print('lig_vdm_dict size {}'.format(len(list(lig_vdm_dict.keys()))))
-        search_lig_indep.write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict, i, para)
+
+    lig_vdm_dict = search_lig_indep_wrap.run_search(target, ligs, path_to_database, para, para.predefined_chidres, lig_cg_2ndshell = None)
+    
+    print('lig_vdm_dict size {}'.format(len(list(lig_vdm_dict.keys()))))
+    search_lig_indep_wrap.write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict,  para)
 
     return
 
 
-def main():
-    #path = '/mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/search_lig_paras.py'
-    on_wynton = bool(int(sys.argv[1]))
-    path = sys.argv[2]
-    para = importlib.machinery.SourceFileLoader('para', path).load_module()
-    print(path)
+def run_local():
+    path_to_database='/mnt/e/DesignData/Combs/Combs2_database/vdMs/'
+    #workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta_86-88-101/_rosetta_r1/output_1_sel/'
+    workdir = '/mnt/e/DesignData/Metalloenzyme/HelixFe_TTS/'
+    lig_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/tts_fe_rdkit.pdb'
+
+    para = Para()
+    para_lig = ParaLig()
     print('Task: ' + para.task_type)
-    workdir, path_to_database, lig_path = para.get_file_path(on_wynton)
-    print('on_wynton: ' + str(on_wynton))
 
     pdb_files = sorted([fp for fp in os.listdir(workdir) if fp[0] != '.' and '.pdb' in fp])
 
-    ind = int(sys.argv[3]) -1
+    ind = int(sys.argv[2]) -1
     if ind > len(pdb_files) -1:
         return
     print(pdb_files[ind])
     
-    run_all(pdb_files[ind], workdir,  path_to_database, lig_path, para)
+    run_all(pdb_files[ind], workdir,  path_to_database, lig_path, para, para_lig)
     return
 
 
+def run_wynton():
+    path_to_database='/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/'
+    workdir = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe_1dmm_rosetta_sel/'
+    #workdir = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe_1dmm_rosetta_2rd_sel/'
+    lig_path = '/wynton/home/degradolab/lonelu/GitHub_Design/Combs2_library/ntf2_fe/tts_fe_rdkit.pdb'
+    
+    para = Para()
+    para_lig = ParaLig()
+    print('Task: ' + para.task_type)
+
+    pdb_files = sorted([fp for fp in os.listdir(workdir) if fp[0] != '.' and '.pdb' in fp])
+
+    ind = int(sys.argv[2]) -1
+    if ind > len(pdb_files) -1:
+        return
+    print(pdb_files[ind])
+    
+    run_all(pdb_files[ind], workdir,  path_to_database, lig_path, para, para_lig)
+    return
+
 if __name__=='__main__':
-    main()
+    run_local()
 

@@ -26,11 +26,15 @@ python /mnt/e/Github_Design/Metalprot/scrips/position_ligand/belinostat/pose_lig
 '''
 class Para:
 
-    resnums = [3, 7, 10, 14, 17, 18, 21, 24, 25, 
-        51, 54, 58, 61, 65, 68, 69, 72, 77, 81, 84, 88, 91, 92, 95, 99, 
-        125, 128, 132, 135, 139, 142, 146]
-    #resnums = [61]
-    predefined_resnums = [('A', r) for r in resnums]
+    # resnums = [3, 7, 10, 14, 17, 18, 21, 24, 25, 
+    #     51, 54, 58, 61, 65, 68, 69, 72, 77, 81, 84, 88, 91, 92, 95, 99, 
+    #     125, 128, 132, 135, 139, 142, 146]
+    resnums_a = [55, 58, 59, 62, 92, 96, 99]    
+    predefined_resnums_a = [('A', r) for r in resnums_a]
+
+
+    resnums_b = [95, 54, 58]
+    predefined_resnums_b = [('A', r) for r in resnums_b]
 
     use_enriched = True
     use_abple=True
@@ -260,6 +264,56 @@ class Para:
             'filter_hb' : True,
             'filter_cc' : False
         },  
+        ('conh2_1'):{
+            'cg' : 'conh2',
+            'lgd_sel' : ['O3', 'C12', 'N2'],
+            'correspond_resname' : 'GLN',
+            'represent_name' : 'CD',
+            'correspond_names' : ['OE1', 'CD', 'NE2'],
+            'aas' : 'STYHQN', #'HDE' is also provide good hb but we want to get rid of confusing the metal binding.
+            'filter_hb' : True,
+            'filter_cc' : False
+        },  
+        ('bb_cnh_0'):{
+            'cg' : 'bb_cnh',
+            'lgd_sel' : ['O3', 'C12', 'N2'],
+            'correspond_resname' : 'ASN',
+            'represent_name' : 'CA',
+            'correspond_names' : ['OD1', 'CG', 'ND2'],
+            'aas' : 'STYHQN', #'HDE' is also provide good hb but we want to get rid of confusing the metal binding.
+            'filter_hb' : True,
+            'filter_cc' : False
+        },  
+        ('bb_cco_0'):{
+            'cg' : 'bb_cco',
+            'lgd_sel' : ['C11', 'C12', 'O3'],
+            'correspond_resname' : 'GLY',
+            'represent_name' : 'CA',
+            'correspond_names' : ['CA', 'C', 'O'],
+            'aas' : 'STYHQN',
+            'filter_hb' : True,
+            'filter_cc' : False
+        },
+        ('bb_cco_1'):{
+            'cg' : 'bb_cco',
+            'lgd_sel' : ['C11', 'C12', 'O3'],
+            'correspond_resname' : 'ALA',
+            'represent_name' : 'CA',
+            'correspond_names' : ['CA', 'C', 'O'],
+            'aas' : 'STYHQN',
+            'filter_hb' : True,
+            'filter_cc' : False
+        },
+        ('bb_cco_2'):{
+            'cg' : 'bb_cco',
+            'lgd_sel' : ['C11', 'C12', 'O3'],
+            'correspond_resname' : 'PRO',
+            'represent_name' : 'CA',
+            'correspond_names' : ['CA', 'C', 'O'],
+            'aas' : 'STYHQN',
+            'filter_hb' : True,
+            'filter_cc' : False
+        }
     }
 
 
@@ -277,8 +331,11 @@ def run_local():
 
     para = Para()
 
-    select_chidres_keys = search_lig_indep_inpair._select_chidres_keys(target, lig, para, path_to_database)
+    select_chidres_keys = search_lig_indep_inpair._select_chidres_keys_inpair(target, para)
     print(len(select_chidres_keys))
+    #for _x in select_chidres_keys:
+    #    print(_x)
+    
     # for key_a, key_b, chidres_a, chidres_b, abple_a, abple_b in select_chidres_keys:
     #     search_lig_indep_inpair.search_select_pair_vdm(outdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b)
     return
@@ -297,7 +354,7 @@ def run_wynton():
 
     para = Para()
 
-    select_chidres_keys = search_lig_indep_inpair._select_chidres_keys(target, lig, para, path_to_database)
+    select_chidres_keys = search_lig_indep_inpair._select_chidres_keys_inpair(target, para)
 
     ind = int(sys.argv[2]) -1
 
@@ -317,7 +374,7 @@ def run_wynton_multifile():
     para = Para()
 
     ind = int(sys.argv[2]) -1
-    select_chidres_keys = search_lig_indep_inpair._select_chidres_keys(targets[0], ligs[0], para, path_to_database)
+    select_chidres_keys = search_lig_indep_inpair._select_chidres_keys_inpair(targets[0], para)
     key_a, key_b, chidres_a, chidres_b, abple_a, abple_b = select_chidres_keys[ind]
     for target in targets:
         for lig in ligs:           

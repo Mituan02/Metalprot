@@ -45,11 +45,23 @@ def verify_vdMs(outdir, target, chidres, para, abples, path_to_database, lig, vd
     return
 
 
-def prepare_ligs(outdir, target, lig_path, para):
-    if para.task_type == 'search_unknow':
-        position_ligand.run_ligand(outdir, target, lig_path, para.ro1, para.ro2, para.rest1, para.rest2, para.lig_connects, para.geo_sel, para.rot_degree, para.interMolClashSets, clash_dist = 2.7, write_all_ligands=False)
-    else:
-        position_ligand.extract_ligand(outdir, target, para.lig_name)
+def prepare_ligs(outdir, target, task_type = 'search_eval', lig_path = None, para_lig = None):
+    '''
+    Prepare ligands for vdm search.
+    'search_eval': We can extract ligand from the target for the evaluation purpose.
+    'search_unknow': We can generate ligand by rotating the ligands.
+    'search_exists': We can use pre-generated ligands.
+    '''
+    if task_type == 'search_unknow':
+        position_ligand.run_ligand(outdir, target, lig_path, para_lig.ro1, para_lig.ro2, para_lig.rest1, para_lig.rest2, para_lig.lig_connects, para_lig.geo_sel, para_lig.rot_degree, para_lig.interMolClashSets, clash_dist = 2.5, write_all_ligands=False)
+    elif task_type == 'search_eval':
+        position_ligand.extract_ligand(outdir, target, para_lig.lig_name)
+    elif task_type == 'search_exists':
+        for file in os.listdir(lig_path):
+            os.makedirs(outdir + 'filtered_ligs/', exist_ok=True)
+            if not '.pdb' in file and not '.pdb.gz' in file:
+                continue
+            shutil.copy2(lig_path + file, outdir + 'filtered_ligs/')
 
     outdir_ligs = outdir + 'ligs_inorder/'
     os.makedirs(outdir_ligs, exist_ok=True)
@@ -65,7 +77,7 @@ def prepare_ligs(outdir, target, lig_path, para):
     return ligs
 
 
-def write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict, i, para):
+def write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict, para):
     ### write filtered vdms.
     summaries = []
     for lig_id in lig_vdm_dict.keys():
@@ -86,7 +98,7 @@ def write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict, i, para):
         print('Filtered vdms is 0.')
         return
 
-    with open(outdir + target.getTitle() + '_' + str(i) + '_summary.tsv', 'w') as f:
+    with open(outdir + target.getTitle() + '_summary.tsv', 'w') as f:
         f.write('file\tcg\taa\tpos\tcg_tag\tlig\trmsd\tvdm_id\tscore\tvdm\tContact_hb\tContact_cc\n')
         for s in summaries:
             #print(s)
@@ -109,12 +121,12 @@ def write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict, i, para):
         pr.writePDB(outdir_uni + prefix  + '.pdb.gz', unique_vdms[(cg, chidres, aa, vdm_id)][0])
 
     ### Write summary file.
-    df = pd.read_csv(outdir + target.getTitle() + '_' + str(i) + '_summary.tsv', sep = '\t')
+    df = pd.read_csv(outdir + target.getTitle() + '_summary.tsv', sep = '\t')
     df_group = df.groupby(['file', 'lig'])
 
     df_score = df_group[['score']].sum()
 
-    df_score.to_csv(outdir + target.getTitle() + '_' + str(i) + '_sum_score.tsv', sep = '\t')
+    df_score.to_csv(outdir + target.getTitle() +  '_sum_score.tsv', sep = '\t')
 
     scores = []
     for g_name, g in df_group:
@@ -124,7 +136,7 @@ def write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict, i, para):
             score += gg[['score']].max()
         scores.append((g_name, score.sum()))
 
-    with open(outdir + target.getTitle() + '_' + str(i) +  '_sum_score_rmdu.tsv', 'w') as f:
+    with open(outdir + target.getTitle() + '_' + '_sum_score_rmdu.tsv', 'w') as f:
         f.write('file\tlig\tscore\n')
         for s in scores:
             f.write('\t'.join([str(x) for x in s[0]]) + '\t' +  str(s[1]) + '\n')

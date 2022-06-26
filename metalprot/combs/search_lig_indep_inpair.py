@@ -149,7 +149,7 @@ def search_select_pair_vdm(outdir, target, lig, para, path_to_database, key_a, k
 
 
 
-def _select_chidres_keys(target, lig, para, path_to_database):
+def _select_chidres_keys(target, para):
     abples, phipsi = utils.seq_get_ABPLE(target)
 
     select_chidres_keys = []
@@ -173,6 +173,34 @@ def _select_chidres_keys(target, lig, para, path_to_database):
         
     return select_chidres_keys
 
+
+def _select_chidres_keys_inpair(target, para):
+    '''
+    get keys based on (para.predefined_resnums_a, para.predefined_resnums_b)
+    '''
+    abples, phipsi = utils.seq_get_ABPLE(target)
+
+    select_chidres_keys = []
+    for i in range(len(para.predefined_resnums_a)):
+        for j in range(len(para.predefined_resnums_b)):
+            chidres_a = para.predefined_resnums_a[i]
+            chidres_b = para.predefined_resnums_b[j]
+
+            pos_a = target.select('chid ' + chidres_a[0] + ' and resnum ' + str(chidres_a[1]))
+            pos_b = target.select('chid ' + chidres_b[0] + ' and resnum ' + str(chidres_b[1]))
+
+            far = pr.calcDistance(pos_a.select('name C'), pos_b.select('name C'))[0]
+            if far > 18:
+                continue
+            
+            abple_a = abples[pos_a.getResindices()[0]]
+            abple_b = abples[pos_b.getResindices()[0]]
+
+            for key_a in para.vdm_cg_aa_atommap_dict_a.keys():
+                for key_b in para.vdm_cg_aa_atommap_dict_b.keys():
+                    select_chidres_keys.append((key_a, key_b, chidres_a, chidres_b, abple_a, abple_b))
+        
+    return select_chidres_keys
 
 def _test_case(para):
     '''

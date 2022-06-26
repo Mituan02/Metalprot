@@ -193,12 +193,14 @@ def lig_2_target(ligs, lig_connect_sel, target, geo_sel = 'chid X and name FE1 O
     mobile_sel_coords = []
     for s in lig_connect_sel:
         try:
+            #print(_lig.getNames())
             mobile_sel_coords.append(_lig.select('name ' + s).getCoords()[0])
         except: 
             print('ERROR: (lig_2_ideageo) ' + ' '.join(lig_connect_sel))
             print(_lig.getNames())
             print(s)
 
+    #print(target.select('chid X').getNames())
     try:
         target_sel_coords = target.select(geo_sel).getCoords()
     except:
@@ -292,9 +294,9 @@ def run_ligand(outdir, target, lig_path, ro1, ro2, rest1, rest2, lig_connects, g
     # points = np.array(position_ligand.fibonacci_sphere(10, scale=0.2))
     # point_sel = 'name FE1'
 
-    filtered_ligs, _ = generate_ligands(all_ligs, target, lig_connects, geo_sel, clash_dist = clash_dist)
+    filtered_ligs, all_ligands = generate_ligands(all_ligs, target, lig_connects, geo_sel, clash_dist = clash_dist)
 
-    write_ligands(outdir, filtered_ligs, all_ligs, write_all_ligands)
+    write_ligands(outdir, filtered_ligs, all_ligands, write_all_ligands)
 
     return
 
@@ -357,11 +359,14 @@ def generate_ligands(all_ligs, target, lig_connects, geo_sel, points = None, poi
             [l.setTitle('Geo_' + str(i) + '_P_' + str(j) + '_' + l.getTitle() ) for l in _ligs]
             lig_2_target(_ligs, lig_connect, _target, geo_sel = geo_sel)
             all_ligands.extend(_ligs)
+    
 
+    if len(all_ligands) <= 0:
+        print('No ligands generated.')
     filtered_ligs = ligand_clashing_filter(all_ligands, target, dist = clash_dist)
 
     if len(filtered_ligs) <= 0:
-        print('The position could not support the ligand.')
+        print('The position could not support the total ligand {}.'.format(len(all_ligands)))
 
     return filtered_ligs, all_ligands
 

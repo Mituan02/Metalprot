@@ -26,7 +26,7 @@ class Para:
             'represent_name' : 'OD2',
             'correspond_resname' : 'ASP',
             'correspond_names' : ['CB', 'CG', 'OD1', 'OD2'],
-            'aas' : 'AGKNQRSTY',
+            'aas' : 'GAWSTYNQDEKRH',
             #'aas': 'H',
             'filter_hb' : True,
             'filter_cc' : False
@@ -37,7 +37,7 @@ class Para:
             'represent_name' : 'OE2',
             'correspond_resname' : 'GLU',
             'correspond_names' : ['CG', 'CD', 'OE1', 'OE2'],
-            'aas' : 'AGKNQRSTY',
+            'aas' : 'GAWSTYNQDEKRH',
             #'aas': 'H',
             'filter_hb' : True,
             'filter_cc' : False
@@ -48,7 +48,7 @@ class Para:
             'represent_name' : 'ND1',
             'correspond_resname' : 'HIS',
             'correspond_names' : ['ND1', 'CE1', 'CG', 'CD2'],
-            'aas' : 'AGDEKNQRST',
+            'aas' : 'GAWSTYNQDE',
             #'aas' : 'Q',
             'filter_hb' : False,
             'filter_cc' : False
@@ -59,7 +59,7 @@ class Para:
             'represent_name' : 'NE2',
             'correspond_resname' : 'HIS',
             'correspond_names' : ['NE2', 'CE1', 'CD2', 'CG'],
-            'aas' : 'AGDEKNQRST',
+            'aas' : 'GAWSTYNQDE',
             #'aas' : 'Q',
             'filter_hb' : False,
             'filter_cc' : False

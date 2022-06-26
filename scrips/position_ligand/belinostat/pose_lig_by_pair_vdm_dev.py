@@ -88,7 +88,8 @@ def run_local():
     outdir = workdir + 'output_pair-search_' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S') 
     os.makedirs(outdir, exist_ok = True)
 
-    select_chidres_keys = search_lig_indep_inpair._select_chidres_keys(target, lig, para, path_to_database)
+    select_chidres_keys = search_lig_indep_inpair._select_chidres_keys(target, para)
+    print(len(select_chidres_keys))
     for key_a, key_b, chidres_a, chidres_b, abple_a, abple_b in select_chidres_keys:
         search_lig_indep_inpair.search_select_pair_vdm(outdir, target, lig, para, path_to_database, key_a, key_b, chidres_a, chidres_b, abple_a, abple_b)
     return
@@ -119,5 +120,5 @@ def run_verify_vdMs():
     return
 
 if __name__=='__main__':
-    run_verify_vdMs()
+    #run_verify_vdMs()
     run_local()

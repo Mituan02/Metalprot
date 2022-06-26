@@ -14,7 +14,7 @@ import numpy as np
 import prody as pr
 from sklearn.neighbors import NearestNeighbors
 import itertools
-from datetime import datetime
+import datetime
 from scipy.sparse import csr_matrix, lil_matrix
 
 from metalprot.basic import constant, utils
@@ -402,23 +402,23 @@ def run_wynton():
 
     path_to_database='/wynton/home/degradolab/lonelu/DesignData/Database/vdMs/'
 
-    lig = pr.parsePDB(workdir + 'meo_50g_amber14eht_md_out/50g_md_0.pdb')
+    lig = pr.parsePDB(workdir + 'meo_50g_amber14eht_md_out/50g_md_1.pdb')
 
     target = pr.parsePDB(workdir + 'targets/01_f63440_nick_ala.pdb')
 
     #>>>
 
-    workdir = '/wynton/home/degradolab/lonelu/DesignData/Metalloenzyme/6w70_vdM/'
+    # workdir = '/wynton/home/degradolab/lonelu/DesignData/Metalloenzyme/6w70_vdM/'
 
-    path_to_database='/wynton/home/degradolab/lonelu/DesignData/Database/vdMs/'
+    # path_to_database='/wynton/home/degradolab/lonelu/DesignData/Database/vdMs/'
 
-    lig = pr.parsePDB(workdir + 'gg2.pdb')
+    # lig = pr.parsePDB(workdir + 'gg2.pdb')
 
-    target = pr.parsePDB(workdir + '6w70_bb.pdb')
+    # target = pr.parsePDB(workdir + '6w70_bb.pdb')
         
     #>>>
 
-    outdir = workdir + 'output_pair-search_' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S') 
+    outdir = workdir + 'out_pair_' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + '/'
     os.makedirs(outdir, exist_ok = True)
 
     para = Para2()

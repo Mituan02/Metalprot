@@ -408,9 +408,9 @@ def run_wynton():
 
     #>>>
 
-    workdir = '/mnt/e/DesignData/Metalloenzyme/6w70_vdM/'
+    workdir = '/wynton/home/degradolab/lonelu/DesignData/Metalloenzyme/6w70_vdM/'
 
-    path_to_database='/mnt/e/DesignData/Combs/Combs2_database/vdMs/'
+    path_to_database='/wynton/home/degradolab/lonelu/DesignData/Database/vdMs/'
 
     lig = pr.parsePDB(workdir + 'gg2.pdb')
 

@@ -21,7 +21,7 @@ from metalprot.basic import constant, utils
 from metalprot.combs import search_lig_indep, search_lig_indep_inpair
 
 '''
-python /mnt/e/Github_Design/Metalprot/scrips/position_ligand/belinostat/pose_lig_by_pair_vdm.py local
+python /mnt/e/Github_Design/Metalprot/scrips/position_ligand/belinostat/run_pose_lig_by_pair_vdm.py local
 
 '''
 class Para:
@@ -29,12 +29,16 @@ class Para:
     # resnums = [3, 7, 10, 14, 17, 18, 21, 24, 25, 
     #     51, 54, 58, 61, 65, 68, 69, 72, 77, 81, 84, 88, 91, 92, 95, 99, 
     #     125, 128, 132, 135, 139, 142, 146]
-    resnums_a = [55, 58, 59, 62, 92, 96, 99]    
-    predefined_resnums_a = [('A', r) for r in resnums_a]
 
+    resnums_a = [55, 58, 59, 62, 92, 96, 99]   
+    predefined_resnums_a = [('A', r) for r in resnums_a]
 
     resnums_b = [95, 54, 58]
     predefined_resnums_b = [('A', r) for r in resnums_b]
+
+    #>>> seudo target testing.
+    #predefined_resnums_a = [('A', 7)]
+    #predefined_resnums_b = [('B', 7)]
 
     use_enriched = True
     use_abple=True
@@ -164,40 +168,36 @@ class Para:
     #     }
     # }
 
-    # vdm_cg_aa_atommap_dict_a = {
-    #     ('ph_0'):{
-    #         'cg' : 'ph',
-    #         'lgd_sel' : ['C7', 'C9', 'C14'],
-    #         'correspond_resname' : 'PHE',
-    #         'represent_name' : 'CZ',
-    #         'correspond_names' : ['CG', 'CE1', 'CE2'],
-    #         'aas' : 'F',
-    #         'filter_hb' : False,
-    #         'filter_cc' : True
-    #     },
-    # }
-
-    # vdm_cg_aa_atommap_dict_a ={
-    #     ('coo_0'):{
-    #         'cg' : 'coo',
-    #         'lgd_sel' : ['S', 'O1', 'O2'],
-    #         'correspond_resname' : 'ASP',
-    #         'represent_name' : 'CG',
-    #         'correspond_names' : ['CG', 'OD1', 'OD2'],
-    #         'aas' : 'STYH', #'HDE' is also provide good hb but we want to get rid of confusing the metal binding.
-    #         'filter_hb' : True,
-    #         'filter_cc' : False
-    #     },         
-    # }
 
     vdm_cg_aa_atommap_dict_a = {
+        ('coo_0'):{
+            'cg' : 'coo',
+            'lgd_sel' : ['S', 'O1', 'O2'],
+            'correspond_resname' : 'ASP',
+            'represent_name' : 'CG',
+            'correspond_names' : ['CG', 'OD1', 'OD2'],
+            'aas' : 'STYWHNQ', 
+            'filter_hb' : True,
+            'filter_cc' : False
+        },   
+        ('coo_1'):{
+            'cg' : 'coo',
+            'lgd_sel' : ['S', 'O1', 'O2'],
+            'correspond_resname' : 'GLU',
+            'represent_name' : 'CD',
+            'correspond_names' : ['CD', 'OE1', 'OE2'],
+            'aas' : 'STYWHNQ', 
+            #'aas' : 'Y', 
+            'filter_hb' : True, 
+            'filter_cc' : False 
+        },   
         ('bb_cco_0'):{
             'cg' : 'bb_cco',
             'lgd_sel' : ['C7', 'S', 'O1'],
             'correspond_resname' : 'GLY',
             'represent_name' : 'CA',
             'correspond_names' : ['CA', 'C', 'O'],
-            'aas' : 'STYHQN',
+            'aas' : 'STYWHNQ',
             'filter_hb' : True,
             'filter_cc' : False
         },
@@ -207,7 +207,7 @@ class Para:
             'correspond_resname' : 'ALA',
             'represent_name' : 'CA',
             'correspond_names' : ['CA', 'C', 'O'],
-            'aas' : 'STYHQN',
+            'aas' : 'STYWHNQ',
             'filter_hb' : True,
             'filter_cc' : False
         },
@@ -217,7 +217,7 @@ class Para:
             'correspond_resname' : 'PRO',
             'represent_name' : 'CA',
             'correspond_names' : ['CA', 'C', 'O'],
-            'aas' : 'STYHQN',
+            'aas' : 'STYWHNQ',
             'filter_hb' : True,
             'filter_cc' : False
         },
@@ -227,7 +227,7 @@ class Para:
             'correspond_resname' : 'GLY',
             'represent_name' : 'CA',
             'correspond_names' : ['CA', 'C', 'O'],
-            'aas' : 'STYHQN',
+            'aas' : 'STYWHNQ',
             'filter_hb' : True,
             'filter_cc' : False
         },
@@ -237,7 +237,7 @@ class Para:
             'correspond_resname' : 'ALA',
             'represent_name' : 'CA',
             'correspond_names' : ['CA', 'C', 'O'],
-            'aas' : 'STYHQN',
+            'aas' : 'STYWHNQ',
             'filter_hb' : True,
             'filter_cc' : False
         },
@@ -247,7 +247,7 @@ class Para:
             'correspond_resname' : 'PRO',
             'represent_name' : 'CA',
             'correspond_names' : ['CA', 'C', 'O'],
-            'aas' : 'STYHQN',
+            'aas' : 'STYWHNQ',
             'filter_hb' : True,
             'filter_cc' : False
         },
@@ -260,7 +260,8 @@ class Para:
             'correspond_resname' : 'ASN',
             'represent_name' : 'CG',
             'correspond_names' : ['OD1', 'CG', 'ND2'],
-            'aas' : 'STYHQN', #'HDE' is also provide good hb but we want to get rid of confusing the metal binding.
+            'aas' : 'STYWHQNDE',
+            #'aas' : 'E',
             'filter_hb' : True,
             'filter_cc' : False
         },  
@@ -270,17 +271,7 @@ class Para:
             'correspond_resname' : 'GLN',
             'represent_name' : 'CD',
             'correspond_names' : ['OE1', 'CD', 'NE2'],
-            'aas' : 'STYHQN', #'HDE' is also provide good hb but we want to get rid of confusing the metal binding.
-            'filter_hb' : True,
-            'filter_cc' : False
-        },  
-        ('bb_cnh_0'):{
-            'cg' : 'bb_cnh',
-            'lgd_sel' : ['O3', 'C12', 'N2'],
-            'correspond_resname' : 'ASN',
-            'represent_name' : 'CA',
-            'correspond_names' : ['OD1', 'CG', 'ND2'],
-            'aas' : 'STYHQN', #'HDE' is also provide good hb but we want to get rid of confusing the metal binding.
+            'aas' : 'STYWHQNDE',
             'filter_hb' : True,
             'filter_cc' : False
         },  
@@ -290,7 +281,7 @@ class Para:
             'correspond_resname' : 'GLY',
             'represent_name' : 'CA',
             'correspond_names' : ['CA', 'C', 'O'],
-            'aas' : 'STYHQN',
+            'aas' : 'STYWHQNDE',
             'filter_hb' : True,
             'filter_cc' : False
         },
@@ -300,7 +291,7 @@ class Para:
             'correspond_resname' : 'ALA',
             'represent_name' : 'CA',
             'correspond_names' : ['CA', 'C', 'O'],
-            'aas' : 'STYHQN',
+            'aas' : 'STYWHQNDE',
             'filter_hb' : True,
             'filter_cc' : False
         },
@@ -310,7 +301,7 @@ class Para:
             'correspond_resname' : 'PRO',
             'represent_name' : 'CA',
             'correspond_names' : ['CA', 'C', 'O'],
-            'aas' : 'STYHQN',
+            'aas' : 'STYWHQNDE',
             'filter_hb' : True,
             'filter_cc' : False
         }
@@ -373,7 +364,9 @@ class Para2:
         },  
     }
 
+
 def run_local():
+    #>>>
     workdir = '/mnt/e/DesignData/Metalloenzyme/belinostat/'
 
     path_to_database='/mnt/e/DesignData/Combs/Combs2_database/vdMs/'
@@ -381,8 +374,24 @@ def run_local():
     lig = pr.parsePDB(workdir + 'ligs/meo_50g_amber14eht_md_out/50g_md_0.pdb')
 
     target = pr.parsePDB(workdir + 'targets/01_f63440_nick_ala.pdb')
+    
+    outdir = workdir + 'out_pair/'
+    
+    #>>>
+    # workdir = '/mnt/e/DesignData/Metalloenzyme/belinostat/'
 
-    outdir = workdir + 'results/' 
+    # path_to_database='/mnt/e/DesignData/Combs/Combs2_database/vdMs/'
+
+    # lig = pr.parsePDB(workdir + 'ligs/meo_50g_amber14eht_md_out/50g_md_0.pdb')
+
+    # target = pr.parsePDB(workdir + 'rvrs/seudo_target.pdb')
+
+    # outdir = workdir + 'rvrs/results/' 
+
+    #>>>
+
+
+
     os.makedirs(outdir, exist_ok = True)
 
     para = Para()
@@ -398,6 +407,7 @@ def run_local():
 
 def run_wynton():
     #>>>
+
     workdir = '/wynton/home/degradolab/lonelu/DesignData/Metalloenzyme/belinostat/'
 
     path_to_database='/wynton/home/degradolab/lonelu/DesignData/Database/vdMs/'
@@ -405,6 +415,10 @@ def run_wynton():
     lig = pr.parsePDB(workdir + 'meo_50g_amber14eht_md_out/50g_md_1.pdb')
 
     target = pr.parsePDB(workdir + 'targets/01_f63440_nick_ala.pdb')
+
+    para = Para()
+
+    select_chidres_keys = search_lig_indep_inpair._select_chidres_keys_inpair(target, para)
 
     #>>>
 
@@ -415,16 +429,16 @@ def run_wynton():
     # lig = pr.parsePDB(workdir + 'gg2.pdb')
 
     # target = pr.parsePDB(workdir + '6w70_bb.pdb')
-        
+
+    #para = Para2()
+
+    #select_chidres_keys = search_lig_indep_inpair._select_chidres_keys(target, para)
+
     #>>>
 
-    outdir = workdir + 'out_pair_' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + '/'
+    #outdir = workdir + 'out_pair_' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + '/'
+    outdir = workdir + 'out_pair/'
     os.makedirs(outdir, exist_ok = True)
-
-    para = Para2()
-
-    select_chidres_keys = search_lig_indep_inpair._select_chidres_keys(target, para)
-    #select_chidres_keys = search_lig_indep_inpair._select_chidres_keys_inpair(target, para)
 
     ind = int(sys.argv[2]) -1
 

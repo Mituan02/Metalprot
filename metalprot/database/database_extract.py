@@ -120,8 +120,9 @@ def extract_all_core_seq_from_path(workdir, metal_sel, extend = 4, extract_2ndsh
                 core = get_metal_core_seq(pdb_prody, metal_sel, extend)
             if core:
                 cores.extend(core)
-            pdb_prody = None
         except:
+            with open(workdir + '_log.txt', 'a') as f:
+                f.write(workdir + pdb_path + '\n')
             print('not sure')   
     return cores
 
@@ -223,8 +224,8 @@ def reduce_dup(pdbs, metal_sel):
         clusters.append(cluster)
     return clusters
 
-def write_dup_summary(workdir, pdbs, clusters):
-    with open(workdir + 'dup_summary.txt', 'w') as f:
+def write_dup_summary(workdir, pdbs, clusters, title = 'dup_summary.txt'):
+    with open(workdir + title, 'w') as f:
         for clu in clusters:
             line = [pdbs[ind].getTitle() for ind in clu]
             f.write('\t'.join(line) + '\n')

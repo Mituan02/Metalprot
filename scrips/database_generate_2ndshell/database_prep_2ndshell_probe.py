@@ -6,7 +6,6 @@ After run the script, one can use the 'run_cluster_2ndshell_probe.py' to get the
     labeled *so* (small overlap), *bo* (bad overlap), *wc* (wide contact)
 '''
 
-from itertools import chain
 import os
 import pandas as pd
 import prody as pr
@@ -14,14 +13,17 @@ from metalprot.basic import probe
 from metalprot.database import database_extract
 
 '''
-python /mnt/e/GitHub_Design/Metalprot/scrips/database_generate/database_prep_2ndshell_probe.py
+python /mnt/e/GitHub_Design/Metalprot/scrips/database_generate_2ndshell/database_prep_2ndshell_probe.py
 '''
 
-workdir = "/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/"
+#workdir = "/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/"
+#probe_dir = workdir + '_Seq_core_2ndshell_date_reps_probe/'
+#outdir = workdir + '_Seq_core_2ndshell_date_reps_probe2ndshell/'
 
-probe_dir = workdir + '_Seq_core_2ndshell_date_reps_probe/'
+workdir = "/mnt/e/DesignData/ligands/all/20220710/"
+probe_dir = workdir + '_Seq_core_2ndshell_reps_probe/'
+outdir = workdir + '_Seq_core_2ndshell_reps_probe2ndshell/'
 
-outdir = workdir + '_Seq_core_2ndshell_date_reps_probe2ndshell/'
 os.makedirs(outdir , exist_ok=True)
 
 df_probes = {}
@@ -31,8 +33,9 @@ for probefile in os.listdir(probe_dir):
     df = probe.probe2csv(probe_dir, probefile)
     df_probes[probefile.split('.')[0]] = df
 
+# '1982_4tln_ZN_1'
 
-cores = database_extract.load_cores(workdir + '_Seq_core_2ndshell_date_reps/') 
+cores = database_extract.load_cores(workdir + '_Seq_core_2ndshell_reps_all_withH/') 
 
 # core = cores[2]
 # df = df_probes[core.full_pdb.getTitle()]
@@ -58,6 +61,10 @@ for core in cores:
                 continue
             resind1 = core.full_pdb.select('chid ' + chain1 + ' and resnum ' + str(resnum1)).getResindices()[0]
             resind2 = core.full_pdb.select('chid ' + chain2 + ' and resnum ' + str(resnum2)).getResindices()[0]
+
+            #If both are in core.contact_aa_resinds, the bond between the two cannot be hbond.
+            if resind1 in core.contact_aa_resinds and resind2 in core.contact_aa_resinds:
+                continue
 
             _2ndshellVdm = core.full_pdb.select('resindex ' + str(resind1)  + ' ' + str(resind2) + ' ' + str(core.metal_resind))
 

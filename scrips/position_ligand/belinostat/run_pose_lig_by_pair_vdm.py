@@ -309,7 +309,9 @@ class Para:
 
 
 class Para2:
-
+    '''
+    For 6w70_bb from Nick P.
+    '''
     resnums = [49, 6]
     predefined_resnums = [('A', r) for r in resnums]
 
@@ -376,7 +378,7 @@ def run_local():
     target = pr.parsePDB(workdir + 'targets/01_f63440_nick_ala.pdb')
     
     outdir = workdir + 'out_pair/'
-    
+
     #>>>
     # workdir = '/mnt/e/DesignData/Metalloenzyme/belinostat/'
 

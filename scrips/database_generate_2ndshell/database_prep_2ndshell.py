@@ -14,24 +14,7 @@ cores_2nd = database_extract.extract_all_core_seq_from_path('/mnt/e/DesignData/l
 os.makedirs(workdir + '20220116_2ndshell/_Seq_core_2ndshell/', exist_ok=True)
 database_extract.superimpose_core_and_writepdb(cores_2nd, cores_2nd[0], metal_sel, workdir + '20220116_2ndshell/_Seq_core_2ndshell/')
 
-# Check datesplit.py to change add the date.
-
-### Copy based on 1st shell duplication.
-core_reps = set()
-for pdb_path in os.listdir('/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/_Seq_core_date_reps/'):
-    if not pdb_path.endswith(".pdb"):
-        continue
-    core_reps.add(pdb_path)
-
-outdir = workdir + '20220114_bb2ndshell/_Seq_cores_with_2ndshell_copyby1stshell/'
-os.makedirs(outdir, exist_ok=True)
-
-for pdb_path in os.listdir(workdir + '20220114_bb2ndshell/_Seq_core_2ndshell_date/'):
-    #print(pdb_path)
-    if not pdb_path.endswith(".pdb"):
-        continue
-    if pdb_path in core_reps:
-        shutil.copy(workdir + '20220114_bb2ndshell/_Seq_core_2ndshell_date/' + pdb_path, outdir + pdb_path)
+# Check datesplit.py to add the date.
 
 
 ### Remove duplicate by 2nd shell.
@@ -50,3 +33,56 @@ database_extract.write_dup_summary(workdir, pdbs, clusters)
 
 database_extract.extract_rep_and_writepdb(pdbs, clusters, metal_sel, workdir + '_Seq_core_2ndshell_date_reps/')
 
+
+
+
+#>>> Extract 2ndshell from all metal.
+import os
+from metalprot.database import database_extract
+
+def extract_core_2nd(indir, outdir, metal_sel):
+    #indir = '/mnt/e/DesignData/ligands/CO_rcsb/all_rcsb/'
+    #metal_sel = 'name CO'
+    cores_2nd = database_extract.extract_all_core_seq_from_path(indir, metal_sel, extend = 4, extract_2ndshell = True, _2ndshell_extend = 4)
+    database_extract.superimpose_core_and_writepdb(cores_2nd, cores_2nd[0], metal_sel, outdir)
+    return
+
+def extrat_mvdm2nd_reps(indir, outdir_filter, outdir_reps, metal_sel):
+
+    database_extract.rm_core(indir, outdir_filter, min_contact_aa_num=2)
+
+    pdbs = database_extract.get_all_pbd_prody(outdir_filter)
+
+    clusters = database_extract.reduce_dup(pdbs, metal_sel)
+
+    database_extract.write_dup_summary(outdir_reps, pdbs, clusters)
+
+    database_extract.extract_rep_and_writepdb(pdbs, clusters, metal_sel, outdir_reps)
+
+    return
+
+def run_ext_all_mvdm2ndshell():
+    
+    workdir = '/mnt/e/DesignData/ligands/'
+
+    mts = ['CO', 'CU', 'FE', 'MN', 'NI']
+
+    for mt in mts:
+        metal_sel = 'name ' + mt
+        for folder in os.listdir(workdir + mt + '_rcsb/'):
+            if not 'all_rcsb' in folder or not os.path.isdir(workdir + mt + '_rcsb/' + folder):
+                continue
+            indir = workdir + mt + '_rcsb/' + folder + '/'
+            outdir = workdir + 'all/20220710/_Seq_core_2ndshell_' + mt + '/'
+            os.makedirs(outdir, exist_ok=True)
+            extract_core_2nd(indir, outdir, metal_sel)
+
+        outdir_filter = workdir + 'all/20220710/_Seq_core_2ndshell_filter_' + mt + '/'
+        os.makedirs(outdir_filter, exist_ok=True)
+        outdir_reps = workdir + 'all/20220710/_Seq_core_2ndshell_reps_' + mt + '/'
+        os.makedirs(outdir_reps, exist_ok=True)
+
+        extrat_mvdm2nd_reps(outdir, outdir_filter, outdir_reps, metal_sel)
+    return
+
+run_ext_all_mvdm2ndshell()

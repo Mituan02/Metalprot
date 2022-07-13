@@ -28,8 +28,8 @@ class ParaLig:
 
     #>>> Ligand superimpose
     lig_connects = [['O1','O3', 'FE1'], ['O3','O1', 'FE1']]
-    #geo_sel = 'chid X and name FE1 O2 O3'
-    geo_sel = 'chid X and name O1 O3 FE1'
+    #geo_sel = 'chid X and name O1 O3 FE1'
+    geo_sel = 'chid X and name O1 O2 FE1'
     clash_dist = 3.0
     lig_name = 'TTS'
 
@@ -44,7 +44,7 @@ class Para:
     #predefined_resnums = [11, 12, 15, 16, 19, 24, 27, 30, 31, 35, 37, 39, 43, 46, 52, 55, 56, 59, 60, 65, 67, 69, 83, 89, 98, 102, 104, 106, 112, 115, 117, 119]
     
     #>>> Helix6a
-    predefined_win_filters = [('A',85), ('A',87), ('A',100)]
+    predefined_win_filters = [('A',14), ('A',135), ('A',139)]
     predefined_resnums = [7, 17, 21, 58, 61, 62, 65, 68, 69, 72, 77, 78, 80, 81, 84, 85, 88, 89, 91, 92, 95, 132, 135, 138, 142]
     
     predefined_chidres = [('A', x) for x in predefined_resnums]
@@ -274,7 +274,7 @@ def run_all(file, workdir, path_to_database, lig_path, para, para_lig):
     time_tag = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') 
 
     target_path = workdir + file
-    outdir = workdir + para.task_type  + '_result/output_' + '_'+ file + '_' + time_tag + '/'
+    outdir = workdir + para.task_type  + '_'+ file.split('.')[0] + '_' + time_tag + '/'
     os.makedirs(outdir, exist_ok=True)
 
     target = pr.parsePDB(target_path)
@@ -304,9 +304,18 @@ def run_all(file, workdir, path_to_database, lig_path, para, para_lig):
 
 def run_local():
     path_to_database='/mnt/e/DesignData/Combs/Combs2_database/vdMs/'
-    #workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta_86-88-101/_rosetta_r1/output_1_sel/'
-    workdir = '/mnt/e/DesignData/Metalloenzyme/HelixFe_TTS/'
     lig_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/tts_fe_rdkit.pdb'
+
+    #workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta_86-88-101/_rosetta_r1/output_1_sel/'
+
+    #>>>
+    workdir = '/mnt/e/DesignData/Metalloenzyme/HelixFe_TTS/'
+    
+    #>>>
+    workdir = '/mnt/e/DesignData/Metalloenzyme/HelixFe_TTS/helix22_14-135-139_HHD/'
+
+    #>>>
+    workdir = '/mnt/e/DesignData/Metalloenzyme/HelixFe_TTS/helix6_14-135-139_HHE/'
 
     para = Para()
     para_lig = ParaLig()
@@ -344,5 +353,8 @@ def run_wynton():
     return
 
 if __name__=='__main__':
-    run_local()
+    if sys.argv[1] == 'wynton': 
+        run_wynton()
+    elif sys.argv[1] == 'local':
+        run_local()
 

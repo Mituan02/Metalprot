@@ -16,13 +16,16 @@ python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/1ukr/run_selfcenter
 
 class Para():
 
-    win_filter = [('A',37), ('A',66), ('A', 164)]
+    #win_filter = [('A',37), ('A',66), ('A', 164)]
 
-    geometry_path = None
+    predefined_resnums = [4, 6, 8, 9, 24, 34, 35, 37, 62, 64, 66, 68, 70, 77, 79, 81, 87, 109, 111, 113, 116, 119, 122, 125, 127, 129, 161, 162, 166, 168, 170]
+    win_filter = [('A', x) for x in predefined_resnums]
+
+    #geometry_path = None
     #geometry_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/fe_geo.pdb'
+    geometry_path = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/20220116_selfcenter_fe/fe_geo_o.pdb'
 
-
-    metal_metal_dist = 0.45
+    metal_metal_dist = 0.6
 
     num_contact_vdms = [3]
 
@@ -62,7 +65,7 @@ def run(target_path, query_dir, outdir, win_filter, para, path_to_database):
     ss =  search_selfcenter.Search_selfcenter(target_path,  outdir, all_querys, cluster_centroid_dict, query_all_metal, 
         num_contact_vdms, metal_metal_dist, win_filter, validateOriginStruct = False, 
         search_filter= _filter, geometry_path = geometry_path, density_radius = 0.6, 
-        search_2ndshell = True, secondshell_vdms = path_to_database, rmsd_2ndshell = 0.75,
+        search_2ndshell = True, secondshell_vdms = path_to_database, rmsd_2ndshell = 1.2,
         allowed_aa_combinations = allowed_aa_combinations)
 
     search_selfcenter.run_search_selfcenter(ss)

@@ -216,6 +216,20 @@ def lig_2_target(ligs, lig_connect_sel, target, geo_sel = 'chid X and name FE1 O
     return
 
 
+def _ligand_clashing_filteredid(target_coords, lig_coords, lig_len, dist):
+
+    nbrs = NearestNeighbors(radius= dist).fit(target_coords)
+    adj_matrix = nbrs.radius_neighbors_graph(lig_coords).astype(bool)
+
+    adj_matrix_reshape = adj_matrix.reshape((-1, adj_matrix.shape[1]*lig_len))
+    successed = []
+    #>>> TO DO: resahpe the adj_matrix (type csr_matrix) will improve the code.
+    for i in range(adj_matrix_reshape.shape[0]):
+        if adj_matrix_reshape.getrow(i).toarray().any():
+            continue
+        successed.append(i)
+
+    return successed
 
 def ligand_clashing_filter(ligs, target, dist = 3):
     '''
@@ -223,28 +237,20 @@ def ligand_clashing_filter(ligs, target, dist = 3):
     Nearest neighbor is used to calc the distances. 
     '''
     all_coords = []
-    labels = []
+    ids = []
 
     for i in range(len(ligs)):
         coords = ligs[i].select('heavy').getCoords()
         all_coords.extend(coords)
-        labels.extend([i for j in range(len(coords))])
+        ids.extend([i for j in range(len(coords))])
 
-    
+    lig_len = len(ligs[0].select('heavy'))
     target_coords = target.select('name N C CA O CB').getCoords()
-
-    nbrs = NearestNeighbors(radius= dist).fit(target_coords)
-    adj_matrix = nbrs.radius_neighbors_graph(all_coords).astype(bool)
-
-    failed = set()
-    for i in range(adj_matrix.shape[0]):
-        if adj_matrix.getrow(i).toarray().any():
-            failed.add(labels[i])
+    
+    successed_id = _ligand_clashing_filteredid(target_coords, all_coords, lig_len, dist)
     
     filtered_ligs = []
-    for i in range(len(ligs)):
-        if i in failed:
-            continue
+    for i in successed_id:
         filtered_ligs.append(ligs[i])
 
     return filtered_ligs

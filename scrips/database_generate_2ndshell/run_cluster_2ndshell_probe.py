@@ -1,6 +1,9 @@
 '''
 2ndshell Hbond interaction is extracted from Probe program.
-The script cluster the 2ndshell vdms. To run the script, run database_prep_2ndshell_probe.py first. Then run '.../search_2ndshell_pickle.py' to get the pickle form.
+The script cluster the 2ndshell vdms. 
+To run the script, 
+run database_prep_2ndshell_probe.py first. 
+Then run '.../search_2ndshell_pickle.py' to get the pickle form.
 '''
 
 import os
@@ -10,6 +13,10 @@ import prody as pr
 from metalprot.database import database_extract
 from metalprot.database import database_cluster as ldb_clu
 from metalprot.basic import vdmer_2ndshell 
+
+'''
+python /mnt/e/GitHub_Design/Metalprot/scrips/database_generate_2ndshell/run_cluster_2ndshell_probe.py
+'''
 
 workdir = "/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/"
 

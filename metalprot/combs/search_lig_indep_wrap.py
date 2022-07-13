@@ -53,7 +53,7 @@ def prepare_ligs(outdir, target, task_type = 'search_eval', lig_path = None, par
     'search_exists': We can use pre-generated ligands.
     '''
     if task_type == 'search_unknow':
-        position_ligand.run_ligand(outdir, target, lig_path, para_lig.ro1, para_lig.ro2, para_lig.rest1, para_lig.rest2, para_lig.lig_connects, para_lig.geo_sel, para_lig.rot_degree, para_lig.interMolClashSets, clash_dist = 2.5, write_all_ligands=False)
+        position_ligand.run_ligand(outdir, target, lig_path, para_lig.ro1, para_lig.ro2, para_lig.rest1, para_lig.rest2, para_lig.lig_connects, para_lig.geo_sel, para_lig.rot_degree, para_lig.interMolClashSets, clash_dist = para_lig.clash_dist, write_all_ligands=False)
     elif task_type == 'search_eval':
         position_ligand.extract_ligand(outdir, target, para_lig.lig_name)
     elif task_type == 'search_exists':

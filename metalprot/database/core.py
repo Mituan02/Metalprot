@@ -33,7 +33,7 @@ def extend_res_indices(inds_near_res, pdb_prody, extend = 4):
     return extend_inds
 
 
-def get_2ndshell_indices(inds, contact_aa_resinds, pdb_prody, ni_index, only_bb_2ndshell = False, _2nd_extend = 0):
+def get_2ndshell_indices(inds, pdb_prody, ni_index, contact_aa_resinds =[], only_bb_2ndshell = False, _2nd_extend = 0):
     '''
     The method is to extract 2nd shell contact by applying heavy atom distance cut off 3.4.
     '''
@@ -290,7 +290,7 @@ class Core:
             if filter_AA and not self.full_pdb.select('resname ' + AA + ' and resindex ' + str(resind)):
                 continue      
             #inds = get_inds_from_resind(pdb_prody, resind, aa)
-            _2nshell_resinds = get_2ndshell_indices([resind], self.contact_aa_resinds, self.full_pdb, self.metal.getIndex(), only_bb_2ndshell = only_bb_2ndshell)
+            _2nshell_resinds = get_2ndshell_indices([resind],  self.full_pdb, self.metal.getIndex(), self.contact_aa_resinds, only_bb_2ndshell = only_bb_2ndshell)
             if len(_2nshell_resinds) > 0:
                 for _2resind in _2nshell_resinds:      
                     #print(self.full_pdb.getTitle() + '+' + '-'.join([str(x) for x in _2nshell_resinds]))
@@ -311,7 +311,7 @@ class Core:
             _resinds = extend_res_indices([resind], self.full_pdb, extend)
             _resnums = self.full_pdb.select('resindex ' + ' '.join([str(r) for r in _resinds])).getResnums()
             #inds = get_inds_from_resind(pdb_prody, resind, aa)
-            _2nshell_resinds = get_2ndshell_indices([resind], self.contact_aa_resinds, self.full_pdb, self.metal.getIndex(), only_bb_2ndshell = only_bb_2ndshell)
+            _2nshell_resinds = get_2ndshell_indices([resind],  self.full_pdb, self.metal.getIndex(), self.contact_aa_resinds, only_bb_2ndshell = only_bb_2ndshell)
             if len(_2nshell_resinds) > 0:
                 for _2resind in _2nshell_resinds:      
                     #print(self.full_pdb.getTitle() + '+' + '-'.join([str(x) for x in _2nshell_resinds]))

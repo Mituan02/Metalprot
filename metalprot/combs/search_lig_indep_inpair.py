@@ -123,12 +123,17 @@ def search_select_pair_vdm(outdir, target, lig, para, path_to_database, key_a, k
         aa_a = constant.inv_one_letter_code[_aa_a]
         labels_a, vdm_coords_a, df_vdm_filter_filter_a = _get_labels_and_vdm_coords(target, chidres_a, para.vdm_cg_aa_atommap_dict_a, key_a, abple_a, aa_a, para, path_to_database)
 
+        if labels_a.shape[0] ==0:
+            continue
+
         for _aa_b in para.vdm_cg_aa_atommap_dict_b[key_b]['aas']:
             aa_b = constant.inv_one_letter_code[_aa_b]
             labels_b, vdm_coords_b, df_vdm_filter_filter_b = _get_labels_and_vdm_coords(target, chidres_b, para.vdm_cg_aa_atommap_dict_b, key_b, abple_b, aa_b, para, path_to_database)
+            if labels_b.shape[1] ==0:
+                continue
 
             adj_matrix_pair = _get_pair_vdms_adj_matrix(dists, labels_a, vdm_coords_a, labels_b, vdm_coords_b, para)
-            
+                        
             # with open(outdir + '_summary.txt', 'a') as f:
             #     f.write('----------------------------------------------------------\n')
             #     f.write('pos: ({}, {}) key_a: {}, key_b: {}, aa_a:{}, aa_b {}, matrix sum: {}\n'.format(chidres_a, chidres_b, key_a, key_b, aa_a, aa_b, adj_matrix_pair.sum()))

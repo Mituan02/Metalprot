@@ -26,10 +26,7 @@ python /mnt/e/Github_Design/Metalprot/scrips/position_ligand/saha/run_pose_lig_b
 '''
 class Para:
 
-    resnums = [3, 7, 10, 14, 17, 18, 21, 24, 25, 
-        51, 54, 58, 61, 65, 68, 69, 72, 77, 81, 84, 88, 91, 92, 95, 99, 
-        125, 128, 132, 135, 139, 142, 146]
-
+    resnums = [3, 7, 10, 14, 17, 18, 21, 24, 25, 51, 54, 58, 61, 65, 68, 69, 72, 77, 81, 84, 88, 91, 92, 95, 99, 125, 128, 132, 135, 139, 142, 146]
 
     predefined_resnums_a = [('A', r) for r in resnums]
 

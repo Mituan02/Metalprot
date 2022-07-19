@@ -18,9 +18,11 @@ from metalprot.basic import vdmer_2ndshell
 python /mnt/e/GitHub_Design/Metalprot/scrips/database_generate_2ndshell/run_cluster_2ndshell_probe.py
 '''
 
-workdir = "/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/"
+#workdir = "/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/"
+#outdir = workdir + '_Seq_core_2ndshell_reps_probe2ndshell/'
 
-outdir = workdir + '_Seq_core_2ndshell_date_reps_probe2ndshell/'
+workdir = "/mnt/e/DesignData/ligands/all/20220710/"
+outdir = workdir + '_Seq_core_2ndshell_reps_probe2ndshell/'
 
 metal_sel = 'name NI MN ZN CO CU MG FE' 
 align_sel_backbone = 'name C CA N O NI MN ZN CO CU MG FE'

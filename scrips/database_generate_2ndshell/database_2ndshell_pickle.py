@@ -14,12 +14,12 @@ from metalprot.basic import vdmer_2ndshell
 import pickle
 
 '''
-python /mnt/e/GitHub_Design/Metalprot/scrips/search_2ndshell/database_2ndshell_pickle.py
+python /mnt/e/GitHub_Design/Metalprot/scrips/database_generate_2ndshell/database_2ndshell_pickle.py
 '''
 
 vdm_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/20220116_selfcenter_bb2ndshell_notconnect/'
 vdm_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/_Seq_core_2ndshell_date_reps_probe2ndshell/'
-
+vdm_dir = '/mnt/e/DesignData/ligands/all/20220710/_Seq_core_2ndshell_reps_probe2ndshell/'
 
 outdir = vdm_dir + 'pickle_noCYS/'
 os.makedirs(outdir, exist_ok=True)

@@ -152,9 +152,10 @@ def write_2ndshell(ss, workdir, comb_dict):
         return
         
     for key in comb_dict.keys():
-        outdir = workdir + 'win_' + '-'.join([ss.target_index_dict[w] for w in key[0]]) + '/'
+        print(key)
+        outdir = workdir + 'win_' + '-'.join([ss.target_ind2chidres[w][0] + '-' + str(ss.target_ind2chidres[w][1]) for w in key[0]]) + '/'
         
-        tag = 'W_' + '-'.join([ss.target_index_dict[w] for w in key[0]]) + '_X_' + '-'.join(k[0] + '-' + str(k[1]) for k in key[1])
+        tag = 'W_' + '-'.join([ss.target_ind2chidres[w][0] + '-' + str(ss.target_ind2chidres[w][1]) for w in key[0]]) + '_X_' + '-'.join(k[0] + '-' + str(k[1]) for k in key[1])
         
         outdir += tag + '_hb/'
         os.makedirs(outdir, exist_ok=True)

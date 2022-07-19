@@ -185,7 +185,9 @@ def _select_chidres_keys_inpair(target, para):
         for j in range(len(para.predefined_resnums_b)):
             chidres_a = para.predefined_resnums_a[i]
             chidres_b = para.predefined_resnums_b[j]
-
+            
+            if chidres_a == chidres_b:
+                continue
             pos_a = target.select('chid ' + chidres_a[0] + ' and resnum ' + str(chidres_a[1]))
             pos_b = target.select('chid ' + chidres_b[0] + ' and resnum ' + str(chidres_b[1]))
 

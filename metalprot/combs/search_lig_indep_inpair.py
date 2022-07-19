@@ -32,10 +32,11 @@ def _calc_lig_sel_dist(lig, key_a, key_b, para):
 
 def _vdm_bb_clashing(target, chidres, df_vdm_filter, dist_cut = 2.5):
     '''
-    
+    The clashing is between the heavy atoms. 
     '''
     df_vdm_filter_heavy = df_vdm_filter[(df_vdm_filter['resnum'] == 10)
-            & ~(df_vdm_filter['name'].isin(['N', 'C', 'CA', 'O']))
+            & (df_vdm_filter['chain'] == 'Y')
+            #& ~(df_vdm_filter['chain'] == 'X' & df_vdm_filter['name'].isin(['N', 'C', 'CA', 'O', 'CB']))
             & ~(df_vdm_filter['atom_type_label'].isin(['h_pol', 'h_alkyl', 'h_aro']))]
 
     bb_coords = target.select('heavy and not ( chid ' + chidres[0] + ' and resnum ' + str(chidres[1]) + ')').getCoords()

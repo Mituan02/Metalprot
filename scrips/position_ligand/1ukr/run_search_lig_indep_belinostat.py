@@ -25,7 +25,7 @@ class Para:
     task_type = 'search_unknow' #>>> 'search_unknow', 'search_eval', 'search_exists'
 
 
-    #>>> Helix6a
+    #>>> 1ukr
     predefined_win_filters = [('A',37), ('A',66), ('A',164)]
 
     predefined_resnums = [4, 6, 8, 9, 24, 34, 35, 37, 62, 64, 66, 68, 70, 77, 79, 81, 87, 109, 111, 113, 116, 119, 122, 125, 127, 129, 161, 162, 166, 168, 170]

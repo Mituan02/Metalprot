@@ -152,13 +152,13 @@ def run_search(target, ligs, path_to_database, para, predefined_chidres, lig_cg_
     # predefined_resnums = [102]
     abples, phipsi = utils.seq_get_ABPLE(target)
 
-
     #summaries = []
     lig_vdm_dict = {}
     for cg_id in para.vdm_cg_aa_atommap_dict.keys():
         cg = para.vdm_cg_aa_atommap_dict[cg_id]['cg']
+        correspond_resname = para.vdm_cg_aa_atommap_dict[cg_id]['correspond_resname']
 
-        if para.task_type == 'search_2ndshell' and (para.vdm_cg_aa_atommap_dict[cg_id]['correspond_resname'] != constant.inv_one_letter_code[lig_cg_2ndshell[0]] or cg not in lig_cg_2ndshell[1]):
+        if para.task_type == 'search_2ndshell' and (para.vdm_cg_aa_atommap_dict[cg_id]['correspond_resname'] != lig_cg_2ndshell[0] or cg not in lig_cg_2ndshell[1]):
             print('cg {} is not for the 2ndshell of aa {}.'.format(cg, lig_cg_2ndshell))
             continue
 
@@ -227,8 +227,8 @@ def run_search_2ndshell(file, workdir, outdir, path_to_database, lig_path, para)
         if not predefined_chidres and para.task_type == 'search_2ndshell':
             predefined_chidres = search_lig_indep_2ndshell.calc_chidres_around_pose(target, para.predefined_win_filters[i], para.predefined_win_filters, dist = 12)
 
-        lig_vdm_dict = run_search(target, [lig], path_to_database, para, predefined_chidres, para.lig_cg_2ndshell[i])
+        lig_vdm_dict = run_search(target, [lig], path_to_database, para, predefined_chidres, (lig.getResnames()[0], para.lig_cg_2ndshell[i]))
         print('lig_vdm_dict size {}'.format(len(list(lig_vdm_dict.keys()))))
-        write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict, i, para)
+        write_vdm(outdir, outdir_all, outdir_uni, target, lig_vdm_dict, para)
 
     return

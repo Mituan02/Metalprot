@@ -357,10 +357,18 @@ class Search_selfcenter(Search_vdM):
         for key in self.best_aa_comb_dict.keys():
             if not ('BestOPscore' in self.best_aa_comb_dict[key].tag or 'Best2ShScore' in self.best_aa_comb_dict[key].tag or 'Best2ShRmsd' in self.best_aa_comb_dict[key].tag):
                 continue
+
+            outpath = 'win_' + '-'.join([self.target_ind2chidres[k][0] + '-' + str(self.target_ind2chidres[k][1]) for k in key[0]]) + '/'
+            outdir = self.workdir + outpath
+            if not os.path.exists(outdir):
+                os.mkdir(outdir)
+
             tag = 'W_' + '-'.join([self.target_ind2chidres[k][0] + '-' + str(self.target_ind2chidres[k][1]) for k in key[0]]) + '_' + '-'.join([k[0] for k in key[1]]) + '_' + '-'.join([str(k[1]) for k in key[1]])
             ag = prody_ext.combine_vdm_into_ag(self.best_aa_comb_dict[key].centroid_dict.values(), tag, self.best_aa_comb_dict[key].geometry, self.best_aa_comb_dict[key].overlapScore, self.best_aa_comb_dict[key].cluScore)
             pdb_path = self.outdir_represent + tag + '_' + self.best_aa_comb_dict[key].tag
-            pr.writePDB(pdb_path + '.pdb', ag)    
+            pr.writePDB(pdb_path + '.pdb', ag) 
+            pdb_path = outdir + tag + '_' + self.best_aa_comb_dict[key].tag
+            pr.writePDB(pdb_path + '.pdb', ag)               
             # # If the ideal geometry is not used as a filter before. 
             # if self.best_aa_comb_dict[key].geo_rmsd < 0: 
             #     ideal_geometry, rmsd = Search_filter.get_min_geo(self.best_aa_comb_dict[key].geometry, self.geo_struct)
@@ -369,13 +377,15 @@ class Search_selfcenter(Search_vdM):
             if self.best_aa_comb_dict[key].ideal_geo:
                 pdb_path_idealgeo = self.outdir_represent + tag + '_idealgeo_' + str(round(self.best_aa_comb_dict[key].geo_rmsd, 2)) + '.pdb'
                 pr.writePDB(pdb_path_idealgeo, self.best_aa_comb_dict[key].ideal_geo)   
+                pdb_path_idealgeo = outdir + tag + '_idealgeo_' + str(round(self.best_aa_comb_dict[key].geo_rmsd, 2)) + '.pdb'
+                pr.writePDB(pdb_path_idealgeo, self.best_aa_comb_dict[key].ideal_geo)  
            
-           #>>> Write secondshell
+            #>>> Write secondshell
             for lig_key in self.best_aa_comb_dict[key].secondshell_dict.keys():
                 for ag, _infos in self.best_aa_comb_dict[key].secondshell_dict[lig_key]:
                     _chidres = self.target_ind2chidres[lig_key[0]] 
                     _2ShTag =  _chidres[0] + str(_chidres[1]) + '_' + '_'.join([_infos[0], _infos[1], _infos[2][0], str(_infos[2][1]), str(round(_infos[5], 2)), str(round(_infos[7], 2))])
-                    pr.writePDB(self.outdir_represent + tag + '_' + _2ShTag, ag)
+                    pr.writePDB(outdir + tag + '_' + _2ShTag, ag)
         return
 
 

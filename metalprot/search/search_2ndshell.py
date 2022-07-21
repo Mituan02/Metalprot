@@ -11,7 +11,7 @@ class Para:
     use_enriched = True
     use_abple=True
 
-    rmsd = 0.75
+    rmsd = 1.0
     
     aa_cg_2ndshell_dict = {
             'D':['coo'],
@@ -129,7 +129,7 @@ def run_search_2ndshell(target, neighbor_comb_dict, target_ind2chidres, resnum_f
 
         predefined_chidres = search_lig_indep_2ndshell.calc_all_chidres_around_pose(target, resnum_filtered, dist = 12)
 
-        lig_vdm_dict = search_lig_indep_wrap.run_search(target, ligs, path_to_database, para, predefined_chidres, (aa, para.aa_cg_2ndshell_dict[aa]))
+        lig_vdm_dict = search_lig_indep_wrap.run_search(target, ligs, path_to_database, para, predefined_chidres, (constant.inv_one_letter_code[aa], para.aa_cg_2ndshell_dict[aa]))
 
         for lig_id in lig_vdm_dict.keys():
             lig_key = lig_keys[lig_id]

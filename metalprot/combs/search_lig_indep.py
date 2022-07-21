@@ -41,6 +41,7 @@ def lgd_sel_coord(lgd, lgd_sel):
         try:
             coords.extend(lgd.select('name ' + lsa).getCoords().flatten())
         except:
+            print('Error: likely set the wrong ligand or 2ndshell residue.')
             print(lgd.getNames())
             print(lgd_sel)
     return coords
@@ -155,7 +156,7 @@ def search_lig_at_cg_aa_resnum(target, chidres, pos, abple, ligs, vdm_cg_aa_atom
 
     labels, vdm_coords = gvdm_helper.get_vdm_labels_coords_4old_vdm_db(df_vdm, vdm_cg_aa_atommap_dict[cg_id]['correspond_resname'], vdm_cg_aa_atommap_dict[cg_id]['represent_name'], vdm_cg_aa_atommap_dict[cg_id]['correspond_names'])
 
-    #<<< Debgu
+    #<<< Debug
     # for i in range(labels.shape[0]):
     #     x = labels.iloc[i]
     #     v = df_vdm[(df_vdm['CG'] == x['CG']) & (df_vdm['rota'] == x['rota']) & (df_vdm['probe_name'] == x['probe_name'])]

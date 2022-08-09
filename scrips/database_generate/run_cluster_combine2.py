@@ -1,3 +1,7 @@
+'''
+Generating database with 2 binding amino acids.
+'''
+
 import os
 import sys
 import prody as pr

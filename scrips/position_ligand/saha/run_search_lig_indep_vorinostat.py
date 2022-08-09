@@ -30,6 +30,11 @@ class Para:
     predefined_resnums = [24, 25, 51, 54, 58, 61, 88, 91, 92, 95, 99, 124, 125, 135]
     predefined_chidres = [('A', x) for x in predefined_resnums]
 
+    #>>> 0009
+    predefined_win_filters = [('A', 58), ('A', 91), ('A', 95)]
+    predefined_resnums = [14, 17, 21, 54, 57, 61, 88, 128, 132, 135]
+    predefined_chidres = [('A', x) for x in predefined_resnums]    
+
     #>>> Database para
     use_enriched = True
     use_abple=True
@@ -229,7 +234,8 @@ def run_local():
 
 def run_wynton():
     path_to_database='/wynton/home/degradolab/lonelu/DesignData/Database/vdMs/'
-    workdir = '/wynton/home/degradolab/lonelu/DesignData/Metalloenzyme/SAHA_Vorinostat/helix1_17-21-132/'
+    #workdir = '/wynton/home/degradolab/lonelu/DesignData/Metalloenzyme/SAHA_Vorinostat/helix1_17-21-132/'
+    workdir = '/wynton/home/degradolab/lonelu/DesignData/Metalloenzyme/SAHA_Vorinostat/SAHA_Rosetta20220728/'
     lig_path = '/wynton/home/degradolab/lonelu/DesignData/Metalloenzyme/SAHA_Vorinostat/SuperLig/'
     
     para = Para()

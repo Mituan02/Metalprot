@@ -33,7 +33,7 @@ Adjust the '.resfile'.
 Pre make the 'output' folder.
 
 ## Account.
-Run AF2 colab: lonelu.af@gmail.com, lonelu.af2@gmail.com
+Run AF2 colab: lonelu.af@gmail.com, lonelu.af2@gmail.com, pw: Inspiron_15
 
 ## Dialog
 In the design process, I use nick_helix6 to start, because it contains several good metal binding sites. Eventually, all the nick_helix_bundles are same on bottom 2helix when considering the binding of the ligand.

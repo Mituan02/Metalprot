@@ -1,15 +1,16 @@
+
 import itertools
 import os
 from numpy.core.fromnumeric import argmin
 import prody as pr
 import numpy as np
-
+from ..basic import constant, prody_ext
 
 # According to the prody atom flag (http://prody.csb.pitt.edu/manual/reference/atomic/flags.html#flags), NI MN ZN CO CU MG FE CA are not all flag as ion. 
 # Note that calcium is read as CA, which is same as alpha carbon in prody selection. 
 # So to select calcium, we need to add ion before it.
 
-metal_sel = 'ion or name NI MN ZN CO CU MG FE' 
+metal_sel = 'name NI MN ZN CO CU MG FE' 
 
 
 def connectivity_filter(pdb_prody, ind, ext_ind):
@@ -270,6 +271,23 @@ class Core:
             sel_pdb_prody = self.full_pdb.select('resindex ' + str(p[0]) + ' ' +  str(p[1]) + ' '+ str(self.metal_resind))
             
             self.add2atomGroupDict(key, (sel_pdb_prody, ''))
+        return
+
+
+    def generate_AAdAAdAA_Metal(self, key = 'AAdAAdAA_Metal'):
+        _ags = []
+        for i in self.contact_aa_resinds:
+            #if self.full_pdb.select('resindex ' + str(i)).getResnames()[0] not in ['HIS', 'GLU', 'ASP', 'CYS']:
+            #    continue
+            _ags.append(self.full_pdb.copy().select('resindex ' + str(i)).toAtomGroup())
+
+        for ps in itertools.combinations(range(len(_ags)), 3):
+            title = ''.join([constant.one_letter_code[_ags[p].getResnames()[0]] + str(p) for p in ps])
+            sel_ags = [_ags[p] for p in ps]
+            sel_ags.append(self.metal.copy())
+
+            sel_pdb_prody = prody_ext.combine_ags(sel_ags, title, ABCchids=['A', 'B', 'C', 'M'])
+            self.add2atomGroupDict(key, (sel_pdb_prody, title))
         return
 
 

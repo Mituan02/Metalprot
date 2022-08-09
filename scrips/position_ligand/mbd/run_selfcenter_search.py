@@ -1,4 +1,5 @@
 import os
+from re import T
 import sys
 import prody as pr
 import numpy as np
@@ -8,31 +9,18 @@ from metalprot.search import search_selfcenter
 from metalprot.basic import filter
 import pickle
 
-
 '''
-python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/ntf2_1dmm/run_selfcenter_search.py local
+python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/mbd/run_selfcenter_search.py local
 
 '''
 
 class Para():
 
-    #win_filter = [('A',15), ('A',19), ('A', 27)]
-
-    # >>> 32 Helixbundles Nick.
-    resnums = [3, 7, 10, 14, 17, 18, 21, 24, 25, 
-        51, 54, 58, 61, 65, 68, 69, 72, 77, 81, 84, 88, 91, 92, 95, 99, 
-        125, 128, 132, 135, 139, 142, 146]
-
-    #resnums = [17, 21, 132]
-    # >>> 2 longer Helixbundles Nick.
-    # resnums = [3, 7, 10, 14, 17, 18, 21, 24, 25, 28, 31, 35, 40, 43, 47,  
-    #     51, 54, 58, 61, 65, 68, 69, 72, 77, 81, 84, 88, 91, 92, 95, 98, 102, 105, 109, 114, 118, 121, 
-    #     125, 128, 132, 135, 139, 142, 146]
-
-    win_filter = [('A', x) for x in resnums]
+    predefined_resnums = list(range(6, 103))
+    win_filter = [('A', x) for x in predefined_resnums]
 
     geometry_path = None
-    #geometry_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/fe_geo_o.pdb'
+    #geometry_path = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/fe_geo.pdb'
     #geometry_path = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/20220116_selfcenter_fe/fe_geo_o.pdb'
 
     metal_metal_dist = 0.6
@@ -41,6 +29,7 @@ class Para():
 
     allowed_aa_combinations = [['H', 'H', 'D'], ['H', 'H', 'E'], ['H', 'H', 'H']] 
     #allowed_aa_combinations = []
+
 
 
 def run(target_path, query_dir, outdir, win_filter, para, path_to_database):
@@ -74,7 +63,7 @@ def run(target_path, query_dir, outdir, win_filter, para, path_to_database):
     ss =  search_selfcenter.Search_selfcenter(target_path,  outdir, all_querys, cluster_centroid_dict, query_all_metal, 
         num_contact_vdms, metal_metal_dist, win_filter, validateOriginStruct = False, 
         search_filter= _filter, geometry_path = geometry_path, density_radius = 0.6, 
-        search_2ndshell = True, secondshell_vdms = path_to_database, rmsd_2ndshell = 1.0,
+        search_2ndshell = True, secondshell_vdms = path_to_database, rmsd_2ndshell = 0.85,
         allowed_aa_combinations = allowed_aa_combinations)
 
     search_selfcenter.run_search_selfcenter(ss)
@@ -82,17 +71,15 @@ def run(target_path, query_dir, outdir, win_filter, para, path_to_database):
 
 
 def run_local():
-
+    #>>> Local
     query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS/'
     #query_dir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/pickle_noCYS/'
 
-    #workdir = '/mnt/e/DesignData/ligands/LigandBB/_lig_fe/_ntf2_rosetta_16-20-28/_rosetta_tts_r3_876/output_55F_newlop2/metalprot_eval/'
-    #workdir = '/mnt/e/DesignData/Metalloenzyme/HelixFe/'
-    workdir = '/mnt/e/DesignData/Metalloenzyme/HelixZn/'
+    workdir = '/mnt/e/DesignData/Metalloenzyme/MBD/'
     
-    #path_to_database='/mnt/e/DesignData/Combs/Combs2_database/vdMs/'
-    path_to_database='/mnt/e/DesignData/Database/vdMs_all/'
-    pdb_file = '06_f63440_nick_ala.pdb'
+    path_to_database='/mnt/e/DesignData/Combs/Combs2_database/vdMs/'
+
+    pdb_file = '3nz3.pdb'
 
     para = Para()
 
@@ -102,20 +89,16 @@ def run_local():
     
     run(target_path, query_dir, outdir, win_filter, para, path_to_database)
 
-    return 
-
 
 def run_wynton():
-
+    #>>> On Wynton
+    #query_dir = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/database/pickle_all_fe_220119/'
+    #query_dir = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/database/pickle_noCYS_mn_fe_co_220119/'
     query_dir = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/20211013_selfcenter/pickle_noCYS/'
-    #query_dir = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/20220116_selfcenter_fe/pickle_noCYS/'
-    
     #workdir = '/wynton/home/degradolab/lonelu/GitHub_Design/Metalprot/data/ntf2_fe/family_3vsy/'
-    #workdir = '/wynton/home/degradolab/lonelu/DesignData/Metalloenzyme/HelixFe/'
-    workdir = '/wynton/home/degradolab/lonelu/DesignData/Metalloenzyme/HelixZn/'
+    workdir = '/wynton/home/degradolab/lonelu/DesignData/Metalloenzyme/MBD/'
 
-    #path_to_database='/wynton/home/degradolab/lonelu/DesignData/Database/vdMs/'
-    path_to_database='/wynton/home/degradolab/lonelu/DesignData/Database/vdMs_all/'
+    path_to_database='/wynton/home/degradolab/lonelu/DesignData/Database/vdMs/'
 
     para = Para()
 
@@ -137,5 +120,3 @@ if __name__=='__main__':
         run_wynton()
     elif sys.argv[1] == 'local':
         run_local()
-
-

@@ -1,5 +1,4 @@
 import os
-from re import T
 import sys
 import prody as pr
 import numpy as np

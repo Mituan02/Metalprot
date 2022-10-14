@@ -132,11 +132,11 @@ APBEL_DICT = read_apble(Path(__file__).parent.parent / 'constants/APBLE.txt')
 with open(Path(__file__).parent.parent / 'constants/abple_dict.pkl', 'rb') as infile:
     abple_dict = pickle.load(infile)                
 
-tetrahydra_geo = pr.parsePDB(Path(__file__).parent.parent / 'constants/tetrahydral_geo.pdb')
+tetrahydra_geo = pr.parsePDB(os.path.join(Path(__file__).parent.parent,'constants/tetrahydral_geo.pdb'))
 
-tetrahydra_geo_o = pr.parsePDB(Path(__file__).parent.parent / 'constants/Zn_Tet_O.pdb')
+tetrahydra_geo_o = pr.parsePDB(os.path.join(Path(__file__).parent.parent, 'constants/Zn_Tet_O.pdb'))
 
-ideal_ala = pr.parsePDB(Path(__file__).parent.parent / 'constants/ideal_ala.pdb')
+ideal_ala = pr.parsePDB(os.path.join(Path(__file__).parent.parent, 'constants/ideal_ala.pdb'))
 
 with open(Path(__file__).parent.parent / 'constants/ideal_alanine_bb_only.pkl', 'rb') as f:
     ideal_alanine_bb_only = pickle.load(f)

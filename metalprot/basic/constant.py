@@ -141,7 +141,7 @@ ideal_ala = pr.parsePDB(os.path.join(Path(__file__).parent.parent, 'constants/id
 try:
     with open(Path(__file__).parent.parent / 'constants/ideal_alanine_bb_only.pkl', 'rb') as f:
         ideal_alanine_bb_only = pickle.load(f)
+    ideal_ala_coords = np.array(ideal_alanine_bb_only[['c_x', 'c_y', 'c_z']])
 except:
-        ideal_alanine_bb_only = None
-        
-ideal_ala_coords = np.array(ideal_alanine_bb_only[['c_x', 'c_y', 'c_z']])
+    ideal_alanine_bb_only = None
+    ideal_ala_coords = None

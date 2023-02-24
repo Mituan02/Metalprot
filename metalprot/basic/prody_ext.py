@@ -246,11 +246,15 @@ def target_to_all_gly_ala(target, title, win_no_mutation = [], aa = 'ALA', keep_
                 '''
                 Add CB for gly in original structure.
                 '''
-                ala = constant.ideal_ala.copy()
-                pr.calcTransformation(ala.select('name N CA C'), c.select('name N CA C')).apply(ala)
-                ala.setChids([c.getChids()[0] for x in range(len(ala))])
-                ala.setResnums([c.getResnums()[0] for x in range(len(ala))])
-                c = ala.select(bb_sel)
+                ala_heavy = constant.ideal_ala.select('heavy').copy()
+                pr.calcTransformation(ala_heavy.select('name N CA C'), c.select('name N CA C')).apply(ala_heavy)
+                ala_heavy.setChids([c.getChids()[0] for x in range(len(ala_heavy))])
+                ala_heavy.setResnums([c.getResnums()[0] for x in range(len(ala_heavy))])
+                for x in ['N', 'CA', 'C', 'O', 'CB']:
+                    if c.select('name ' + x) is not None:
+                        ala_heavy.select('name ' + x).setCoords(c.select('name ' + x).getCoords())
+                c = ala_heavy.select(bb_sel)
+
         coords.extend(c.getCoords())
         chids.extend(c.getChids())
         names.extend(c.getNames())

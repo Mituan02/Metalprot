@@ -15,10 +15,11 @@ python /mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/belinostat/run_self
 
 class Para():
      
-    resnums = [3, 7, 10, 14, 17, 18, 21, 24, 25, 
-        51, 54, 58, 61, 65, 68, 69, 72, 77, 81, 84, 88, 91, 92, 95, 99, 
-        125, 128, 132, 135, 139, 142, 146]
+    # resnums = [3, 7, 10, 14, 17, 18, 21, 24, 25, 
+    #     51, 54, 58, 61, 65, 68, 69, 72, 77, 81, 84, 88, 91, 92, 95, 99, 
+    #     125, 128, 132, 135, 139, 142, 146]
     #resnums = [3, 7, 72, 77]
+    resnums = [x for x in range(2, 146)]
 
     win_filter = [('A', x) for x in resnums]
 
@@ -29,8 +30,8 @@ class Para():
 
     num_contact_vdms = [3]
 
-    allowed_aa_combinations = [['H', 'H', 'D'], ['H', 'H', 'E'], ['H', 'H', 'H']] 
-    #allowed_aa_combinations = []
+    #allowed_aa_combinations = [['H', 'H', 'D'], ['H', 'H', 'E'], ['H', 'H', 'H']] 
+    allowed_aa_combinations = [['H', 'H', 'H']]
 
 
 
@@ -74,14 +75,14 @@ def run(target_path, query_dir, outdir, win_filter, para, path_to_database):
 
 def run_local():
 
-    query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS/'
+    query_dir = '/mnt/e/DesignData/ligands_metal/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS/'
     #query_dir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/pickle_noCYS/'
 
-    workdir = '/mnt/e/DesignData/Metalloenzyme/belinostat/targets/'
+    workdir = '/mnt/e/DesignData/Metalloprotein/ParametricBundles2/param_ala/'
     
     path_to_database='/mnt/e/DesignData/Combs/Combs2_database/vdMs/'
 
-    pdb_file = '01_f63440_nick_ala.pdb'
+    pdb_file = '00010.pdb'
 
     para = Para()
 

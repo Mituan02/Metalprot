@@ -7,6 +7,7 @@ import os
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse import lil_matrix
+from . import gvdm_helper
 
 class CgCombInfo:
     def __init__(self):
@@ -35,7 +36,7 @@ def get_vdm_labels_coords(dfa, represent_name, correspond_resname, correspond_na
     represent_name = 'OD2'
     correspond_names = ['CG', 'OD1', 'OD2']
     '''
-    labels = dfa[(dfa['chain'] == 'Y') & (dfa['resname'] == correspond_resname) & (dfa['name'] == represent_name)][['CG', 'rota', 'probe_name', 'seg_chain_resnum']]
+    labels = dfa[(dfa['chain'] == 'Y') & (dfa['resname'] == correspond_resname) & (dfa['name'] == represent_name)][['CG', 'rota', 'probe_name']]
 
     vdm_coords =[]
     for k in correspond_names:
@@ -84,7 +85,9 @@ def write_vdms(outdir, all_inds, labels, dfa, prefix):
         # if v['resname'].iloc[-1] != 'ARG':
         #     continue
         print(ind)
-        combs2.design.functions.print_dataframe(v, outpath=outdir, tag = '_' + str(ind), prefix = prefix)
+        ag = gvdm_helper.df2ag(v)
+        pr.writePDB(outdir + prefix + '_' + str(ind),  ag)
+        #combs2.design.functions.print_dataframe(v, outpath=outdir, tag = '_' + str(ind), prefix = prefix)
     return
 
 
@@ -122,7 +125,7 @@ def vdm_ligand_clash(vdm, ligand, clash_radius = 2.7):
     return False
 
 
-def search_vdm(cg_dict, ligands, cg_id, input_dict, labels_cgs, df_cgs, dist_ind_cgs, rmsd = 0.5):
+def search_vdm(dfa, ligands, cg_id, input_dict, labels_cgs, df_cgs, dist_ind_cgs, rmsd = 0.5):
     '''
     s: combs2.design._sample.Sample
 
@@ -142,13 +145,14 @@ def search_vdm(cg_dict, ligands, cg_id, input_dict, labels_cgs, df_cgs, dist_ind
     }
     '''
 
-    dfa = cg_dict[input_dict[cg_id]['cg']]
+    #dfa = cg_dict[input_dict[cg_id]['cg']]
 
     ligand_coords = get_ligand_coords(ligands, input_dict[cg_id]['lgd_sel'])
 
     labels, vdm_coords = get_vdm_labels_coords(dfa, input_dict[cg_id]['represent_name'], input_dict[cg_id]['correspond_resname'], input_dict[cg_id]['correspond_names'])
 
     if vdm_coords.shape[0] <=0:
+        print('No vdM coords are generated.')
         return
     
     num_cg_atoms = len(input_dict[cg_id]['lgd_sel'])
@@ -159,7 +163,8 @@ def search_vdm(cg_dict, ligands, cg_id, input_dict, labels_cgs, df_cgs, dist_ind
     labels_cgs[cg_id] = labels
     df_cgs[cg_id] = dfa
     dist_ind_cgs[cg_id] = (dists, inds)
-
+    print('found {} vdms for cg {}.'.format(len(dist_ind_cgs[cg_id][1]), cg_id))
+    
     return 
 
 
@@ -194,22 +199,15 @@ def construct_vdm_write(outdir, ligands, labels_cgs, input_dict, df_cgs, dist_in
                     print(labels.shape)
                     print(inds)
                 x = labels.iloc[ind]
-                v = dfa[(dfa['CG'] == x['CG']) & (dfa['rota'] == x['rota']) & (dfa['probe_name'] == x['probe_name']) & (dfa['seg_chain_resnum'] == x['seg_chain_resnum'])]
+                v = dfa[(dfa['CG'] == x['CG']) & (dfa['rota'] == x['rota']) & (dfa['probe_name'] == x['probe_name'])]
                 if vdm_ligand_clash(v, ligands[i], clash_radius):
                     continue
-                
-                seg_chain_resnum = v['seg_chain_resnum'].iloc[-1]
-                #print(seg_chain_resnum)
-                resname = v['resname'].iloc[-1]
-
-                if len(benchmark_filters) > 0:
-                    if seg_chain_resnum in benchmark_filters.keys():
-                        if benchmark_filters[seg_chain_resnum] != resname:
-                            continue
 
                 info.append((rmsd, v)) 
-                prefix = 'Lig-'+ str(i) + '_'  + '_'.join(str(z) for z in seg_chain_resnum) + '_key_' + '-'.join(str(z) for z in cg) + '_rmsd_' + str(round(rmsd, 2))  + '_' + resname + '_' # + str(x['C_score_bb_ind']) + '_'                              
-                combs2.design.functions.print_dataframe(v, outpath=outdir, tag = '_' + str(ind), prefix = prefix)
+                prefix = 'Lig-'+ str(i) + '_key_' + '-'.join(str(z) for z in cg) + '_rmsd_' + str(round(rmsd, 2))  + '_' + str(round(v['C_score_bb_ind'].iloc[0], 2)) + '_'                              
+                #combs2.design.functions.print_dataframe(v, outpath=outdir, tag = '_' + str(ind), prefix = prefix)
+                ag = gvdm_helper.df2ag(v)
+                pr.writePDB(outdir + prefix + '_' + str(ind),  ag)
             cgCombInfo.vdm_cgs[cg] = info
         CgCombInfoDict[i] = cgCombInfo
         

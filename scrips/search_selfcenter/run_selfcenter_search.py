@@ -7,12 +7,12 @@ import time
 import prody as pr
 
 '''
-python /mnt/e/GitHub_Design/Metalprot/scrips/search_selfcenter/run_selfcenter_search.py
+python /Users/lonelu/GitHub_Design/Metalprot/scrips/search_selfcenter/run_selfcenter_search.py
 
 '''
 start_time = time.time()
 
-query_dir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20211013/20211013_selfcenter/pickle_noCYS/'
+query_dir = '/Users/lonelu/GitHub_Design/Metalprot/Database/ZN_HDEC_20210113/'
 
 with open(query_dir + 'all_metal_vdm.pkl', 'rb') as f:
     query_all_metal = pickle.load(f)
@@ -25,26 +25,26 @@ with open(query_dir + 'cluster_centroid_dict.pkl', 'rb') as f:
 
 print(len(all_querys))
 
-path_to_database='/mnt/e/DesignData/Combs/Combs2_database/vdMs/'
+path_to_database='/Users/lonelu/DesignData/Combs/vdMs/'
 
 ### run Search_struct
 
-# workdir = '/mnt/e/DesignData/ligands/LigandBB/MID1sc10/'
-
-# outdir = workdir + 'output_selfcenter/'
-
-# target_path = workdir + '5od1_zn.pdb'
-
-# win_filter = [('A',35),  ('A', 61),  ('A', 65)]
-
-
-workdir = '/mnt/e/DesignData/ligands/LigandBB/_zn_case/6dwv/'
+workdir = '/Users/lonelu/DesignData/ligands_metal_prot/MID1sc10/'
 
 outdir = workdir + 'output_selfcenter/'
 
-target_path = workdir + '6dwv.pdb'
+target_path = workdir + '5od1_zn.pdb'
 
-win_filter = [('B', 8), ('B', 10), ('B', 178)]
+win_filter = [('A',35),  ('A', 61),  ('A', 65)]
+
+
+# workdir = '/mnt/e/DesignData/ligands/LigandBB/_zn_case/6dwv/'
+
+# outdir = workdir + 'output_selfcenter/'
+
+# target_path = workdir + '6dwv.pdb'
+
+# win_filter = [('B', 8), ('B', 10), ('B', 178)]
 
 
 # workdir = '/mnt/e/DesignData/ligands/LigandBB/8adh/'

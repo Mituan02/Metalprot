@@ -81,6 +81,14 @@ def neighbor_generate_nngraph(ss):
     ss is the search.Search_vdM object.
     '''
     wins = sorted(list(ss.neighbor_query_dict.keys()))
+    if len(wins) <= 2:
+        print('The win Please check you input parameters. Something maybe wrong.')
+    if len(wins) <= 0:
+        print('The win Please check you input parameters. Something maybe wrong.')
+        return
+
+    #print('neighbor_generate_nngraph: {}'.format(wins))
+
     metal_vdm_size = len(ss.all_metal_vdm.get_metal_mem_coords())
 
     all_coords = []
@@ -134,6 +142,8 @@ def generate_mask_labels(ss, wins, metal_vdm_size, bb_coords, all_coords):
     '''
 
     #>>> metal_clashing with bb
+    #print('generate_mask_labels: {}'.format(bb_coords.shape))
+    #print('generate_mask_labels: {}'.format(len(all_coords)))
     nbrs_bb = NearestNeighbors(radius= 3.5).fit(all_coords)
     adj_matrix_bb = nbrs_bb.radius_neighbors_graph(bb_coords).astype(bool)
     #print(adj_matrix_bb.shape)

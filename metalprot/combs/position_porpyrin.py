@@ -13,16 +13,16 @@ def rotate_porphyrin_first(lig, rot, rotation_degree = 1, metal = 'FE'):
     rot_dist = pr.calcDistance(rot_coords[1], rot_coords[0])
 
     z_coords = np.zeros((2, 3), dtype=float)
-    z_coords[0, 0] = rot_dist
+    z_coords[1, -1] = rot_dist
 
     pr.calcTransformation(rot_coords, z_coords).apply(lig)
 
     all_ligs = []
     for i in range(0, 12, rotation_degree):
         _lig = lig.copy()
-        rotation = Rotation.from_rotvec(np.radians(i)*np.array([1, 0, 0]))        
+        rotation = Rotation.from_rotvec(np.radians(i)*np.array([0, 0, 1]))        
         _coords = rotation.apply(_lig.getCoords())
-        _coords[0] = _lig.select('name ' + 'NE2')[0].getCoords()
+
         _lig.setCoords(_coords)
 
         _lig.setTitle(lig.getTitle() + '_' + '-'.join(rot) + '_' + str(i))
@@ -89,3 +89,5 @@ def porphyrin2vdm(ligs, lig_connects, vdm, metal_sel = 'name NI MN ZN CO CU MG F
         transformation.apply(lg)
 
     return 
+
+

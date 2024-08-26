@@ -11,11 +11,20 @@ from metalprot.database import database_extract
 from metalprot.database import database_vdMAtomOrder
 
 '''
-python /mnt/e/GitHub_Design/Metalprot/scrips/database_generate/database_extract_vdm_from_core.py
+python /Users/lonelu/GitHub_Design/Metalprot/scrips/database_generate/database_extract_vdm_from_core.py
 '''
 
-def extract_single_vdm(cores, outdir, AA, key, basic = True, extention = None, n = None, key_out = None, phipsi = False):
+def extract_single_vdm(cores, outdir, AA, key, basic = True, extention = None, n = None, key_out = None, phipsi = True):
     for c in cores:   
+
+        if AA == 'CYS':
+            ## Filter 4 CYS ones. The reason is that there are too many CYS and I think the all-CYS binding is very special.
+            print('------')
+            print(list(c.contact_aas.getResnames()))
+            if list(c.contact_aas.getResnames()).count('CYS') >= len(list(c.contact_aas.getResnames())):
+                print(list(c.contact_aas.getResnames()).count('CYS'))
+                continue
+
         if basic:
             c.generate_AA_Metal(AA, key)
         elif extention:
@@ -50,17 +59,18 @@ def extract_vdm(coredir, outdir, aas):
             os.makedirs(_outdir, exist_ok=True)
             for pdb in _pdbs:
                 pr.writePDB(_outdir + pdb.getTitle(), pdb)
+    return
 
-workdir = "/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/"
-workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/_Seq_core_2ndshell_date_reps/'
-workdir = '/mnt/e/DesignData/DL/_Seq_core_date_reps/'
+workdir = "/Users/lonelu/DesignData/ligands_metal/ZN_rcsb_datesplit/20211013/_Seq_core_date_reps/"
+#workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/_Seq_core_2ndshell_date_reps/'
+#workdir = '/mnt/e/DesignData/DL/_Seq_core_date_reps/'
 
-outdir = workdir + '20211209_vdm_reps/'
-outdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/20220128_1stshell/'
-outdir = '/mnt/e/DesignData/DL/20220511_vdm_reps/'
+outdir = '/Users/lonelu/DesignData/ligands_metal/ZN_rcsb_datesplit/20211013/20231020_cys_vdm_filtered/'
+#outdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/20220128_1stshell/'
+#outdir = '/mnt/e/DesignData/DL/20220511_vdm_reps/'
 os.makedirs(outdir, exist_ok = True)
 
 #aas = ['HIS', 'GLU', 'ASP', 'CYS']
-aas = ['HIS', 'GLU', 'ASP', 'CYS']
+aas = ['CYS']
 
 extract_vdm(workdir, outdir, aas)

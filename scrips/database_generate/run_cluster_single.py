@@ -12,13 +12,14 @@ from metalprot.database import database_cluster as ldb_clu
 
 
 '''
-python /mnt/e/GitHub_Design/Metalprot/scrips/database_generate/run_cluster_single.py
+python /Users/lonelu/GitHub_Design/Metalprot/scrips/database_generate/run_cluster_single.py
 '''
 
 def cluster_single(workdir, outdir, is_self_center, metal_sel, align_sel, len_sel):
 
     #aas = ['HIS', 'GLU', 'ASP', 'CYS']
-    aas = ['HIS', 'GLU', 'ASP']
+    #aas = ['HIS', 'GLU', 'ASP']
+    aas = ['CYS']
     for AA in aas:
         #Change len_sel according to aa sidechain number. His:6, Glu: 5, Asp: 4, Cys: 2
         if AA == 'HIS':
@@ -37,27 +38,27 @@ def cluster_single(workdir, outdir, is_self_center, metal_sel, align_sel, len_se
         else:
             _pdbs = database_extract.get_all_pbd_prody(workdir + 'AAMetalPhiPsi_' + AA + '_reps/')
         print(len(_pdbs))
-        
+
         ldb_clu.run_cluster(_pdbs, outdir, 'AAMetalPhiPsi_' + AA + '_cluster05/', rmsd = 0.5, metal_sel = metal_sel, len_sel = len_sel_sc, align_sel = align_sel, min_cluster_size = 0, tag = 'AAMetalPhiPsi_' + AA + '_', is_self_center=is_self_center)
 
 
 ### set up parameters
 
-workdir = "/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/20211013_vdm_reps/"
-workdir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_vdm_reps/'
-workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/20220128_1stshell/'
+workdir = '/Users/lonelu/DesignData/ligands_metal/ZN_rcsb_datesplit/20211013/20231020_cys_vdm_filtered/'
+#workdir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_vdm_reps/'
+#workdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/20220128_1stshell/'
 is_self_center = True
 
 
 metal_sel = 'name NI MN ZN CO CU FE' 
-#align_sel = 'heavy'
-#len_sel = 9
-align_sel = 'heavy and not name NI MN ZN CO CU FE'
-len_sel = 8
+align_sel = 'heavy'
+len_sel = 9
+#align_sel = 'heavy and not name NI MN ZN CO CU FE'
+#len_sel = 8
 
-outdir = '/mnt/e/DesignData/ligands/Zn_rcsb_datesplit/20211013/20211209_selfcenter_nometal/'
-outdir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/'
-outdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/20220128_1stshell/20220128_selfcenter/'
+outdir = '/Users/lonelu/DesignData/ligands_metal/ZN_rcsb_datesplit/20211013/20231020_cys_vdm_filtered/'
+#outdir = '/mnt/e/DesignData/ligands/all/20220116_FE_MN_CO/20220116_selfcenter/'
+#outdir = '/mnt/e/DesignData/ligands/ZN_rcsb_datesplit/20220116_2ndshell/20220128_1stshell/20220128_selfcenter/'
 os.makedirs(outdir, exist_ok = True)
 
 cluster_single(workdir, outdir, is_self_center, metal_sel, align_sel, len_sel)

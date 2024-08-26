@@ -1,6 +1,6 @@
 '''
 Special for porphyrin.
-Design metal + ligand bindin protein. 
+Design porphyrin binding protein. 
 Need to run search_selfcenter function first. 
 '''
 

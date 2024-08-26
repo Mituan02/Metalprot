@@ -168,7 +168,7 @@ class Search_selfcenter(Search_vdM):
             return
 
         self.selfcenter_get_write_represents(comb_dict)
-
+    
         self.selfcenter_write_win(self.best_aa_comb_dict)
 
         outpath = 'win_' + '-'.join([self.target_ind2chidres[w][0] + '-' + str(self.target_ind2chidres[w][1]) for w in win_comb]) + '/'

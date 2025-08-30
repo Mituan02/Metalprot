@@ -15,7 +15,7 @@ setup(
         'numpy',
         'matplotlib',
         'prody',
-        'sklearn',
+        'scikit-learn', # edited by 5.8
         'numba',
         'scipy',
         #'dataclasses',

@@ -1,0 +1,41 @@
+{
+  "retained_design_count": 4,
+  "database_motif_count": 5853,
+  "dependencies": {
+    "numpy": "1.26.4",
+    "pandas": "2.2.3",
+    "scipy": "1.13.1",
+    "scikit-learn": "1.6.1",
+    "numba": "0.60.0",
+    "ProDy": "2.4.1",
+    "matplotlib": "3.9.2"
+  },
+  "scoring_reference": {
+    "H": [
+      2662,
+      285,
+      92.08,
+      60
+    ],
+    "E": [
+      829,
+      50,
+      16.32,
+      11
+    ],
+    "D": [
+      896,
+      90,
+      26.12,
+      22
+    ],
+    "C": [
+      3211,
+      913,
+      457,
+      457
+    ]
+  },
+  "pre_geometry_candidate_count": 3814,
+  "comparison": "Compare under the recorded environment with identical data and settings; retain the original numerical precision and ignore timestamps."
+}

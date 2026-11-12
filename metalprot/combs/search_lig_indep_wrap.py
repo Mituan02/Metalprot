@@ -15,7 +15,7 @@ import shutil
 def verify_vdMs(outdir, target, chidres, para, abples, path_to_database, lig, vdm_cg_aa_atommap_dict):
     '''
     For a ligand-binding protein, verify the vdMs used by the protein in a quick way.
-    For usage, please check '/mnt/e/GitHub_Design/Metalprot/scrips/position_ligand/belinostat/pose_lig_by_pair_vdm_dev.py'
+    This module provides ligand-placement helpers for advanced search workflows.
     '''
     for cg_id in vdm_cg_aa_atommap_dict.keys():
 

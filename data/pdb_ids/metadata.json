@@ -1,0 +1,30 @@
+{
+  "description": "Source PDB IDs represented in the final curated Metal Mer libraries. IDs are uppercase, sorted, and unique. These lists do not represent the initial download sets.",
+  "extraction": "PDB identifiers are parsed from the query titles in AAMetalPhiPsi.pkl.",
+  "libraries": {
+    "Zn": {
+      "source_library": "ZN_HDEC_20210113",
+      "source_file": "AAMetalPhiPsi.pkl",
+      "source_sha256": "abcff62541250050b233f0a3ae1f4f657831e1da0bcc161e7e1fdc6842f7d563",
+      "metal_elements": [
+        "ZN"
+      ],
+      "record_count": 5853,
+      "unique_pdb_id_count": 1366,
+      "pdb_id_file": "data/pdb_ids/zn_pdb_ids.txt",
+      "pdb_id_file_sha256": "c7b8284872eb5c862f000f048550f5017d63af1f286cf08e24bd123ff1a89eb8"
+    },
+    "Fe": {
+      "source_library": "FE_HDE_20220116",
+      "source_file": "AAMetalPhiPsi.pkl",
+      "source_sha256": "0364eef73115dbbdc6901dba3eb1ebb61b142f90f1d0ca97ed06724aca6af927",
+      "metal_elements": [
+        "FE"
+      ],
+      "record_count": 976,
+      "unique_pdb_id_count": 223,
+      "pdb_id_file": "data/pdb_ids/fe_pdb_ids.txt",
+      "pdb_id_file_sha256": "49d1ab68ce67858e8ad1e3f450fe9628d3ca39bf47363149b9bdcb6013754501"
+    }
+  }
+}

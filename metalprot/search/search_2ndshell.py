@@ -1,6 +1,6 @@
 '''
 Searching 2ndshell using general vdM database.
-Please check 'scrips/position_ligand/1ukr/run_search_2ndshell.py'
+Utilities for advanced second-shell searches.
 '''
 from ..basic import constant, utils
 from ..combs import search_lig_indep, gvdm_helper, search_lig_indep_wrap, search_lig_indep_2ndshell

@@ -1,0 +1,15 @@
+include README.md LICENSE.txt CITATION.cff requirements.txt environment.yml
+recursive-include metalprot/constants *.pdb *.pkl *.txt
+recursive-include docs *.md
+recursive-include assets *.jpg
+recursive-include examples *.py *.json *.pdb *.md *.tsv *.sh *.ipynb
+recursive-include scripts *.py
+recursive-include tests/release *.py
+recursive-include tests/test_data *.pdb
+include tests/README.md
+include data/pdb_ids/zn_pdb_ids.txt data/pdb_ids/fe_pdb_ids.txt data/pdb_ids/metadata.json
+prune Database
+prune legacy
+prune build
+prune dist
+prune outputs

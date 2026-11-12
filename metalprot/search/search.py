@@ -114,7 +114,7 @@ class Search_vdM:
             self.geo_struct = constant.tetrahydra_geo
 
         if geometry_o_path:
-            self.geo_o_struct = pr.parsePDB(geometry_path)
+            self.geo_o_struct = pr.parsePDB(geometry_o_path)
         else:
             self.geo_o_struct = constant.tetrahydra_geo_o
 
@@ -465,6 +465,5 @@ class Search_vdM:
         if len(self.log) > 0:
             with open(self.workdir + '_log.txt', 'w') as f:
                 f.write(self.log)
-
 
 

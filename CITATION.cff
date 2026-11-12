@@ -1,0 +1,39 @@
+cff-version: 1.2.0
+message: "If using this work, cite the bioRxiv article in preferred-citation and report the software version and commit."
+type: software
+title: "METALPROT: Metal Mer-based search for local metal-binding sites"
+authors:
+  - family-names: Lu
+    given-names: Lei
+  - family-names: Ren
+    given-names: Zhuoyun
+version: 0.1.0rc1
+repository-code: "https://github.com/Mituan02/Metalprot"
+url: "https://github.com/Mituan02/Metalprot"
+license: MIT
+keywords:
+  - Metal Mer
+  - metalloprotein design
+  - metal coordination
+preferred-citation:
+  type: article
+  title: "De novo design of metalloenzymes using Metal Mer"
+  authors:
+    - family-names: Shan
+      given-names: Chuan
+    - family-names: Ren
+      given-names: Zhuoyun
+    - family-names: Yu
+      given-names: Jinhao
+    - family-names: Gao
+      given-names: Yuan
+    - family-names: Wu
+      given-names: Chenxin
+    - family-names: Zhong
+      given-names: Xiaofang
+    - family-names: Lu
+      given-names: Lei
+  journal: bioRxiv
+  year: 2026
+  doi: "10.64898/2026.10.13.758590"
+  url: "https://www.biorxiv.org/content/10.64898/2026.10.13.758590v1"
